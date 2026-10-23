@@ -4,7 +4,8 @@ export const DADOS_URL: string = (import.meta.env.PUBLIC_DADOS_URL || "https://a
   /\/$/,
   "",
 );
-export const META_URL = "https://ans.feeds.abelhaninja.de/meta.json";
+// ans-feeds publishes meta.json next to dados/; its `date` is the day of the data
+export const META_URL = new URL("../meta.json", `${DADOS_URL}/`).href;
 
 export const ANS_FEEDS_URL = "https://ans.feeds.abelhaninja.de/";
 export const ANVISA_HUB_URL = "https://anvisa.abelhaninja.de/";
