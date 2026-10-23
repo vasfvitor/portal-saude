@@ -34,6 +34,13 @@ export function fmtReais(value: number): string {
   return `R$ ${int.format(Math.round(value))}`;
 }
 
+/** centavos → "R$ 507,70"; 341576938 → "R$ 3.415.769,38". */
+export function fmtMoney(centavos: number): string {
+  const reais = Math.trunc(centavos / 100);
+  const cents = Math.abs(centavos % 100);
+  return `R$ ${int.format(reais)},${String(cents).padStart(2, "0")}`;
+}
+
 /** 3391379 → "3,4 milhões"; 98203 → "98 mil"; 524 → "524". */
 export function fmtPessoas(n: number): string {
   if (n >= 1e6) return `${fmtDec(n / 1e6, 1)} ${n >= 2e6 ? "milhões" : "milhão"}`;
