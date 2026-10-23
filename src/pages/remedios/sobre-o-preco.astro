@@ -1,0 +1,107 @@
+---
+// What the maximum price is, who sets it, why it changes by state, and the curated table of default ICMS rates
+// with the source of each row.
+import Base from "../../layouts/Base.astro";
+import { fmtDate } from "../../lib/format";
+import { aliquotaRotulo, PRECO_MAXIMO, SE_COBRAREM_MAIS } from "../../lib/frases-remedios";
+import { ESTADOS } from "../../lib/icms";
+
+const CMED_URL = "https://www.gov.br/anvisa/pt-br/assuntos/medicamentos/cmed";
+const estados = [...ESTADOS].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+const faq = [
+  { q: "O que é o preço máximo ao consumidor?", a: PRECO_MAXIMO },
+  {
+    q: "Por que o preço muda de estado para estado?",
+    a: "Porque o preço máximo inclui o ICMS, que cada estado define. A CMED publica o preço para cada alíquota, e vale a do estado onde o remédio é vendido. Alguns remédios têm alíquota diferente da padrão do estado.",
+  },
+  { q: "E se a farmácia cobrar mais?", a: SE_COBRAREM_MAIS },
+];
+const faqLd = {
+  "@type": "FAQPage",
+  mainEntity: faq.map(({ q, a }) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })),
+};
+---
+
+<Base
+  title="Como ler o preço máximo dos remédios"
+  description="O que é o preço máximo ao consumidor da CMED, por que ele muda com o ICMS de cada estado e qual alíquota cada estado usa."
+  structured={[faqLd]}
+>
+  <h1>Como ler o preço máximo</h1>
+  {faq.map(({ q, a }) => (
+    <>
+      <h2>{q}</h2>
+      <p>{a}</p>
+    </>
+  ))}
+  <p>
+    Lista oficial e regras: <a href={CMED_URL}>CMED, no site da ANVISA</a>.
+  </p>
+
+  <h2>ICMS padrão para remédios, por estado</h2>
+  {estados.length === 0 ? (
+    <p class="muted">
+      Tabela em revisão. Enquanto isso, a página de cada remédio mostra o preço em todas as alíquotas.
+    </p>
+  ) : (
+    <>
+      <p class="muted">
+        Alíquota padrão de cada estado, com a fonte. Alguns remédios têm alíquota diferente; a observação de cada estado
+        diz quando sabemos.
+      </p>
+      <div class="rolagem" tabindex="0" role="region" aria-label="ICMS por estado">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Estado</th>
+              <th scope="col" class="n">
+                ICMS
+              </th>
+              <th scope="col">Observação</th>
+              <th scope="col">Fonte</th>
+            </tr>
+          </thead>
+          <tbody>
+            {estados.map((e) => (
+              <tr>
+                <th scope="row">
+                  {e.nome} ({e.uf})
+                </th>
+                <td class="n">{aliquotaRotulo(e.aliquota)}</td>
+                <td>{e.observacao ?? ""}</td>
+                <td>
+                  <a href={e.fonte}>fonte</a>, conferida em {fmtDate(e.conferido_em)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  )}
+</Base>
+
+<style>
+  .rolagem {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--card);
+  }
+  table {
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    min-width: 100%;
+  }
+  th,
+  td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    vertical-align: top;
+  }
+  .n {
+    text-align: right;
+    white-space: nowrap;
+  }
+</style>

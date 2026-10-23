@@ -1,8 +1,8 @@
 ---
-// Home: the subjects. Only "Plano de saúde" is live; "Remédios" points to what already exists elsewhere.
+// Home: the subjects, each a section of its own.
 import Base from "../layouts/Base.astro";
 import { TITLE } from "../lib/brand";
-import { ANVISA_HUB_URL, CMED_URL, CONTEM_URL } from "../lib/config";
+import { ANVISA_HUB_URL, CONTEM_URL } from "../lib/config";
 ---
 
 <Base title={TITLE}>
@@ -20,19 +20,16 @@ import { ANVISA_HUB_URL, CMED_URL, CONTEM_URL } from "../lib/config";
       </p>
       <span class="ir">Procurar a operadora →</span>
     </a>
-    <div class="assunto em-breve">
-      <h2>
-        Remédios <small>em breve</small>
-      </h2>
-      <p>
-        Quanto a farmácia pode cobrar e se o remédio está regularizado. Enquanto isso: <a href={CONTEM_URL}>contém</a>
-        (produtos regularizados) e <a href={CMED_URL}>preços máximos da CMED</a>.
-      </p>
-      <p class="muted">
-        Dados da ANVISA: <a href={ANVISA_HUB_URL}>anvisa.abelhaninja.de</a>
-      </p>
-    </div>
+    <a class="assunto" href="/remedios/">
+      <h2>Remédios</h2>
+      <p>Quanto a farmácia pode cobrar por um remédio no seu estado? Tem genérico mais barato?</p>
+      <span class="ir">Procurar o remédio →</span>
+    </a>
   </section>
+  <p class="muted">
+    Para saber se um produto está regularizado na ANVISA: <a href={CONTEM_URL}>contém</a>. Dados abertos da ANVISA:
+    <a href={ANVISA_HUB_URL}>anvisa.abelhaninja.de</a>.
+  </p>
 </Base>
 
 <style>

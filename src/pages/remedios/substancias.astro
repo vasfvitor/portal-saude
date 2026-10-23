@@ -1,0 +1,57 @@
+---
+// Every substância A to Z: the way in without JavaScript, and a page search engines can follow.
+import Base from "../../layouts/Base.astro";
+import { CMED_DADOS_URL } from "../../lib/config";
+import { fmtInt } from "../../lib/format";
+import { indiceProdutosForBuild, slugsSubstancias } from "../../lib/remedios";
+
+const { produtos } = await indiceProdutosForBuild(CMED_DADOS_URL);
+const contagem = new Map<string, number>();
+for (const p of produtos) contagem.set(p.substancia, (contagem.get(p.substancia) ?? 0) + 1);
+const slugs = slugsSubstancias([...contagem.keys()]);
+const nomes = [...contagem.keys()].sort((a, b) => a.localeCompare(b, "pt-BR"));
+const inicial = (n: string) => n.normalize("NFD").charAt(0).toUpperCase();
+const letras = [...new Set(nomes.map(inicial))];
+---
+
+<Base
+  title="Todas as substâncias"
+  description="Todas as substâncias de remédios vendidos em farmácia, de A a Z, com as marcas e genéricos de cada uma."
+>
+  <h1>Todas as substâncias</h1>
+  <p class="lead">{fmtInt(nomes.length)} substâncias de remédios vendidos em farmácia, de A a Z.</p>
+  <nav class="letras" aria-label="Letras">
+    {letras.map((l) => (
+      <a href={`#letra-${l}`}>{l}</a>
+    ))}
+  </nav>
+  {letras.map((l) => (
+    <section id={`letra-${l}`}>
+      <h2>{l}</h2>
+      <ul>
+        {nomes
+          .filter((n) => inicial(n) === l)
+          .map((n) => (
+            <li>
+              <a href={`/remedios/substancia/${slugs.get(n)!}/`}>{n}</a>
+              <span class="muted"> · {fmtInt(contagem.get(n)!)}</span>
+            </li>
+          ))}
+      </ul>
+    </section>
+  ))}
+</Base>
+
+<style>
+  .letras {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+  }
+  ul {
+    padding-left: 1.1rem;
+  }
+  li {
+    margin: 3px 0;
+  }
+</style>

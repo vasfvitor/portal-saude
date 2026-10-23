@@ -1,0 +1,218 @@
+---
+// One page per product: what it is in plain words, then the maximum consumer price of each presentation at
+// each ICMS rate, with the states whose default is that rate in the column header. Prices come from the CMED
+// list as published; the page never names one price for a state without the rate next to it.
+import Base from "../../layouts/Base.astro";
+import { CMED_DADOS_URL } from "../../lib/config";
+import { fmtDate } from "../../lib/format";
+import {
+  aliquotaRotulo,
+  avisoComercializacao,
+  faixaPreco,
+  PRECO_MAXIMO,
+  precoMaximo,
+  SE_COBRAREM_MAIS,
+  tarjaExplicada,
+  tipoExplicado,
+} from "../../lib/frases-remedios";
+import { colunas, ufsPorAliquota } from "../../lib/icms";
+import { paginaProduto, produtosForBuild, slugsSubstancias, type Produto } from "../../lib/remedios";
+
+export async function getStaticPaths() {
+  const produtos = await produtosForBuild(CMED_DADOS_URL);
+  const substancias = slugsSubstancias(produtos.map((p) => p.substancia));
+  return produtos.map((p) => ({
+    params: { pagina: paginaProduto(p).split("/")[2]! },
+    props: { p, substanciaSlug: substancias.get(p.substancia)! },
+  }));
+}
+
+interface Props {
+  p: Produto;
+  substanciaSlug: string;
+}
+const { p, substanciaSlug } = Astro.props;
+const cols = colunas();
+const ufs = ufsPorAliquota();
+const tipo = tipoExplicado(p.tipo_produto);
+const tarja = tarjaExplicada(p.tarja);
+const aviso = avisoComercializacao(p.comercializado);
+const publicado = fmtDate(`${p.stamp.slice(0, 4)}-${p.stamp.slice(4, 6)}-${p.stamp.slice(6, 8)}`);
+const primeira = p.apresentacoes[0]!;
+const faixa = faixaPreco(primeira, cols);
+const descricao = `${p.produto} (${p.laboratorio}): preço máximo que a farmácia pode cobrar, por apresentação e por ICMS do estado. Lista da CMED de ${publicado}.`;
+const breadcrumb = {
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Remédios", item: new URL("/remedios/", Astro.site).href },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: p.substancia,
+      item: new URL(`/remedios/substancia/${substanciaSlug}/`, Astro.site).href,
+    },
+    { "@type": "ListItem", position: 3, name: p.produto, item: new URL(Astro.url.pathname, Astro.site).href },
+  ],
+};
+---
+
+<Base title={`${p.produto}: preço máximo`} description={descricao} structured={[breadcrumb]}>
+  <p class="trilha">
+    <a href="/remedios/">Remédios</a> › <a href={`/remedios/substancia/${substanciaSlug}/`}>{p.substancia}</a>
+  </p>
+  <h1>{p.produto}</h1>
+  <p class="ficha">
+    <span>{p.laboratorio}</span>
+    {p.tipo_produto && <span>{p.tipo_produto}</span>}
+    <span>Registro ANVISA {p.registro_produto}</span>
+  </p>
+
+  {aviso && <p class="faixa aviso">{aviso}</p>}
+
+  <p class="lead">{PRECO_MAXIMO}</p>
+  {faixa && (
+    <p>
+      <strong>{primeira.apresentacao}</strong>: {faixa}
+    </p>
+  )}
+
+  <section>
+    <h2>Preço máximo por apresentação e ICMS do estado</h2>
+    <p class="muted">
+      O ICMS muda de estado para estado. Cada coluna mostra os estados que usam aquela alíquota como padrão para
+      remédios; alguns remédios têm alíquota diferente (por exemplo, genéricos em alguns estados). Na dúvida, confira em{" "}
+      <a href="/remedios/sobre-o-preco/">como ler o preço</a>.
+    </p>
+    <div class="rolagem" tabindex="0" role="region" aria-label="Tabela de preços máximos">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Apresentação</th>
+            {cols.map((a) => (
+              <th scope="col" class="n">
+                ICMS {aliquotaRotulo(a)}
+                {ufs.get(a) && <small>{ufs.get(a)!.join(", ")}</small>}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {p.apresentacoes.map((a) => (
+            <tr class={a.comercializado ? "" : "fora"}>
+              <th scope="row">
+                {a.apresentacao}
+                {!a.comercializado && <small>sem venda no último ano</small>}
+              </th>
+              {cols.map((k) => (
+                <td class="n">{precoMaximo(a, k) ?? "–"}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p class="muted">
+      Preços da lista da CMED publicada em {publicado}. {SE_COBRAREM_MAIS}
+    </p>
+  </section>
+
+  <section>
+    <h2>Sobre este remédio</h2>
+    <ul>
+      {tipo && <li>{tipo}</li>}
+      {tarja && <li>{tarja}</li>}
+      <li>
+        Substância: <a href={`/remedios/substancia/${substanciaSlug}/`}>{p.substancia}</a> (veja outras marcas e
+        genéricos)
+      </li>
+      {p.classe_terapeutica && <li>Classe terapêutica: {p.classe_terapeutica}</li>}
+    </ul>
+  </section>
+
+  <section class="fontes">
+    <h2>Fontes</h2>
+    <p>
+      Lista de preços da CMED (ANVISA), publicada em {publicado}. Dados deste produto:{" "}
+      <a href={`${CMED_DADOS_URL}/produto/${p.registro_produto}.json`}>JSON</a>.
+    </p>
+  </section>
+</Base>
+
+<style>
+  .trilha {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin: 1.25rem 0 0;
+  }
+  .trilha a {
+    color: var(--muted);
+  }
+  h1 {
+    margin-top: 0.5rem;
+  }
+  .ficha {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+  .faixa {
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin: 1rem 0;
+    font-weight: 600;
+  }
+  .aviso {
+    background: var(--alert-soft);
+    border: 1px solid var(--alert);
+  }
+  .rolagem {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--card);
+  }
+  table {
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    min-width: 100%;
+  }
+  th,
+  td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    vertical-align: top;
+  }
+  thead th {
+    font-size: 0.8rem;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  th small {
+    display: block;
+    font-weight: 400;
+    white-space: normal;
+    max-width: 8rem;
+  }
+  tbody th {
+    font-weight: 500;
+    min-width: 14rem;
+  }
+  tbody th small {
+    color: var(--alert);
+    max-width: none;
+  }
+  .n {
+    text-align: right;
+    white-space: nowrap;
+  }
+  tr.fora td {
+    color: var(--muted);
+  }
+  tr:last-child th,
+  tr:last-child td {
+    border-bottom: 0;
+  }
+</style>

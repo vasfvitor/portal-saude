@@ -1,0 +1,98 @@
+---
+// One page per substância: every product with it, grouped by type, each with the range of its maximum prices
+// at one reference ICMS rate, so brands and generics can be compared. Different doses and pack sizes sit in the
+// same range: the page says to compare the same presentation on the product page.
+import Base from "../../../layouts/Base.astro";
+import { CMED_DADOS_URL } from "../../../lib/config";
+import { fmtInt, fmtMoney } from "../../../lib/format";
+import { aliquotaRotulo, tipoExplicado } from "../../../lib/frases-remedios";
+import { aliquotaReferencia } from "../../../lib/icms";
+import { paginaProduto, produtosForBuild, slugsSubstancias, type Produto } from "../../../lib/remedios";
+
+export async function getStaticPaths() {
+  const produtos = await produtosForBuild(CMED_DADOS_URL);
+  const slugs = slugsSubstancias(produtos.map((p) => p.substancia));
+  const por = new Map<string, Produto[]>();
+  for (const p of produtos) por.set(p.substancia, [...(por.get(p.substancia) ?? []), p]);
+  return [...por.entries()].map(([substancia, lista]) => ({
+    params: { slug: slugs.get(substancia)! },
+    props: { substancia, lista },
+  }));
+}
+
+interface Props {
+  substancia: string;
+  lista: Produto[];
+}
+const { substancia, lista } = Astro.props;
+const { aliquota, deEstados } = aliquotaReferencia();
+const resumo = `${fmtInt(lista.length)} ${lista.length === 1 ? "produto" : "produtos"} com esta substância, com a faixa do preço máximo de cada um no ICMS de ${aliquotaRotulo(aliquota)}${deEstados ? ", a alíquota padrão mais comum entre os estados" : ""}.`;
+const ORDEM = ["Novo", "Genérico", "Similar", "Biológico", "Específico", "Fitoterápico"];
+const posicao = (t: string) => (ORDEM.includes(t) ? ORDEM.indexOf(t) : ORDEM.length);
+const tipos = [...new Set(lista.map((p) => p.tipo_produto ?? "Outro"))].sort(
+  (a, b) => posicao(a) - posicao(b) || a.localeCompare(b),
+);
+const faixa = (p: Produto) => {
+  const precos = p.apresentacoes.map((a) => a.pmc[aliquota]).filter((c): c is number => c !== undefined);
+  if (precos.length === 0) return "sem preço nesta alíquota";
+  const min = Math.min(...precos);
+  const max = Math.max(...precos);
+  return min === max ? fmtMoney(min) : `${fmtMoney(min)} a ${fmtMoney(max)}`;
+};
+const ordenados = (t: string) =>
+  lista
+    .filter((p) => (p.tipo_produto ?? "Outro") === t)
+    .sort((a, b) => Number(b.comercializado) - Number(a.comercializado) || a.produto.localeCompare(b.produto));
+---
+
+<Base
+  title={`${substancia}: marcas, genéricos e preço máximo`}
+  description={`${fmtInt(lista.length)} produtos com ${substancia} na lista da CMED, com a faixa de preço máximo de cada um.`}
+>
+  <p class="trilha">
+    <a href="/remedios/">Remédios</a> › Substância
+  </p>
+  <h1>{substancia}</h1>
+  <p class="lead">
+    {resumo} Doses e embalagens diferentes entram na mesma faixa: para comparar, abra o produto e veja a mesma
+    apresentação.
+  </p>
+  {tipos.map((t) => (
+    <section>
+      <h2>{t}</h2>
+      {tipoExplicado(t) && <p class="muted">{tipoExplicado(t)}</p>}
+      <ul class="produtos">
+        {ordenados(t).map((p) => (
+          <li class={p.comercializado ? "" : "fora"}>
+            <a href={paginaProduto(p)}>{p.produto}</a>
+            <span class="muted">
+              {" "}
+              · {p.laboratorio} · {faixa(p)}
+              {!p.comercializado && " · sem venda no último ano"}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))}
+</Base>
+
+<style>
+  .trilha {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin: 1.25rem 0 0;
+  }
+  .trilha a {
+    color: var(--muted);
+  }
+  .produtos {
+    padding-left: 1.1rem;
+  }
+  .produtos li {
+    margin: 6px 0;
+  }
+  .fora a {
+    opacity: 0.75;
+  }
+</style>

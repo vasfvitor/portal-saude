@@ -1,0 +1,48 @@
+---
+// The medicines section: search by brand, substância or laboratory, and what the maximum price means.
+import Busca from "../../components/Busca.astro";
+import Base from "../../layouts/Base.astro";
+import { CMED_DADOS_URL } from "../../lib/config";
+import { fmtDate, fmtInt } from "../../lib/format";
+import { PRECO_MAXIMO, SE_COBRAREM_MAIS } from "../../lib/frases-remedios";
+import { indiceProdutosForBuild } from "../../lib/remedios";
+
+const { stamp, produtos } = await indiceProdutosForBuild(CMED_DADOS_URL);
+const publicado = fmtDate(`${stamp.slice(0, 4)}-${stamp.slice(4, 6)}-${stamp.slice(6, 8)}`);
+const substancias = new Set(produtos.map((p) => p.substancia)).size;
+---
+
+<Base
+  title="Remédios: quanto a farmácia pode cobrar"
+  description="Preço máximo que a farmácia pode cobrar por cada remédio, por apresentação e por ICMS do estado, na lista oficial da CMED."
+>
+  <h1>Remédios: quanto a farmácia pode cobrar</h1>
+  <p class="lead">
+    {PRECO_MAXIMO} São {fmtInt(produtos.length)} remédios vendidos em farmácia e {fmtInt(substancias)} substâncias, na
+    lista de {publicado}.
+  </p>
+  <Busca
+    indice="/remedios/busca.json"
+    rotulo="Nome do remédio, substância ou laboratório"
+    nomes={["remédio", "remédios"]}
+    todas={{ href: "/remedios/substancias/", texto: "Ver todas as substâncias, de A a Z" }}
+  />
+
+  <section>
+    <h2>Como ler o preço</h2>
+    <ul>
+      <li>
+        O preço máximo depende do <strong>ICMS do estado</strong> onde o remédio é vendido. A página de cada remédio
+        mostra o preço em cada alíquota e quais estados usam cada uma.
+      </li>
+      <li>
+        <strong>Genéricos e similares</strong> da mesma substância costumam ter preço máximo menor; a página da
+        substância lista todos.
+      </li>
+      <li>{SE_COBRAREM_MAIS}</li>
+    </ul>
+    <p>
+      <a href="/remedios/sobre-o-preco/">Mais sobre o preço máximo e o ICMS de cada estado</a>
+    </p>
+  </section>
+</Base>
