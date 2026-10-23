@@ -41,6 +41,12 @@ export function fmtPessoas(n: number): string {
   return int.format(n);
 }
 
+/** 3391379 → "3,4 milhões de beneficiários"; 98203 → "98 mil beneficiários"; 1 → "1 beneficiário". */
+export function fmtBeneficiarios(n: number): string {
+  if (n === 1) return "1 beneficiário";
+  return `${fmtPessoas(n)}${n >= 1e6 ? " de" : ""} beneficiários`;
+}
+
 /** "2026-10-08" or an ISO timestamp → "08/10/2026". */
 export function fmtDate(iso: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);

@@ -1,0 +1,44 @@
+---
+// One comparison: the sentence in bold, the base below. The tone only colours the left border.
+import type { Frase } from "../lib/frases";
+
+interface Props {
+  frase: Frase;
+}
+const { frase } = Astro.props;
+---
+
+<div class={`frase ${frase.tom}`}>
+  <p class="titulo">{frase.titulo}</p>
+  {frase.detalhe && <p class="detalhe">{frase.detalhe}</p>}
+  <slot />
+</div>
+
+<style>
+  .frase {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 0.75rem 0;
+  }
+  .frase.favoravel {
+    border-left-color: var(--good);
+  }
+  .frase.desfavoravel {
+    border-left-color: var(--alert);
+  }
+  .frase.neutro {
+    border-left-color: var(--accent);
+  }
+  .titulo {
+    font-weight: 600;
+    margin: 0;
+  }
+  .detalhe {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin: 0.4rem 0 0;
+  }
+</style>

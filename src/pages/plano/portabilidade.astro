@@ -1,0 +1,73 @@
+---
+// Special portability explained, with the operators that have it now. The deadline and the details are in
+// each Resolução Operacional, linked from the operator's page; this page does not restate them.
+import Base from "../../layouts/Base.astro";
+import { ANS_PORTABILIDADE_URL, DADOS_URL } from "../../lib/config";
+import { fmtBeneficiarios, fmtDate } from "../../lib/format";
+import { nomeExibido, operadorasForBuild, paginaOperadora } from "../../lib/operadoras";
+
+const ops = await operadorasForBuild(DADOS_URL);
+const vigentes = ops
+  .filter((o) => o.portabilidade_vigente.length > 0)
+  .sort((a, b) => b.portabilidade_vigente[0]!.data.localeCompare(a.portabilidade_vigente[0]!.data));
+const faq = [
+  {
+    q: "O que é portabilidade especial?",
+    a: "É quando a ANS autoriza os clientes de uma operadora a trocar de plano sem cumprir carência de novo. Acontece, em geral, quando a operadora tem problemas graves ou está saindo do mercado.",
+  },
+  {
+    q: "Como pedir?",
+    a: "Escolha um plano de outra operadora, compatível com o seu, e peça a portabilidade à nova operadora, informando a Resolução Operacional da ANS. O prazo e as condições estão na própria Resolução.",
+  },
+];
+const faqLd = {
+  "@type": "FAQPage",
+  mainEntity: faq.map(({ q, a }) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })),
+};
+---
+
+<Base
+  title="Portabilidade especial"
+  description="Quais operadoras de planos de saúde estão em portabilidade especial: os clientes podem trocar de plano sem cumprir carência de novo."
+  structured={[faqLd]}
+>
+  <h1>Portabilidade especial</h1>
+  <p class="lead">Quando a ANS libera, os clientes da operadora podem trocar de plano sem cumprir carência de novo.</p>
+  {faq.map(({ q, a }) => (
+    <>
+      <h2>{q}</h2>
+      <p>{a}</p>
+    </>
+  ))}
+  <p>
+    Lista oficial e regras: <a href={ANS_PORTABILIDADE_URL}>página de portabilidade especial da ANS</a>.
+  </p>
+
+  <h2>Operadoras com portabilidade especial em vigor</h2>
+  {vigentes.length === 0 && <p class="muted">Nenhuma na lista da ANS nesta coleta.</p>}
+  <ul class="vigentes">
+    {vigentes.map((o) => (
+      <li>
+        <a href={paginaOperadora(o)}>{nomeExibido(o)}</a>
+        <span class="muted">
+          {" "}
+          · desde {fmtDate(o.portabilidade_vigente[0]!.data)}
+          {o.uf && ` · ${o.uf}`}
+          {o.beneficiarios !== null && ` · ${fmtBeneficiarios(o.beneficiarios)}`}
+        </span>
+      </li>
+    ))}
+  </ul>
+  <p class="muted">
+    A página da ANS de onde vem esta lista nem sempre está em dia; na dúvida, confira a Resolução Operacional.
+  </p>
+</Base>
+
+<style>
+  .vigentes {
+    padding-left: 1.1rem;
+  }
+  .vigentes li {
+    margin: 6px 0;
+  }
+</style>

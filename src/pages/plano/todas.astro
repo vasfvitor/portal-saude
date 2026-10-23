@@ -1,0 +1,71 @@
+---
+// Every operator, A to Z by state: the way in without JavaScript, and a page search engines can follow.
+import Base from "../../layouts/Base.astro";
+import { DADOS_URL } from "../../lib/config";
+import { fmtInt } from "../../lib/format";
+import { indiceForBuild, nomeExibido, paginaOperadora } from "../../lib/operadoras";
+
+const indice = await indiceForBuild(DADOS_URL);
+const nome = nomeExibido;
+const porUf = new Map<string, typeof indice>();
+for (const o of indice) {
+  const uf = o.uf ?? "Sem UF";
+  porUf.set(uf, [...(porUf.get(uf) ?? []), o]);
+}
+const ufs = [...porUf.keys()].sort((a, b) => a.localeCompare(b, "pt-BR"));
+for (const lista of porUf.values()) lista.sort((a, b) => nome(a).localeCompare(nome(b), "pt-BR"));
+const ativas = indice.filter((o) => o.situacao === "ativa").length;
+---
+
+<Base
+  title="Todas as operadoras"
+  description="Todas as operadoras de planos de saúde com registro na ANS, por estado da sede, com link para a página de cada uma."
+>
+  <h1>Todas as operadoras</h1>
+  <p class="lead">
+    {fmtInt(ativas)} operadoras ativas e {fmtInt(indice.length - ativas)} canceladas nos últimos 5 anos, pelo estado da
+    sede. A sede nem sempre é onde o plano atende.
+  </p>
+  <nav class="ufs" aria-label="Estados">
+    {ufs.map((uf) => (
+      <a href={`#uf-${uf}`}>{uf}</a>
+    ))}
+  </nav>
+  {ufs.map((uf) => (
+    <section id={`uf-${uf}`}>
+      <h2>{uf}</h2>
+      <ul>
+        {porUf.get(uf)!.map((o) => (
+          <li>
+            <a href={paginaOperadora(o)}>{nome(o)}</a>
+            <span class="muted"> · {o.modalidade}</span>
+            {o.situacao === "cancelada" && <span class="tag">cancelada</span>}
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))}
+</Base>
+
+<style>
+  .ufs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    margin: 0 0 1rem;
+  }
+  ul {
+    padding-left: 1.1rem;
+  }
+  li {
+    margin: 4px 0;
+  }
+  .tag {
+    font-size: 0.75rem;
+    border: 1px solid var(--alert);
+    color: var(--alert);
+    border-radius: 999px;
+    padding: 0 8px;
+    margin-left: 8px;
+  }
+</style>

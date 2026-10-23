@@ -309,5 +309,10 @@ export function slug(nome: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+/** The trade name, unless it is just the legal name without accents ("BRADESCO SAUDE S.A."). */
+export function nomeExibido(o: { nome: string; fantasia: string | null }): string {
+  return o.fantasia && slug(o.fantasia) !== slug(o.nome) ? o.fantasia : o.nome;
+}
+
 export const paginaOperadora = (o: { registro: string; nome: string }): string =>
   `/plano/${o.registro}-${slug(o.nome)}/`;

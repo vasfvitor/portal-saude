@@ -1,7 +1,7 @@
 // Numbers into plain pt-BR sentences. Facts compared with peers, always with their base; never a score or
 // a risk label of our own. "Típico" in the text is the peers' median, defined in each `detalhe`. `tom` only
 // drives styling and is never shown as words.
-import { fmtDate, fmtDec, fmtInt, fmtPct, fmtPessoas, fmtReais } from "./format";
+import { fmtBeneficiarios, fmtDate, fmtDec, fmtInt, fmtPct, fmtReais } from "./format";
 import type { Idss, Operadora, PontoSerie, Reclamacoes, Ressarcimento } from "./operadoras";
 
 export type Tom = "favoravel" | "neutro" | "desfavoravel" | "sem-base";
@@ -54,7 +54,7 @@ export const modalidadePlural = (m: string): string => PLURAL[m] ?? `operadoras 
 export function fraseReclamacoes(r: Reclamacoes): Frase {
   const porte = r.porte.toLowerCase();
   const tipo = r.cobertura === "odontológica" ? "odontológicas" : "médico-hospitalares";
-  const base = `${fmtInt(r.reclamacoes)} ${r.reclamacoes === 1 ? "reclamação" : "reclamações"} na ANS no ${trimestre(r.trimestre)}, para ${fmtPessoas(r.beneficiarios_media)} beneficiários em média.`;
+  const base = `${fmtInt(r.reclamacoes)} ${r.reclamacoes === 1 ? "reclamação" : "reclamações"} na ANS no ${trimestre(r.trimestre)}, para ${fmtBeneficiarios(r.beneficiarios_media)} em média.`;
   if (r.indice === null || r.mediana_mesmo_porte === null || r.mediana_mesmo_porte <= 0) {
     return { titulo: "Sem comparação de reclamações neste trimestre.", detalhe: base, tom: "sem-base" };
   }

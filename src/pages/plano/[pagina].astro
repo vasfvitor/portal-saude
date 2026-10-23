@@ -1,0 +1,200 @@
+---
+// One page per operator: what happened to it, then each comparison as a sentence with its base, then the
+// sources. Every number comes from the ans-feeds record; nothing is typed here.
+import Frase from "../../components/Frase.astro";
+import Serie from "../../components/Serie.astro";
+import Base from "../../layouts/Base.astro";
+import { DADOS_URL, META_URL } from "../../lib/config";
+import { fmtBeneficiarios, fmtDate } from "../../lib/format";
+import {
+  cobertura,
+  fraseAnoAnterior,
+  fraseCancelamento,
+  fraseIdss,
+  frasePortabilidade,
+  fraseReclamacoes,
+  fraseRessarcimento,
+} from "../../lib/frases";
+import { metaForBuild, nomeExibido, operadorasForBuild, paginaOperadora, type Operadora } from "../../lib/operadoras";
+
+export async function getStaticPaths() {
+  const [ops, meta] = await Promise.all([operadorasForBuild(DADOS_URL), metaForBuild(META_URL)]);
+  return ops.map((op) => ({
+    params: { pagina: paginaOperadora(op).split("/")[2]! },
+    props: { op, dia: meta.date },
+  }));
+}
+
+interface Props {
+  op: Operadora;
+  dia: string;
+}
+const { op, dia } = Astro.props;
+const titulo = nomeExibido(op);
+const cancelamento = fraseCancelamento(op);
+const portabilidade = frasePortabilidade(op);
+const ressarcimento = fraseRessarcimento(op.ressarcimento);
+const local = [op.municipio, op.uf].filter(Boolean).join("/");
+const descricao = [
+  `${op.nome}, registro ANS ${op.registro}.`,
+  cancelamento ?? (op.reclamacoes[0] ? fraseReclamacoes(op.reclamacoes[0]).titulo : ""),
+  "Dados públicos da ANS, com a fonte de cada número.",
+]
+  .filter(Boolean)
+  .join(" ");
+const NOMES_FONTE: Record<string, string> = {
+  cadastro: "Cadastro de operadoras ativas",
+  cancelamentos: "Operadoras canceladas",
+  reclamacoes: "Índice de reclamações",
+  idss: "Índice de desempenho (IDSS)",
+  ressarcimento: "Ressarcimento ao SUS",
+};
+const breadcrumb = {
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Plano de saúde", item: new URL("/plano/", Astro.site).href },
+    { "@type": "ListItem", position: 2, name: titulo, item: new URL(Astro.url.pathname, Astro.site).href },
+  ],
+};
+---
+
+<Base title={titulo} description={descricao} structured={[breadcrumb]}>
+  <p class="trilha">
+    <a href="/plano/">Plano de saúde</a> › {titulo}
+  </p>
+  <h1>{titulo}</h1>
+  <p class="ficha">
+    {titulo !== op.nome && <span>{op.nome}</span>}
+    <span>Registro ANS {op.registro}</span>
+    <span>{op.modalidade}</span>
+    {local && <span>{local}</span>}
+    {op.beneficiarios !== null && <span>{fmtBeneficiarios(op.beneficiarios)}</span>}
+  </p>
+
+  {cancelamento && <p class="faixa cancelada">{cancelamento}</p>}
+  {portabilidade && (
+    <div class="faixa portabilidade">
+      <p>{portabilidade}</p>
+      <p>
+        <a href="/plano/portabilidade/">Como pedir a troca</a>
+        {op.portabilidade_vigente[0]?.link && (
+          <>
+            {" "}
+            · <a href={op.portabilidade_vigente[0].link}>texto da Resolução</a>
+          </>
+        )}
+      </p>
+    </div>
+  )}
+
+  <section>
+    <h2>Reclamações na ANS</h2>
+    {op.reclamacoes.length === 0 && <p class="muted">Sem dado de reclamações para esta operadora.</p>}
+    {op.reclamacoes.map((r) => (
+      <>
+        {op.reclamacoes.length > 1 && <h3>{cobertura(r.cobertura)}</h3>}
+        <Frase frase={fraseReclamacoes(r)}>
+          {fraseAnoAnterior(r.serie) && <p class="detalhe">{fraseAnoAnterior(r.serie)}</p>}
+          <Serie serie={r.serie} mediana={r.mediana_mesmo_porte} />
+        </Frase>
+      </>
+    ))}
+  </section>
+
+  <section>
+    <h2>Nota de desempenho da ANS (IDSS)</h2>
+    <Frase frase={fraseIdss(op.idss, op.modalidade)} />
+  </section>
+
+  {ressarcimento && (
+    <section>
+      <h2>Ressarcimento ao SUS</h2>
+      <Frase frase={ressarcimento} />
+    </section>
+  )}
+
+  {op.eventos.length > 0 && (
+    <section>
+      <h2>Histórico</h2>
+      <ul class="eventos">
+        {op.eventos.map((e) => (
+          <li>
+            <span class="quando">{fmtDate(e.data)}</span> {e.titulo}
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
+
+  <section class="fontes">
+    <h2>Fontes</h2>
+    <p>
+      Dados abertos da ANS, coletados em {fmtDate(dia)}. Registro completo desta operadora:{" "}
+      <a href={`${DADOS_URL}/operadora/${op.registro}.json`}>JSON</a>.
+    </p>
+    <ul>
+      {Object.entries(op.fontes)
+        .filter(([, url]) => url)
+        .map(([k, url]) => (
+          <li>
+            <a href={url}>{NOMES_FONTE[k] ?? k}</a>
+          </li>
+        ))}
+    </ul>
+    {op.fora.length > 0 && <p class="muted">Fora desta página porque a ANS parou de atualizar: {op.fora.join(" ")}</p>}
+  </section>
+</Base>
+
+<style>
+  .trilha {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin: 1.25rem 0 0;
+  }
+  .trilha a {
+    color: var(--muted);
+  }
+  h1 {
+    margin-top: 0.5rem;
+  }
+  .ficha {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+  .faixa {
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 1.25rem 0;
+    font-weight: 600;
+  }
+  .faixa p {
+    margin: 0.25rem 0;
+  }
+  .cancelada {
+    background: var(--alert-soft);
+    border: 1px solid var(--alert);
+  }
+  .portabilidade {
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+  }
+  .eventos {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .eventos li {
+    padding: 6px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .quando {
+    color: var(--muted);
+    margin-right: 6px;
+  }
+  .fontes {
+    font-size: 0.95rem;
+  }
+</style>
