@@ -1,0 +1,76 @@
+---
+// Home: the subjects. Only "Plano de saúde" is live; "Remédios" points to what already exists elsewhere.
+import Base from "../layouts/Base.astro";
+import { TITLE } from "../lib/brand";
+import { ANVISA_HUB_URL, CMED_URL, CONTEM_URL } from "../lib/config";
+---
+
+<Base title={TITLE}>
+  <h1>{TITLE}</h1>
+  <p class="lead">
+    Respostas diretas a partir dos dados públicos do governo, com a fonte de cada número. Sem cadastro, sem anúncio.
+  </p>
+
+  <section class="assuntos" aria-label="Assuntos">
+    <a class="assunto" href="/plano/">
+      <h2>Plano de saúde</h2>
+      <p>
+        A sua operadora recebe muitas reclamações? Tem nota boa na ANS? Foi cancelada ou liberou a troca de plano sem
+        carência?
+      </p>
+      <span class="ir">Procurar a operadora →</span>
+    </a>
+    <div class="assunto em-breve">
+      <h2>
+        Remédios <small>em breve</small>
+      </h2>
+      <p>
+        Quanto a farmácia pode cobrar e se o remédio está regularizado. Enquanto isso: <a href={CONTEM_URL}>contém</a>
+        (produtos regularizados) e <a href={CMED_URL}>preços máximos da CMED</a>.
+      </p>
+      <p class="muted">
+        Dados da ANVISA: <a href={ANVISA_HUB_URL}>anvisa.abelhaninja.de</a>
+      </p>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .assuntos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 16px;
+    margin: 1rem 0 2rem;
+  }
+  .assunto {
+    display: block;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px 22px;
+    box-shadow: var(--shadow);
+    color: var(--fg);
+  }
+  a.assunto:hover {
+    border-color: var(--accent);
+  }
+  .assunto h2 {
+    margin: 0 0 0.5rem;
+  }
+  .assunto h2 small {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--muted);
+    margin-left: 6px;
+  }
+  .ir {
+    display: inline-block;
+    margin-top: 0.5rem;
+    font-weight: 600;
+    color: var(--accent-ink);
+  }
+  .em-breve {
+    box-shadow: none;
+    background: transparent;
+  }
+</style>
