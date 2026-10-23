@@ -2,6 +2,10 @@
 // required: a fetch or validation failure fails the build, so the previous deploy stays live and no page is
 // published half-filled. Validation covers what the pages read; a key change upstream fails loudly here.
 
+import { getJson, once, pool } from "./fetch";
+import { slug } from "./slug";
+import { list, num, numOrNull, obj, str, strOrNull } from "./validar";
+
 export type Situacao = "ativa" | "cancelada";
 
 export interface ItemIndice {
@@ -77,40 +81,8 @@ export interface Meta {
 
 // ---------------------------------------------------------------- validation
 
-type Obj = Record<string, unknown>;
 const REGISTRO = /^\d{6}$/;
 const DIA = /^\d{4}-\d{2}-\d{2}$/;
-
-function obj(v: unknown, where: string): Obj {
-  if (typeof v !== "object" || v === null || Array.isArray(v)) throw new Error(`${where}: not an object`);
-  return v as Obj;
-}
-function list(v: unknown, where: string): unknown[] {
-  if (!Array.isArray(v)) throw new Error(`${where}: not a list`);
-  return v;
-}
-function str(o: Obj, k: string, where: string): string {
-  const v = o[k];
-  if (typeof v !== "string" || v === "") throw new Error(`${where}: no ${k}`);
-  return v;
-}
-function strOrNull(o: Obj, k: string, where: string): string | null {
-  const v = o[k];
-  if (v === null) return null;
-  if (typeof v !== "string") throw new Error(`${where}: bad ${k}`);
-  return v;
-}
-function num(o: Obj, k: string, where: string): number {
-  const v = o[k];
-  if (typeof v !== "number" || !Number.isFinite(v)) throw new Error(`${where}: no ${k}`);
-  return v;
-}
-function numOrNull(o: Obj, k: string, where: string): number | null {
-  const v = o[k];
-  if (v === null) return null;
-  if (typeof v !== "number" || !Number.isFinite(v)) throw new Error(`${where}: bad ${k}`);
-  return v;
-}
 
 function parseItem(raw: unknown, where: string): ItemIndice {
   const o = obj(raw, where);
@@ -233,51 +205,7 @@ export function parseMeta(raw: unknown): Meta {
 
 // ---------------------------------------------------------------- fetching
 
-const RETRIES = 2;
 const CONCURRENCY = 12;
-
-/** GET JSON past the 600 s GitHub Pages cache; transport errors and 5xx are retried, 4xx fail at once. */
-export async function getJson(url: string): Promise<unknown> {
-  const u = new URL(url);
-  u.searchParams.set("t", String(Date.now()));
-  let last: unknown;
-  for (let attempt = 0; attempt <= RETRIES; attempt++) {
-    try {
-      const res = await fetch(u, { cache: "no-store" });
-      if (res.ok) return (await res.json()) as unknown;
-      last = new Error(`HTTP ${res.status} at ${url}`);
-      if (res.status < 500) break;
-    } catch (e) {
-      last = e;
-    }
-  }
-  throw last instanceof Error ? last : new Error(`fetch failed at ${url}`);
-}
-
-/** Run `fn` over `items` with at most `limit` in flight; results keep the input order. */
-export async function pool<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
-  const out: R[] = new Array<R>(items.length);
-  let next = 0;
-  const worker = async (): Promise<void> => {
-    while (next < items.length) {
-      const i = next++;
-      out[i] = await fn(items[i]!);
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
-  return out;
-}
-
-// one fetch per URL per build, shared by every page and endpoint
-const cache = new Map<string, Promise<unknown>>();
-function once<T>(key: string, load: () => Promise<T>): Promise<T> {
-  let p = cache.get(key) as Promise<T> | undefined;
-  if (!p) {
-    p = load();
-    cache.set(key, p);
-  }
-  return p;
-}
 
 export function indiceForBuild(dadosUrl: string): Promise<ItemIndice[]> {
   return once(`indice ${dadosUrl}`, async () => parseIndice(await getJson(`${dadosUrl}/operadoras.json`)));
@@ -297,17 +225,6 @@ export function metaForBuild(metaUrl: string): Promise<Meta> {
 }
 
 // ---------------------------------------------------------------- URLs
-
-/** "BRADESCO SAÚDE S.A." → "bradesco-saude-s-a" (at most 60 characters, no dash at the ends). */
-export function slug(nome: string): string {
-  return nome
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .slice(0, 60)
-    .replace(/^-+|-+$/g, "");
-}
 
 /** The trade name, unless it is just the legal name without accents ("BRADESCO SAUDE S.A."). */
 export function nomeExibido(o: { nome: string; fantasia: string | null }): string {

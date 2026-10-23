@@ -1,16 +1,15 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { getJson, pool } from "../src/lib/fetch";
 import {
-  getJson,
   indiceForBuild,
   operadorasForBuild,
   paginaOperadora,
   parseIndice,
   parseMeta,
   parseOperadora,
-  pool,
-  slug,
 } from "../src/lib/operadoras";
+import { slug } from "../src/lib/slug";
 
 const fixture = (path: string): unknown =>
   JSON.parse(readFileSync(new URL(`./fixtures/${path}`, import.meta.url), "utf-8")) as unknown;
