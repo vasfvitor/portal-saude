@@ -1,0 +1,37 @@
+// The site in plain text for assistants and agents: what it answers, the pages, where the data comes from.
+import type { APIRoute } from "astro";
+import { DESCRIPTION, NAME, TITLE } from "../lib/brand";
+import { DADOS_URL, META_URL, REPOS } from "../lib/config";
+import { fmtDate, fmtInt } from "../lib/format";
+import { indiceForBuild, metaForBuild } from "../lib/operadoras";
+
+export const GET: APIRoute = async ({ site }) => {
+  const [indice, meta] = await Promise.all([indiceForBuild(DADOS_URL), metaForBuild(META_URL)]);
+  const url = (p: string) => new URL(p, site).href;
+  const ativas = indice.filter((o) => o.situacao === "ativa").length;
+  const body = `# ${NAME}
+
+> ${TITLE}. ${DESCRIPTION}
+
+Dados de ${fmtDate(meta.date)}: ${fmtInt(ativas)} operadoras de planos de saúde ativas na ANS e ${fmtInt(indice.length - ativas)} ${indice.length - ativas === 1 ? "cancelada" : "canceladas"} nos últimos 5 anos.
+
+## Páginas
+
+- [Plano de saúde](${url("/plano/")}): busca da operadora, portabilidades em vigor, cancelamentos recentes.
+- [Página de cada operadora](${url("/plano/todas/")}): /plano/<registro ANS>-<nome>/, com reclamações comparadas com operadoras do mesmo porte, nota de desempenho da ANS (IDSS), ressarcimento ao SUS e histórico.
+- [Portabilidade especial](${url("/plano/portabilidade/")}): o que é, como pedir, quais operadoras.
+- [Sobre](${url("/sobre/")}): método, fontes e o que fica de fora.
+
+## Regras do conteúdo
+
+- Só fatos comparados, com a base e a fonte; o site não dá nota nem rótulo de risco.
+- "Plano típico" é a mediana das operadoras do mesmo porte (reclamações) ou da mesma modalidade (IDSS).
+- Sem vínculo com a ANS.
+
+## Dados
+
+- JSON por operadora: ${DADOS_URL}/operadora/<registro>.json (contrato em ${DADOS_URL}/schema.md)
+- Código: ${REPOS.portal} e ${REPOS.ansFeeds}
+`;
+  return new Response(body, { headers: { "Content-Type": "text/plain; charset=utf-8" } });
+};

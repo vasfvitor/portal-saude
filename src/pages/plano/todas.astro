@@ -23,8 +23,9 @@ const ativas = indice.filter((o) => o.situacao === "ativa").length;
 >
   <h1>Todas as operadoras</h1>
   <p class="lead">
-    {fmtInt(ativas)} operadoras ativas e {fmtInt(indice.length - ativas)} canceladas nos últimos 5 anos, pelo estado da
-    sede. A sede nem sempre é onde o plano atende.
+    {fmtInt(ativas)} operadoras ativas e {fmtInt(indice.length - ativas)}{" "}
+    {indice.length - ativas === 1 ? "cancelada" : "canceladas"} nos últimos 5 anos, pelo estado da sede. A sede nem
+    sempre é onde o plano atende.
   </p>
   <nav class="ufs" aria-label="Estados">
     {ufs.map((uf) => (

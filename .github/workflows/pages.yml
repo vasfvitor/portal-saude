@@ -1,0 +1,106 @@
+name: Publish site
+
+# The pages are built from the operator data that ans-feeds publishes every day (its workflow runs at 10:30
+# UTC). The cron passes after that and twice more, and only publishes when ans-feeds' meta.json date moved
+# against what the site was built from (/build.json). Push and manual dispatch always publish.
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "15 11 * * *" # after the ans-feeds snapshot and build
+    - cron: "15 15 * * *" # a late ans-feeds run
+    - cron: "15 21 * * *" # a manual ans-feeds run during the day
+  workflow_dispatch:
+
+# Least privilege: nothing by default; each job asks for the scope it uses.
+permissions: {}
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {} # reads public URLs only
+    outputs:
+      changed: ${{ steps.compare.outputs.changed }}
+    steps:
+      - name: Compare the data date with what the site was built from
+        id: compare
+        env:
+          EVENT: ${{ github.event_name }}
+          # the same as META_URL in src/lib/config.ts and `site` in astro.config.mjs
+          META: https://ans.feeds.abelhaninja.de/meta.json
+          PUBLISHED: https://saude.abelhaninja.de/build.json
+        run: |
+          if [ "$EVENT" != schedule ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # ?t= gets past the 600 s Pages cache; any failed read counts as a change (publish)
+          dados=$(curl -fsS "$META?t=$(date +%s)" | jq -er .date) || dados=""
+          site=$(curl -fsS "$PUBLISHED?t=$(date +%s)" | jq -er .dados_date) || site=""
+          echo "dados: ${dados:-?} · site: ${site:-?}"
+          if [ -n "$dados" ] && [ "$dados" = "$site" ]; then
+            echo "unchanged: the site was built from the data of $dados"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  publish:
+    needs: verify
+    if: needs.verify.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read # reads the repository
+      pages: write # publishes to GitHub Pages
+      id-token: write # OIDC required by deploy-pages
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # this job pushes nothing
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      # after pnpm: `cache: pnpm` needs pnpm on the PATH
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      # format and lint first: they fail fast and need no network (lint runs astro sync before)
+      - run: pnpm format:check
+
+      - run: pnpm lint
+
+      - run: pnpm test
+
+      # check and build read the live data (an empty PUBLIC_DADOS_URL falls back to config.ts)
+      - run: pnpm check
+
+      - name: Build
+        run: pnpm build
+
+      # only the search script, no e-mail address, no broken internal link, one page per operator
+      - run: pnpm check:dist
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: dist
+
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

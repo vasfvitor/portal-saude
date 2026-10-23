@@ -1,0 +1,23 @@
+---
+// GitHub Pages serves dist/404.html for any path that does not exist.
+import Base from "../layouts/Base.astro";
+---
+
+<Base title="Página não encontrada" noindex>
+  <h1>Não achei</h1>
+  <p class="lead">Este endereço não existe aqui. O que tem:</p>
+  <ul>
+    <li>
+      <a href="/plano/">Plano de saúde</a>: procure a sua operadora.
+    </li>
+    <li>
+      <a href="/plano/todas/">Todas as operadoras</a>, por estado.
+    </li>
+    <li>
+      <a href="/plano/portabilidade/">Portabilidade especial</a>: quem pode trocar de plano sem carência.
+    </li>
+    <li>
+      <a href="/sobre/">Sobre</a>: de onde vêm os dados.
+    </li>
+  </ul>
+</Base>
