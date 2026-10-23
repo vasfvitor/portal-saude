@@ -158,7 +158,7 @@ export function fraseRessarcimento(r: Ressarcimento | null): Frase | null {
   return {
     titulo: `Pagou ${fmtPct(pago)} do que o SUS cobrou por atender clientes desta operadora.`,
     detalhe: `Quando um cliente de plano é atendido no SUS, a operadora deve ressarcir o SUS. Valor cobrado, acumulado até ${mes}: ${fmtReais(r.valor_cobrado)}.`,
-    tom: pago >= 99.5 ? "favoravel" : pago >= 90 ? "neutro" : "desfavoravel",
+    tom: pago >= 100 ? "favoravel" : pago >= 90 ? "neutro" : "desfavoravel",
   };
 }
 
