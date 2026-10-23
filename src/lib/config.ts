@@ -4,6 +4,10 @@ export const DADOS_URL: string = (import.meta.env.PUBLIC_DADOS_URL || "https://a
   /\/$/,
   "",
 );
+// CMED prices per product, from anvisa-feeds; local build: PUBLIC_CMED_DADOS_URL=http://localhost:8000/cmed/dados
+export const CMED_DADOS_URL: string = (
+  import.meta.env.PUBLIC_CMED_DADOS_URL || "https://anvisa.feeds.abelhaninja.de/cmed/dados"
+).replace(/\/$/, "");
 // ans-feeds publishes meta.json next to dados/; its `date` is the day of the data
 export const META_URL = new URL("../meta.json", `${DADOS_URL}/`).href;
 
