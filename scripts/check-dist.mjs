@@ -1,11 +1,11 @@
-// Checks on the built site (run after `pnpm build`): the only client JavaScript is the search on /plano/,
+// Checks on the built site (run after `pnpm build`): the only client JavaScript is the search on /plano/ and /remedios/,
 // no e-mail address is published, every internal link resolves, and every operator in the search index has
 // its page. Exits 1 with the list of problems.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const DIST = new URL("../dist/", import.meta.url).pathname;
-const SEARCH_PAGE = "plano/index.html";
+const SEARCH_PAGES = new Set(["plano/index.html", "remedios/index.html"]);
 const problems = [];
 
 function* htmlFiles(dir) {
@@ -29,7 +29,7 @@ for (const file of htmlFiles(DIST)) {
   const html = readFileSync(file, "utf-8");
   for (const [, attrs] of html.matchAll(/<script\b([^>]*)>/g)) {
     if (/type="application\/ld\+json"/.test(attrs)) continue;
-    if (page === SEARCH_PAGE && /type="module"/.test(attrs)) continue;
+    if (SEARCH_PAGES.has(page) && /type="module"/.test(attrs)) continue;
     problems.push(`${page}: unexpected <script${attrs}>`);
   }
   const email = /[\w.+-]+@[\w-]+\.[a-z]{2,}/i.exec(

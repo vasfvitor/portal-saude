@@ -28,7 +28,12 @@ const ativas = ops.filter((o) => o.situacao === "ativa").length;
   <p class="lead">
     Procure a sua operadora entre as {fmtInt(ativas)} com registro ativo na ANS. Dados de {fmtDate(meta.date)}.
   </p>
-  <Busca />
+  <Busca
+    indice="/plano/busca.json"
+    rotulo="Nome da operadora, cidade ou registro na ANS"
+    nomes={["operadora", "operadoras"]}
+    todas={{ href: "/plano/todas/", texto: "Ver todas as operadoras, por estado" }}
+  />
 
   <section>
     <h2>Pode trocar de plano sem carência</h2>

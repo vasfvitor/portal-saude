@@ -1,29 +1,36 @@
 ---
-// Operator search: the site's only client JavaScript. Without it the link to the A-Z list still works.
-// The index (/plano/busca.json) loads on first focus; matching ignores accents and case, every word must
-// appear in the name, legal name, city, state or registration; names that start with the query come first.
+// Search box: the site's only client JavaScript. Without it the link to the full list still works.
+// The index (JSON list of {n name, d detail line, t extra search text, h href}) loads on first focus;
+// matching ignores accents and case, every word must appear in the name or the extra text; names that start
+// with the query come first.
+interface Props {
+  /** path of the JSON index, e.g. /plano/busca.json */
+  indice: string;
+  rotulo: string;
+  /** singular and plural noun for the count line: ["operadora", "operadoras"] */
+  nomes: [string, string];
+  todas: { href: string; texto: string };
+}
+const { indice, rotulo, nomes, todas } = Astro.props;
 ---
 
-<div class="busca">
+<div class="busca" data-indice={indice} data-um={nomes[0]} data-varios={nomes[1]}>
   <label for="q" class="sr-only">
-    Nome da operadora, cidade ou registro na ANS
+    {rotulo}
   </label>
-  <input id="q" type="search" autocomplete="off" placeholder="Nome da operadora, cidade ou registro na ANS" />
+  <input id="q" type="search" autocomplete="off" placeholder={rotulo} />
   <p class="estado" aria-live="polite"></p>
   <ul class="resultados"></ul>
   <p class="todas">
-    <a href="/plano/todas/">Ver todas as operadoras, por estado</a>
+    <a href={todas.href}>{todas.texto}</a>
   </p>
 </div>
 
 <script>
   interface Item {
-    r: string;
     n: string;
-    o?: string;
-    m?: string;
-    u?: string;
-    c?: 1;
+    d?: string;
+    t?: string;
     h: string;
   }
   const MAX = 20;
@@ -33,21 +40,19 @@
   const input = root?.querySelector<HTMLInputElement>("input");
   const estado = root?.querySelector<HTMLParagraphElement>(".estado");
   const lista = root?.querySelector<HTMLUListElement>(".resultados");
+  const um = root?.dataset.um ?? "resultado";
+  const varios = root?.dataset.varios ?? "resultados";
   let itens: { item: Item; nome: string; texto: string }[] | null = null;
   let carregando: Promise<void> | null = null;
 
   const carregar = () =>
-    (carregando ??= fetch("/plano/busca.json")
+    (carregando ??= fetch(root?.dataset.indice ?? "")
       .then((r) => r.json() as Promise<Item[]>)
       .then((dados) => {
-        itens = dados.map((item) => ({
-          item,
-          nome: norm(item.n),
-          texto: norm([item.n, item.o, item.m, item.u, item.r].filter(Boolean).join(" ")),
-        }));
+        itens = dados.map((item) => ({ item, nome: norm(item.n), texto: norm(`${item.n} ${item.t ?? ""}`) }));
       })
       .catch(() => {
-        if (estado) estado.textContent = "Não foi possível carregar a busca. Use a lista por estado.";
+        if (estado) estado.textContent = "Não foi possível carregar a busca. Use a lista completa.";
       }));
 
   function mostrar() {
@@ -64,25 +69,22 @@
       .sort((a, b) => Number(b.nome.startsWith(q)) - Number(a.nome.startsWith(q)) || a.nome.localeCompare(b.nome));
     estado.textContent =
       achados.length === 0
-        ? "Nenhuma operadora encontrada."
+        ? "Nada encontrado."
         : achados.length > MAX
-          ? `${achados.length} operadoras; mostrando ${MAX}. Digite mais para filtrar.`
-          : `${achados.length} ${achados.length === 1 ? "operadora" : "operadoras"}.`;
+          ? `${achados.length} ${varios}; mostrando ${MAX}. Digite mais para filtrar.`
+          : `${achados.length} ${achados.length === 1 ? um : varios}.`;
     for (const { item } of achados.slice(0, MAX)) {
       const li = document.createElement("li");
       const a = document.createElement("a");
       a.href = item.h;
       a.textContent = item.n;
-      const info = document.createElement("span");
-      info.className = "info";
-      info.textContent = [
-        item.m && item.u ? `${item.m}/${item.u}` : item.u,
-        `registro ${item.r}`,
-        item.c && "cancelada",
-      ]
-        .filter(Boolean)
-        .join(" · ");
-      li.append(a, " ", info);
+      li.append(a);
+      if (item.d) {
+        const info = document.createElement("span");
+        info.className = "info";
+        info.textContent = ` ${item.d}`;
+        li.append(info);
+      }
       lista.append(li);
     }
   }

@@ -1,6 +1,4 @@
-// The search index the client script loads on first focus: short keys keep it small.
-// r registro, n name shown, o other name (legal name when the shown one is the trade name), m city, u state,
-// c 1 when cancelled, h page path.
+// The operator search index for Busca.astro: n name shown, d detail line, t extra search text, h page path.
 import type { APIRoute } from "astro";
 import { DADOS_URL } from "../../lib/config";
 import { indiceForBuild, nomeExibido, paginaOperadora } from "../../lib/operadoras";
@@ -9,13 +7,11 @@ export const GET: APIRoute = async () => {
   const indice = await indiceForBuild(DADOS_URL);
   const itens = indice.map((o) => {
     const n = nomeExibido(o);
+    const local = o.municipio && o.uf ? `${o.municipio}/${o.uf}` : o.uf;
     return {
-      r: o.registro,
       n,
-      ...(n !== o.nome ? { o: o.nome } : {}),
-      ...(o.municipio ? { m: o.municipio } : {}),
-      ...(o.uf ? { u: o.uf } : {}),
-      ...(o.situacao === "cancelada" ? { c: 1 } : {}),
+      d: [local, `registro ${o.registro}`, o.situacao === "cancelada" && "cancelada"].filter(Boolean).join(" · "),
+      t: [n !== o.nome && o.nome, o.municipio, o.uf, o.registro].filter(Boolean).join(" "),
       h: paginaOperadora(o),
     };
   });
