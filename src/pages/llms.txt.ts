@@ -20,6 +20,7 @@ Dados de ${fmtDate(meta.date)}: ${fmtInt(ativas)} operadoras de planos de saúde
 - [Plano de saúde](${url("/plano/")}): busca da operadora, portabilidades em vigor, cancelamentos recentes.
 - [Página de cada operadora](${url("/plano/todas/")}): /plano/<registro ANS>-<nome>/, com reclamações comparadas com operadoras do mesmo porte, nota de desempenho da ANS (IDSS), ressarcimento ao SUS e histórico.
 - [Portabilidade especial](${url("/plano/portabilidade/")}): o que é, como pedir, quais operadoras.
+- [Remédios](${url("/remedios/")}): preço máximo que a farmácia pode cobrar por remédio, por apresentação e por ICMS do estado (lista da CMED); página por produto e por substância.
 - [Sobre](${url("/sobre/")}): método, fontes e o que fica de fora.
 
 ## Regras do conteúdo

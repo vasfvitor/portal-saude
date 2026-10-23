@@ -2,7 +2,9 @@
 
 Plain answers from Brazilian open data, for the general public. The first section answers "meu plano de
 saúde": one page per health plan operator, with complaints compared with operators of the same size, the
-ANS quality score (IDSS), SUS reimbursement and events such as cancellation and special portability.
+ANS quality score (IDSS), SUS reimbursement and events such as cancellation and special portability. The
+second section answers "quanto a farmácia pode cobrar": the CMED maximum consumer price of each medicine sold
+in pharmacies, per presentation and per ICMS rate, with the states that use each rate.
 
 Provisional address: <https://saude.abelhaninja.de>. The name and domain are not final.
 
@@ -17,11 +19,13 @@ a risk label of its own. The wording rules are in `src/lib/frases.ts` and its te
 Nothing is typed by hand. At build time the site reads the operator data that
 [`ans-feeds`](https://github.com/vasfvitor/ans-feeds) publishes from the ANS open data:
 
-| Source                                                      | Used for                            |
-| ----------------------------------------------------------- | ----------------------------------- |
-| `https://ans.feeds.abelhaninja.de/dados/operadoras.json`    | search index, A-Z list              |
-| `https://ans.feeds.abelhaninja.de/dados/operadora/<r>.json` | one page per operator (about 1,340) |
-| `https://ans.feeds.abelhaninja.de/meta.json`                | the date of the data                |
+| Source                                                            | Used for                            |
+| ----------------------------------------------------------------- | ----------------------------------- |
+| `https://ans.feeds.abelhaninja.de/dados/operadoras.json`          | search index, A-Z list              |
+| `https://ans.feeds.abelhaninja.de/dados/operadora/<r>.json`       | one page per operator (about 1,340) |
+| `https://ans.feeds.abelhaninja.de/meta.json`                      | the date of the data                |
+| `https://anvisa.feeds.abelhaninja.de/cmed/dados/produtos.json`    | medicine index (about 7,600)        |
+| `https://anvisa.feeds.abelhaninja.de/cmed/dados/produto/<r>.json` | one page per medicine               |
 
 The contract is `dados/schema.md` on the same site. Every source is required: a failed fetch or a record that
 does not validate fails the build, and the previous deploy stays live.

@@ -1,8 +1,9 @@
 # portal-saude
 
 A static Astro site for the general public (provisional address `https://saude.abelhaninja.de`; the final
-name and domain come later): plain answers built from Brazilian open data. v1 answers "meu plano de saúde"
-with one page per health plan operator, read at build time from the `ans-feeds` data. `README.md` explains
+name and domain come later): plain answers built from Brazilian open data. Two sections: "meu plano de
+saúde" (one page per health plan operator, from the `ans-feeds` data) and "remédios" (the CMED maximum
+consumer price of each product, from the `anvisa-feeds` `cmed/dados/`). `README.md` explains
 the sources and the rebuild schedule; a git-ignored `NOTES.local.md` holds pending items when present.
 
 ## Facts to keep straight
@@ -10,12 +11,17 @@ the sources and the rebuild schedule; a git-ignored `NOTES.local.md` holds pendi
 - Data comes from `https://ans.feeds.abelhaninja.de/dados/` (repo `vasfvitor/ans-feeds`): `operadoras.json`
   (index) and `operadora/<registro>.json`, with the contract in `dados/schema.md`. A key change there needs a
   follow-up in `src/lib/operadoras.ts` and `test/fixtures/`.
+- CMED prices come from `https://anvisa.feeds.abelhaninja.de/cmed/dados/` (contract in its `schema.md`); a key
+  change there needs a follow-up in `src/lib/remedios.ts` and `test/fixtures/cmed/`. Every price is shown with
+  its ICMS rate; the page never states one price for a state on its own.
+- `src/lib/icms.ts` is the only hand-curated table: the default ICMS rate of each state for medicines, each
+  row with a primary source and the day it was checked. Any change needs a source; the user reviews it.
 - Facts compared with peers, with their base and source; never a score, grade or risk label of our own. The
   wording rules live in `src/lib/frases.ts` and are tested.
 - Left out on purpose, and explained on `/sobre/`: the prudential class S1-S4 (a size segment for capital
   rules, not a financial health grade), contact data from the registry, series the ANS stopped updating.
-- The only client JavaScript is the operator search (`src/components/Busca.astro`); every page works
-  without it (`/plano/todas/` lists all operators). JSON-LD `<script>` tags are fine.
+- The only client JavaScript is the search box (`src/components/Busca.astro`) on `/plano/` and `/remedios/`;
+  every page works without it (`/plano/todas/`, `/remedios/substancias/`). JSON-LD `<script>` tags are fine.
 - Numbers are never hand-typed. If a value is missing in the data, the page says so.
 - Copy is short and plain, for people who do not know the jargon: "reclamações", not IGR; every situation
   ends in what the person can do.

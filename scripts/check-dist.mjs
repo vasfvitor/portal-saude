@@ -1,6 +1,6 @@
 // Checks on the built site (run after `pnpm build`): the only client JavaScript is the search on /plano/ and /remedios/,
-// no e-mail address is published, every internal link resolves, and every operator in the search index has
-// its page. Exits 1 with the list of problems.
+// no e-mail address is published, every internal link resolves, and every operator and medicine in the search
+// indexes has its page. Exits 1 with the list of problems.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
@@ -41,9 +41,16 @@ for (const file of htmlFiles(DIST)) {
   }
 }
 
-const index = JSON.parse(readFileSync(join(DIST, "plano/busca.json"), "utf-8"));
-for (const { h } of index) {
-  if (!resolves(h)) problems.push(`operator page missing: ${h}`);
+const counts = {};
+for (const [indice, kind] of [
+  ["plano/busca.json", "operator"],
+  ["remedios/busca.json", "medicine"],
+]) {
+  const items = JSON.parse(readFileSync(join(DIST, indice), "utf-8"));
+  counts[kind] = items.length;
+  for (const { h } of items) {
+    if (!resolves(h)) problems.push(`${kind} page missing: ${h}`);
+  }
 }
 
 if (problems.length) {
@@ -51,4 +58,4 @@ if (problems.length) {
   console.error(`${problems.length} problem(s) in ${pages} pages`);
   process.exit(1);
 }
-console.log(`dist ok: ${pages} pages, ${index.length} operators`);
+console.log(`dist ok: ${pages} pages, ${counts.operator} operators, ${counts.medicine} medicines`);
