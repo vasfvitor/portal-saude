@@ -1,0 +1,94 @@
+---
+// The "plano de saúde" section: search, what changed recently, and what the comparisons mean.
+import Busca from "../../components/Busca.astro";
+import Base from "../../layouts/Base.astro";
+import { DADOS_URL, META_URL } from "../../lib/config";
+import { fmtDate, fmtInt } from "../../lib/format";
+import { metaForBuild, nomeExibido, operadorasForBuild, paginaOperadora } from "../../lib/operadoras";
+
+const RECENTES_DIAS = 90;
+const [ops, meta] = await Promise.all([operadorasForBuild(DADOS_URL), metaForBuild(META_URL)]);
+const limite = new Date(`${meta.date}T00:00:00Z`);
+limite.setUTCDate(limite.getUTCDate() - RECENTES_DIAS);
+const desde = limite.toISOString().slice(0, 10);
+const portabilidade = ops
+  .filter((o) => o.portabilidade_vigente.length > 0)
+  .sort((a, b) => b.portabilidade_vigente[0]!.data.localeCompare(a.portabilidade_vigente[0]!.data));
+const canceladas = ops
+  .filter((o) => o.cancelamento && o.cancelamento.data >= desde)
+  .sort((a, b) => b.cancelamento!.data.localeCompare(a.cancelamento!.data));
+const ativas = ops.filter((o) => o.situacao === "ativa").length;
+---
+
+<Base
+  title="Plano de saúde"
+  description="Procure a sua operadora de plano de saúde: reclamações comparadas com planos do mesmo porte, nota de desempenho da ANS, cancelamentos e portabilidade de carências."
+>
+  <h1>Plano de saúde</h1>
+  <p class="lead">
+    Procure a sua operadora entre as {fmtInt(ativas)} com registro ativo na ANS. Dados de {fmtDate(meta.date)}.
+  </p>
+  <Busca />
+
+  <section>
+    <h2>Pode trocar de plano sem carência</h2>
+    {portabilidade.length === 0 && <p class="muted">Nenhuma operadora em portabilidade especial nesta coleta.</p>}
+    <ul class="lista">
+      {portabilidade.slice(0, 10).map((o) => (
+        <li>
+          <a href={paginaOperadora(o)}>{nomeExibido(o)}</a>
+          <span class="muted"> · desde {fmtDate(o.portabilidade_vigente[0]!.data)}</span>
+        </li>
+      ))}
+    </ul>
+    <p>
+      <a href="/plano/portabilidade/">O que é portabilidade especial e como pedir</a>
+    </p>
+  </section>
+
+  <section>
+    <h2>Canceladas nos últimos {RECENTES_DIAS} dias</h2>
+    {canceladas.length === 0 && <p class="muted">Nenhum cancelamento no período.</p>}
+    <ul class="lista">
+      {canceladas.map((o) => (
+        <li>
+          <a href={paginaOperadora(o)}>{nomeExibido(o)}</a>
+          <span class="muted">
+            {" "}
+            · {fmtDate(o.cancelamento!.data)} · {o.cancelamento!.motivo}
+          </span>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <section>
+    <h2>Como ler as comparações</h2>
+    <ul>
+      <li>
+        <strong>Reclamações</strong>: quantas reclamações a operadora recebe na ANS para cada 100 mil clientes,
+        comparado com o plano típico do mesmo porte (pequeno, médio ou grande).
+      </li>
+      <li>
+        <strong>Nota de desempenho (IDSS)</strong>: nota de 0 a 1 que a ANS dá todo ano, comparada com a das operadoras
+        do mesmo tipo.
+      </li>
+      <li>
+        <strong>Ressarcimento ao SUS</strong>: quanto a operadora pagou do que deve ao SUS por atendimentos dos seus
+        clientes.
+      </li>
+    </ul>
+    <p class="muted">
+      Nenhuma nota é dada pelo site: só fatos, com a base e a fonte. <a href="/sobre/">Saiba mais</a>.
+    </p>
+  </section>
+</Base>
+
+<style>
+  .lista {
+    padding-left: 1.1rem;
+  }
+  .lista li {
+    margin: 5px 0;
+  }
+</style>
