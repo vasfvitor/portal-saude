@@ -32,8 +32,10 @@ interface Props {
   substanciaSlug: string;
 }
 const { p, substanciaSlug } = Astro.props;
-const cols = colunas();
-const ufs = ufsPorAliquota();
+const ufs = ufsPorAliquota(undefined, p.tipo_produto === "Genérico");
+const aConfirmar = [...ufs.values()].flat().some((u) => u.endsWith("*"));
+// only the rates some state uses for this product (generics move SP and MG to 12%)
+const cols = ufs.size > 0 ? colunas().filter((a) => ufs.has(a)) : colunas();
 const tipo = tipoExplicado(p.tipo_produto);
 const tarja = tarjaExplicada(p.tarja);
 const aviso = avisoComercializacao(p.comercializado);
@@ -111,6 +113,7 @@ const breadcrumb = {
         </tbody>
       </table>
     </div>
+    {aConfirmar && <p class="muted">* Alíquota do estado confirmada só por fontes não oficiais.</p>}
     <p class="muted">
       Preços da lista da CMED publicada em {publicado}. {SE_COBRAREM_MAIS}
     </p>

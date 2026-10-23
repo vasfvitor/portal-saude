@@ -46,8 +46,9 @@ const faqLd = {
   ) : (
     <>
       <p class="muted">
-        Alíquota padrão de cada estado, com a fonte. Alguns remédios têm alíquota diferente; a observação de cada estado
-        diz quando sabemos.
+        Alíquota padrão de cada estado para remédios, com a fonte. Alguns remédios têm alíquota diferente; a observação
+        de cada estado diz quando sabemos. "A confirmar": só encontramos fontes não oficiais. Áreas de Livre Comércio
+        têm preço próprio na lista da CMED e não estão nesta tabela.
       </p>
       <div class="rolagem" tabindex="0" role="region" aria-label="ICMS por estado">
         <table>
@@ -67,7 +68,10 @@ const faqLd = {
                 <th scope="row">
                   {e.nome} ({e.uf})
                 </th>
-                <td class="n">{aliquotaRotulo(e.aliquota)}</td>
+                <td class="n">
+                  {aliquotaRotulo(e.aliquota)}
+                  {!e.confirmado && <small class="duvida">a confirmar</small>}
+                </td>
                 <td>{e.observacao ?? ""}</td>
                 <td>
                   <a href={e.fonte}>fonte</a>, conferida em {fmtDate(e.conferido_em)}
@@ -103,5 +107,9 @@ const faqLd = {
   .n {
     text-align: right;
     white-space: nowrap;
+  }
+  .duvida {
+    display: block;
+    color: var(--alert);
   }
 </style>

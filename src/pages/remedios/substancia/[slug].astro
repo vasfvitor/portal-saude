@@ -26,7 +26,7 @@ interface Props {
 }
 const { substancia, lista } = Astro.props;
 const { aliquota, deEstados } = aliquotaReferencia();
-const resumo = `${fmtInt(lista.length)} ${lista.length === 1 ? "produto" : "produtos"} com esta substância, com a faixa do preço máximo de cada um no ICMS de ${aliquotaRotulo(aliquota)}${deEstados ? ", a alíquota padrão mais comum entre os estados" : ""}.`;
+const resumo = `${fmtInt(lista.length)} ${lista.length === 1 ? "produto" : "produtos"} com esta substância, com a faixa do preço máximo de cada um no ICMS de ${aliquotaRotulo(aliquota)}${deEstados ? ", uma das alíquotas padrão mais comuns entre os estados" : ""}.`;
 const ORDEM = ["Novo", "Genérico", "Similar", "Biológico", "Específico", "Fitoterápico"];
 const posicao = (t: string) => (ORDEM.includes(t) ? ORDEM.indexOf(t) : ORDEM.length);
 const tipos = [...new Set(lista.map((p) => p.tipo_produto ?? "Outro"))].sort(
