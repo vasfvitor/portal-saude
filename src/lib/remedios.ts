@@ -118,7 +118,8 @@ export function parseProduto(raw: unknown): Produto {
   };
 }
 
-const CONCURRENCY = 24;
+// ~7,600 files from GitHub Pages: a modest pace keeps it under the rate limit
+const CONCURRENCY = 8;
 
 export function indiceProdutosForBuild(dadosUrl: string): Promise<IndiceProdutos> {
   return once(`produtos ${dadosUrl}`, async () => parseIndiceProdutos(await getJson(`${dadosUrl}/produtos.json`)));

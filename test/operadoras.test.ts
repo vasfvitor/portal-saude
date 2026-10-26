@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getJson, pool } from "../src/lib/fetch";
+import { backoff, getJson, pool } from "../src/lib/fetch";
 import {
   indiceForBuild,
   operadorasForBuild,
@@ -52,7 +52,11 @@ describe("fetching", () => {
       .mockResolvedValueOnce(new Response("", { status: 503 }))
       .mockResolvedValueOnce(Response.json({ ok: 1 }));
     vi.stubGlobal("fetch", fetchMock);
-    await expect(getJson("https://x.test/a.json")).resolves.toEqual({ ok: 1 });
+    vi.useFakeTimers();
+    const p = getJson("https://x.test/a.json");
+    await vi.runAllTimersAsync();
+    await expect(p).resolves.toEqual({ ok: 1 });
+    vi.useRealTimers();
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const url = fetchMock.mock.calls[0]![0] as URL;
     expect(url.searchParams.has("t")).toBe(true);
@@ -66,10 +70,38 @@ describe("fetching", () => {
   });
 
   it("gives up after the retries on transport errors", async () => {
+    vi.useFakeTimers();
     const fetchMock = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
     vi.stubGlobal("fetch", fetchMock);
-    await expect(getJson("https://x.test/a.json")).rejects.toThrow(/fetch failed/);
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    const p = expect(getJson("https://x.test/a.json")).rejects.toThrow(/fetch failed/);
+    await vi.runAllTimersAsync();
+    await p;
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+    vi.useRealTimers();
+  });
+
+  it("waits and retries a 429, honouring Retry-After", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("", { status: 429, headers: { "retry-after": "7" } }))
+      .mockResolvedValueOnce(Response.json({ ok: 1 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const p = getJson("https://x.test/a.json");
+    await vi.advanceTimersByTimeAsync(6_999);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(p).resolves.toEqual({ ok: 1 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
+
+  it("backoff doubles from 1 s, takes Retry-After when valid, and is capped", () => {
+    expect([0, 1, 2, 3, 4].map((a) => backoff(a))).toEqual([1000, 2000, 4000, 8000, 16000]);
+    expect(backoff(0, "3")).toBe(3000);
+    expect(backoff(2, "Wed, 21 Oct 2026 07:28:00 GMT")).toBe(4000);
+    expect(backoff(0, "600")).toBe(60_000);
+    expect(backoff(9)).toBe(60_000);
   });
 
   it("pool keeps the order and the limit", async () => {
