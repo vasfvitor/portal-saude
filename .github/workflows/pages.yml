@@ -48,7 +48,8 @@ jobs:
           # ?t= gets past the 600 s Pages cache; any failed read counts as a change (publish)
           dados=$(curl -fsS "$META?t=$(date +%s)" | jq -er .date) || dados=""
           cmed=$(curl -fsS "$CMED_META?t=$(date +%s)" | jq -er .cmed.stamp) || cmed=""
-          site=$(curl -fsS "$PUBLISHED?t=$(date +%s)") || site=""
+          # plain http as a fallback while the Pages certificate is missing or being renewed
+          site=$(curl -fsS "$PUBLISHED?t=$(date +%s)" || curl -fsS "${PUBLISHED/https:/http:}?t=$(date +%s)") || site=""
           site_dados=$(jq -er .dados_date <<<"$site" 2>/dev/null) || site_dados=""
           site_cmed=$(jq -er .cmed_stamp <<<"$site" 2>/dev/null) || site_cmed=""
           echo "dados: ${dados:-?} / ${site_dados:-?} · cmed: ${cmed:-?} / ${site_cmed:-?}"
