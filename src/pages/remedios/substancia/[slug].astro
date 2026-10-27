@@ -1,13 +1,23 @@
 ---
-// One page per substância: every product with it, grouped by type, each with the range of its maximum prices
-// at one reference ICMS rate, so brands and generics can be compared. Different doses and pack sizes sit in the
-// same range: the page says to compare the same presentation on the product page.
+// One page per substância: first the same dose and package side by side (every product that sells it, cheapest
+// first, at the reader's state once they pick it), then every product grouped by type. Comparing ranges across
+// doses misleads, so prices only appear next to the same dose and package.
+import Selo from "../../../components/Selo.astro";
+import SeuEstado from "../../../components/SeuEstado.astro";
 import Base from "../../../layouts/Base.astro";
+import { lerApresentacao } from "../../../lib/apresentacao";
+import { porChave, quantoMenos, type Opcao } from "../../../lib/comparar";
 import { CMED_DADOS_URL } from "../../../lib/config";
 import { fmtInt, fmtMoney } from "../../../lib/format";
 import { aliquotaRotulo, tipoExplicado } from "../../../lib/frases-remedios";
-import { aliquotaReferencia } from "../../../lib/icms";
-import { paginaProduto, produtosForBuild, slugsSubstancias, type Produto } from "../../../lib/remedios";
+import { aliquotaReferencia, ufsPorAliquota } from "../../../lib/icms";
+import {
+  paginaProduto,
+  produtosForBuild,
+  slugsSubstancias,
+  type Apresentacao,
+  type Produto,
+} from "../../../lib/remedios";
 
 export async function getStaticPaths() {
   const produtos = await produtosForBuild(CMED_DADOS_URL);
@@ -25,56 +35,128 @@ interface Props {
   lista: Produto[];
 }
 const { substancia, lista } = Astro.props;
-const { aliquota, deEstados } = aliquotaReferencia();
-const resumo = `${fmtInt(lista.length)} ${lista.length === 1 ? "produto" : "produtos"} com esta substância, com a faixa do preço máximo de cada um no ICMS de ${aliquotaRotulo(aliquota)}${deEstados ? ", uma das alíquotas padrão mais comuns entre os estados" : ""}.`;
+const { aliquota: ref } = aliquotaReferencia();
+const ufsRef = ufsPorAliquota().get(ref) ?? [];
+const MAX_LINHAS = 8;
+
+// the same dose and package sold by two or more products, the most offered first
+const grupos = [...porChave(lista, ref).entries()]
+  .filter(([, opcoes]) => new Set(opcoes.map((o) => o.produto.registro_produto)).size >= 2)
+  .map(([chave, opcoes]) => ({
+    chave,
+    opcoes,
+    legivel: lerApresentacao(opcoes[0]!.apresentacao.apresentacao)!.legivel,
+  }))
+  .sort((a, b) => b.opcoes.length - a.opcoes.length || a.legivel.localeCompare(b.legivel, "pt-BR"));
+
+const nome = (p: Produto) => (p.produto === p.substancia ? p.laboratorio : p.produto);
+const detalhe = (p: Produto) => (p.produto === p.substancia ? null : p.laboratorio);
+const precos = (pmc: Apresentacao["pmc"]) =>
+  JSON.stringify(
+    Object.fromEntries(
+      Object.entries(pmc)
+        .filter(([k]) => k !== "0")
+        .map(([k, c]) => [k, fmtMoney(c)]),
+    ),
+  );
+const economia = (o: Opcao, opcoes: Opcao[]) => {
+  const ref = opcoes.find((x) => x.produto.tipo_produto === "Novo");
+  return ref && o.preco < ref.preco ? quantoMenos(ref.preco, o.preco) : null;
+};
+
 const ORDEM = ["Novo", "Genérico", "Similar", "Biológico", "Específico", "Fitoterápico"];
 const posicao = (t: string) => (ORDEM.includes(t) ? ORDEM.indexOf(t) : ORDEM.length);
 const tipos = [...new Set(lista.map((p) => p.tipo_produto ?? "Outro"))].sort(
   (a, b) => posicao(a) - posicao(b) || a.localeCompare(b),
 );
-const faixa = (p: Produto) => {
-  const precos = p.apresentacoes.map((a) => a.pmc[aliquota]).filter((c): c is number => c !== undefined);
-  if (precos.length === 0) return "sem preço nesta alíquota";
-  const min = Math.min(...precos);
-  const max = Math.max(...precos);
-  return min === max ? fmtMoney(min) : `${fmtMoney(min)} a ${fmtMoney(max)}`;
-};
-const ordenados = (t: string) =>
+const doTipo = (t: string) =>
   lista
     .filter((p) => (p.tipo_produto ?? "Outro") === t)
-    .sort((a, b) => Number(b.comercializado) - Number(a.comercializado) || a.produto.localeCompare(b.produto));
+    .sort((a, b) => Number(b.comercializado) - Number(a.comercializado) || nome(a).localeCompare(nome(b), "pt-BR"));
+const temGenerico = lista.some((p) => p.tipo_produto === "Genérico");
 ---
 
 <Base
   title={`${substancia}: marcas, genéricos e preço máximo`}
-  description={`${fmtInt(lista.length)} produtos com ${substancia} na lista da CMED, com a faixa de preço máximo de cada um.`}
+  description={`${fmtInt(lista.length)} ${lista.length === 1 ? "produto" : "produtos"} com ${substancia} na lista da CMED, com o preço máximo de cada dose e embalagem lado a lado.`}
 >
   <p class="trilha">
     <a href="/remedios/">Remédios</a> › Substância
   </p>
   <h1>{substancia}</h1>
   <p class="lead">
-    {resumo} Doses e embalagens diferentes entram na mesma faixa: para comparar, abra o produto e veja a mesma
-    apresentação.
+    {`${fmtInt(lista.length)} ${lista.length === 1 ? "produto tem" : "produtos têm"} esta substância`}
+    {temGenerico ? ", entre marcas e genéricos" : ""}.
+    {grupos.length > 0 && " Para comparar preço, compare a mesma dose e embalagem."}
   </p>
-  {tipos.map((t) => (
+
+  {grupos.length > 0 && (
     <section>
-      <h2>{t}</h2>
-      {tipoExplicado(t) && <p class="muted">{tipoExplicado(t)}</p>}
-      <ul class="produtos">
-        {ordenados(t).map((p) => (
-          <li class={p.comercializado ? "" : "fora"}>
-            <a href={paginaProduto(p)}>{p.produto}</a>
-            <span class="muted">
-              {" "}
-              · {p.laboratorio} · {faixa(p)}
-              {!p.comercializado && " · sem venda no último ano"}
-            </span>
-          </li>
-        ))}
-      </ul>
+      <SeuEstado />
+      <h2>A mesma dose e embalagem, lado a lado</h2>
+      <p class="muted">
+        Preço máximo: <span data-uf-rotulo>{`ICMS de ${aliquotaRotulo(ref)} (${ufsRef.join(", ")})`}</span>. A ordem é a
+        do preço no ICMS de {aliquotaRotulo(ref)}. Só entram remédios com venda no último ano.
+      </p>
+      {grupos.map(({ opcoes, legivel }) => (
+        <div class="grupo">
+          <h3>{legivel}</h3>
+          <ol class="opcoes">
+            {opcoes.slice(0, MAX_LINHAS).map((o, i) => {
+              const menos = economia(o, opcoes);
+              return (
+                <li class={i === 0 ? "menor" : ""}>
+                  <span class="quem">
+                    <a href={paginaProduto(o.produto)}>{nome(o.produto)}</a>
+                    {detalhe(o.produto) && <span class="lab">{detalhe(o.produto)}</span>}
+                  </span>
+                  <span class="tipo">{o.produto.tipo_produto && <Selo>{o.produto.tipo_produto}</Selo>}</span>
+                  <span class="valor">
+                    <strong
+                      data-precos={precos(o.apresentacao.pmc)}
+                      data-generico={o.produto.tipo_produto === "Genérico" || undefined}
+                    >
+                      {fmtMoney(o.preco)}
+                    </strong>
+                    {menos !== null && menos >= 1 && <small>{menos}% menos</small>}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+          {opcoes.length > MAX_LINHAS && (
+            <p class="muted mais">E mais {opcoes.length - MAX_LINHAS}, mais caros. Estão na lista completa abaixo.</p>
+          )}
+        </div>
+      ))}
+      <p class="muted">
+        O "% menos" compara com o remédio de referência (o "Novo"), no mesmo ICMS. Em SP e MG, genéricos pagam ICMS
+        menor, então a diferença no balcão pode ser maior.
+      </p>
     </section>
-  ))}
+  )}
+
+  <section>
+    <h2>Todos os produtos com esta substância</h2>
+    {tipos.map((t) => (
+      <>
+        <h3>{t}</h3>
+        {tipoExplicado(t) && <p class="muted">{tipoExplicado(t)}</p>}
+        <ul class="produtos">
+          {doTipo(t).map((p) => (
+            <li>
+              <a href={paginaProduto(p)}>{nome(p)}</a>
+              <span class="muted">
+                {detalhe(p) && ` · ${detalhe(p)}`} · {p.apresentacoes.length}{" "}
+                {p.apresentacoes.length === 1 ? "dose e embalagem" : "doses e embalagens"}
+              </span>
+              {!p.comercializado && <Selo tom="alerta">sem venda no último ano</Selo>}
+            </li>
+          ))}
+        </ul>
+      </>
+    ))}
+  </section>
 </Base>
 
 <style>
@@ -86,13 +168,78 @@ const ordenados = (t: string) =>
   .trilha a {
     color: var(--muted);
   }
+  .grupo {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 4px 16px 10px;
+    margin: 0.9rem 0;
+  }
+  .grupo h3 {
+    margin: 0.8rem 0 0.4rem;
+  }
+  .opcoes {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .opcoes li {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 2px 12px;
+    align-items: center;
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--line);
+    border-radius: 6px;
+  }
+  .opcoes li:last-child {
+    border-bottom: 0;
+  }
+  .opcoes li.menor {
+    background: var(--accent-soft);
+  }
+  .quem {
+    display: flex;
+    flex-direction: column;
+  }
+  .quem a {
+    align-self: flex-start;
+  }
+  .lab {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .valor {
+    text-align: right;
+    white-space: nowrap;
+    display: flex;
+    flex-direction: column;
+  }
+  .valor small {
+    color: var(--good);
+    font-size: 0.78rem;
+  }
+  .mais {
+    margin: 0.4rem 0 0;
+    font-size: 0.9rem;
+  }
   .produtos {
     padding-left: 1.1rem;
   }
   .produtos li {
     margin: 6px 0;
   }
-  .fora a {
-    opacity: 0.75;
+  @media (max-width: 30rem) {
+    .opcoes li {
+      grid-template-columns: 1fr auto;
+    }
+    .tipo {
+      grid-column: 1;
+      grid-row: 2;
+    }
+    .valor {
+      grid-row: 1 / span 2;
+      grid-column: 2;
+    }
   }
 </style>

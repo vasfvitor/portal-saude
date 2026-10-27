@@ -18,8 +18,8 @@ const substancias = new Set(produtos.map((p) => p.substancia)).size;
 >
   <h1>Remédios: quanto a farmácia pode cobrar</h1>
   <p class="lead">
-    {PRECO_MAXIMO} São {fmtInt(produtos.length)} remédios vendidos em farmácia e {fmtInt(substancias)} substâncias, na
-    lista de {publicado}.
+    {PRECO_MAXIMO} São {fmtInt(produtos.length)} remédios vendidos em farmácia, com {fmtInt(substancias)} substâncias,
+    na lista de {publicado}.
   </p>
   <Busca
     indice="/remedios/busca.json"
@@ -30,20 +30,20 @@ const substancias = new Set(produtos.map((p) => p.substancia)).size;
   />
 
   <section>
-    <h2>Como ler o preço</h2>
+    <h2>Antes de ir à farmácia</h2>
     <ul>
       <li>
-        O preço máximo depende do <strong>ICMS do estado</strong> onde o remédio é vendido. A página de cada remédio
-        mostra o preço em cada alíquota e quais estados usam cada uma.
+        O preço máximo muda com o <strong>ICMS do seu estado</strong>. Na página de cada remédio, escolha o estado para
+        ver o valor de lá.
       </li>
       <li>
-        <strong>Genéricos e similares</strong> da mesma substância costumam ter preço máximo menor; a página da
-        substância lista todos.
+        <strong>Genéricos e similares</strong> da mesma substância costumam custar bem menos. A página de cada remédio
+        mostra o mais barato com a mesma dose e embalagem, e a página da substância põe todos lado a lado.
       </li>
       <li>{SE_COBRAREM_MAIS}</li>
     </ul>
     <p>
-      <a href="/remedios/sobre-o-preco/">Mais sobre o preço máximo e o ICMS de cada estado</a>
+      <a href="/remedios/sobre-o-preco/">Por que o preço muda de estado para estado, com o ICMS de cada um</a>
     </p>
   </section>
 </Base>
