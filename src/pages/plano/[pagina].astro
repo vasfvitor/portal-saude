@@ -15,6 +15,7 @@ import {
   frasePortabilidade,
   fraseReclamacoes,
   fraseRessarcimento,
+  resumo,
 } from "../../lib/frases";
 import { metaForBuild, nomeExibido, operadorasForBuild, paginaOperadora, type Operadora } from "../../lib/operadoras";
 
@@ -92,7 +93,29 @@ const breadcrumb = {
     </Quadro>
   )}
 
-  <section>
+  <section class="resumo" aria-labelledby="em-resumo">
+    <h2 id="em-resumo" class="sr-only">
+      Em resumo
+    </h2>
+    <ul>
+      {resumo(op).map((r) => (
+        <li class={r.tom}>
+          <a href={`#${r.ancora}`}>
+            <span class="assunto">{r.assunto}</span>
+            <span class="texto">{r.texto}</span>
+          </a>
+        </li>
+      ))}
+      <li class="ajuda">
+        <a href="#problema">
+          <span class="assunto">Teve problema?</span>
+          <span class="texto">o que fazer</span>
+        </a>
+      </li>
+    </ul>
+  </section>
+
+  <section id="reclamacoes">
     <h2>Reclamações na ANS</h2>
     {op.reclamacoes.length === 0 && <p class="muted">Sem dado de reclamações para esta operadora.</p>}
     {op.reclamacoes.map((r) => (
@@ -106,19 +129,19 @@ const breadcrumb = {
     ))}
   </section>
 
-  <section>
+  <section id="nota">
     <h2>Nota de desempenho da ANS</h2>
     <Frase frase={fraseIdss(op.idss, op.modalidade)} />
   </section>
 
   {ressarcimento && (
-    <section>
+    <section id="sus">
       <h2>Pagamentos ao SUS</h2>
       <Frase frase={ressarcimento} />
     </section>
   )}
 
-  <Quadro tipo="ajuda" titulo="Teve problema com este plano?">
+  <Quadro tipo="ajuda" titulo="Teve problema com este plano?" id="problema">
     <ol>
       <li>Reclame primeiro na operadora e anote o número do protocolo.</li>
       <li>
@@ -181,6 +204,50 @@ const breadcrumb = {
 </Base>
 
 <style>
+  .resumo ul {
+    list-style: none;
+    padding: 0;
+    margin: 1.25rem 0 0;
+    display: grid;
+    /* two per row on a phone, up to five on a wide screen */
+    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+    gap: 8px;
+  }
+  .resumo a {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--line);
+    background: var(--card);
+    text-decoration: none;
+    color: var(--fg);
+  }
+  .resumo a:hover {
+    border-color: var(--accent);
+  }
+  .favoravel a {
+    border-left-color: var(--good);
+  }
+  .desfavoravel a {
+    border-left-color: var(--alert);
+  }
+  .neutro a,
+  .ajuda a {
+    border-left-color: var(--accent);
+  }
+  .assunto {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .texto {
+    font-weight: 600;
+  }
+  section[id] {
+    scroll-margin-top: 1rem;
+  }
   .ficha {
     display: flex;
     flex-wrap: wrap;

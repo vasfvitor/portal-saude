@@ -213,3 +213,57 @@ export function frasePortabilidade(o: Pick<Operadora, "portabilidade_vigente">):
   if (!p) return null;
   return `Os clientes desta operadora podem trocar de plano sem cumprir carência de novo: a ANS liberou a portabilidade especial em ${fmtDate(p.data)} (Resolução Operacional nº ${p.ro}).`;
 }
+
+/** One line per subject for the top of the operator page, derived from the full sentences so the two never
+ * disagree: "Reclamações: 2,2 vezes a típica". `ancora` is the id of the section with the details. */
+export interface ItemResumo {
+  assunto: string;
+  texto: string;
+  tom: Tom;
+  ancora: string;
+}
+
+// for the score, higher is better: a favourable tone means above the typical one
+const NOTA_PERTO: Record<Tom, string> = {
+  favoravel: "acima da típica",
+  neutro: "no nível da típica",
+  desfavoravel: "abaixo da típica",
+  "sem-base": "sem comparação",
+};
+
+export function resumo(op: Pick<Operadora, "reclamacoes" | "idss" | "modalidade" | "ressarcimento">): ItemResumo[] {
+  const out: ItemResumo[] = op.reclamacoes.map((r) => {
+    const f = fraseReclamacoes(r);
+    const razao = f.comparacao ? f.comparacao.esta / f.comparacao.tipica : 0;
+    const texto =
+      f.tom === "desfavoravel" && razao >= 2
+        ? `${fmtDec(razao, 1)} vezes a típica`
+        : f.tom === "favoravel"
+          ? "menos que a típica"
+          : f.tom === "desfavoravel"
+            ? "mais que a típica"
+            : f.tom === "neutro"
+              ? "no nível da típica"
+              : "sem comparação";
+    const assunto = op.reclamacoes.length > 1 ? `Reclamações (${cobertura(r.cobertura).toLowerCase()})` : "Reclamações";
+    return { assunto, texto, tom: f.tom, ancora: "reclamacoes" };
+  });
+  const idss = fraseIdss(op.idss, op.modalidade);
+  out.push({
+    assunto: "Nota da ANS",
+    texto: op.idss?.valor != null ? `${fmtDec(op.idss.valor)}, ${NOTA_PERTO[idss.tom]}` : "sem nota",
+    tom: idss.tom,
+    ancora: "nota",
+  });
+  const sus = fraseRessarcimento(op.ressarcimento);
+  if (sus) {
+    const pago = op.ressarcimento?.indice_pagamento;
+    out.push({
+      assunto: "Pagamentos ao SUS",
+      texto: pago != null && op.ressarcimento?.valor_cobrado ? `pagou ${fmtPct(pago)} do que devia` : "nada cobrado",
+      tom: sus.tom,
+      ancora: "sus",
+    });
+  }
+  return out;
+}

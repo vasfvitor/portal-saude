@@ -4,11 +4,13 @@
 interface Props {
   tipo: "alerta" | "destaque" | "ajuda";
   titulo?: string;
+  /** anchor target, so a summary can link to the box */
+  id?: string;
 }
-const { tipo, titulo } = Astro.props;
+const { tipo, titulo, id } = Astro.props;
 ---
 
-<aside class={`quadro ${tipo}`}>
+<aside class={`quadro ${tipo}`} id={id}>
   {titulo && <p class="titulo">{titulo}</p>}
   <slot />
 </aside>

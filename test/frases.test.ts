@@ -9,6 +9,7 @@ import {
   fraseRessarcimento,
   modalidadePlural,
   motivoCancelamento,
+  resumo,
 } from "../src/lib/frases";
 import { parseOperadora, type Idss, type Reclamacoes } from "../src/lib/operadoras";
 
@@ -116,6 +117,17 @@ describe("real operators", () => {
     expect(fraseRessarcimento(b.ressarcimento)?.detalhe).toMatch(/até [a-zç]+ de \d{4}: R\$ /);
     expect(fraseCancelamento(b)).toBeNull();
     expect(frasePortabilidade(b)).toBeNull();
+  });
+
+  it("summary lines agree with the full sentences", () => {
+    expect(resumo(op("005711"))).toEqual([
+      { assunto: "Reclamações", texto: "2,2 vezes a típica", tom: "desfavoravel", ancora: "reclamacoes" },
+      { assunto: "Nota da ANS", texto: "0,81, no nível da típica", tom: "neutro", ancora: "nota" },
+      { assunto: "Pagamentos ao SUS", texto: "pagou 100% do que devia", tom: "favoravel", ancora: "sus" },
+    ]);
+    expect(resumo(op("422134")).find((x) => x.ancora === "nota")?.texto).toBe("sem nota");
+    const boa = { ...op("005711"), idss: { ...op("005711").idss!, valor: 0.95 } };
+    expect(resumo(boa).find((x) => x.ancora === "nota")?.texto).toBe("0,95, acima da típica");
   });
 
   it("Univida: cancelled, special portability, no IDSS", () => {
