@@ -105,18 +105,18 @@ describe("IDSS", () => {
   });
   it("on the 0-10 scale, against the typical score of the same modality", () => {
     expect(fraseIdss(idss(0.8112, 0.8), "Seguradora Especializada em Saúde")).toMatchObject({
-      titulo: "Nota 8,1 de 10, no nível das seguradoras.",
+      titulo: "Nota 0,81, no nível das seguradoras.",
       tom: "neutro",
     });
-    expect(fraseIdss(idss(0.8112, 0.8), "Medicina de Grupo").comparacao).toMatchObject({ max: 10, casas: 1 });
+    expect(fraseIdss(idss(0.8112, 0.8), "Medicina de Grupo").comparacao).toMatchObject({ max: 1, casas: 2 });
     expect(fraseIdss(idss(0.9, 0.8), "Medicina de Grupo").tom).toBe("favoravel");
     expect(fraseIdss(idss(0.6, 0.8), "Medicina de Grupo").titulo).toBe(
-      "Nota 6,0 de 10, abaixo da típica das operadoras de medicina de grupo.",
+      "Nota 0,60, abaixo da típica das operadoras de medicina de grupo.",
     );
     const { detalhe } = fraseIdss(idss(0.9, 0.8), "Seguradora Especializada em Saúde");
     expect(detalhe).toContain("a do meio entre 7 seguradoras");
-    expect(detalhe).toContain("aqui ela aparece de 0 a 10");
-    expect(comparativoIdss(idss(0.9, 0.8)).texto).toBe("9,0 de 10, acima da típica");
+    expect(detalhe).toContain("gestão. Esta é a nota de 2025, referente a 2024.");
+    expect(comparativoIdss(idss(0.9, 0.8)).texto).toBe("0,90, acima da típica");
   });
   it("no score: says why", () => {
     expect(fraseIdss(idss(null, 0.65), "Medicina de Grupo").titulo).toContain("não divulgado pela ANS");
@@ -144,12 +144,12 @@ describe("real operators", () => {
   it("summary lines agree with the full sentences", () => {
     expect(resumo(op("005711"))).toEqual([
       { assunto: "Reclamações", texto: "mais que o dobro da típica", tom: "desfavoravel", ancora: "reclamacoes" },
-      { assunto: "Nota da ANS", texto: "8,1 de 10, no nível da típica", tom: "neutro", ancora: "nota" },
+      { assunto: "Nota da ANS", texto: "0,81, no nível da típica", tom: "neutro", ancora: "nota" },
       { assunto: "Pagamentos ao SUS", texto: "pagou tudo", tom: "favoravel", ancora: "sus" },
     ]);
     expect(resumo(op("422134")).find((x) => x.ancora === "nota")?.texto).toBe("sem nota");
     const boa = { ...op("005711"), idss: { ...op("005711").idss!, valor: 0.95 } };
-    expect(resumo(boa).find((x) => x.ancora === "nota")?.texto).toBe("9,5 de 10, acima da típica");
+    expect(resumo(boa).find((x) => x.ancora === "nota")?.texto).toBe("0,95, acima da típica");
   });
 
   it("Univida: cancelled, special portability, no IDSS", () => {

@@ -152,20 +152,20 @@ export function fraseAnoAnterior(serie: PontoSerie[]): string | null {
 }
 
 const SOBRE_IDSS =
-  "A ANS dá essa nota todo ano, olhando a qualidade do atendimento, o acesso a médicos e exames, a saúde financeira e a gestão da operadora. A ANS publica a nota de 0 a 1; aqui ela aparece de 0 a 10, como uma nota de escola.";
+  "A ANS avalia cada operadora todo ano: qualidade do atendimento, acesso a médicos e exames, saúde financeira e gestão.";
 
-/** The ANS score (0 to 1) on the 0-10 scale everyone knows: 0.8112 → "8,1". */
-export const notaDe10 = (valor: number): string => fmtDec(valor * 10, 1);
+/** The ANS score as the ANS publishes it, 0 to 1: 0.8112 → "0,81". */
+export const nota = (valor: number): string => fmtDec(valor);
 
 /** The score compared with the typical one of the same kind of operator: higher is better. */
 export function comparativoIdss(i: Idss | null): { texto: string; tom: Tom } {
   if (i?.valor == null) return { texto: "sem nota", tom: "sem-base" };
-  const nota = `${notaDe10(i.valor)} de 10`;
+  const valor = nota(i.valor);
   const mediana = i.mediana_mesma_modalidade;
-  if (mediana === null) return { texto: nota, tom: "sem-base" };
-  if (i.valor >= mediana + IDSS_FAIXA) return { texto: `${nota}, acima da típica`, tom: "favoravel" };
-  if (i.valor <= mediana - IDSS_FAIXA) return { texto: `${nota}, abaixo da típica`, tom: "desfavoravel" };
-  return { texto: `${nota}, no nível da típica`, tom: "neutro" };
+  if (mediana === null) return { texto: valor, tom: "sem-base" };
+  if (i.valor >= mediana + IDSS_FAIXA) return { texto: `${valor}, acima da típica`, tom: "favoravel" };
+  if (i.valor <= mediana - IDSS_FAIXA) return { texto: `${valor}, abaixo da típica`, tom: "desfavoravel" };
+  return { texto: `${valor}, no nível da típica`, tom: "neutro" };
 }
 
 export function fraseIdss(i: Idss | null, modalidade: string): Frase {
@@ -176,7 +176,7 @@ export function fraseIdss(i: Idss | null, modalidade: string): Frase {
       tom: "sem-base",
     };
   }
-  const ano = `Esta é a nota de ${i.ano}, sobre o ano de ${i.ano_base}.`;
+  const ano = `Esta é a nota de ${i.ano}, referente a ${i.ano_base}.`;
   if (i.valor === null) {
     return {
       titulo: `Sem nota de desempenho em ${i.ano}: ${i.motivo ?? "a ANS não divulgou"}.`,
@@ -184,28 +184,28 @@ export function fraseIdss(i: Idss | null, modalidade: string): Frase {
       tom: "sem-base",
     };
   }
-  const nota = `Nota ${notaDe10(i.valor)} de 10`;
+  const titNota = `Nota ${nota(i.valor)}`;
   const mediana = i.mediana_mesma_modalidade;
   const { tom } = comparativoIdss(i);
-  if (mediana === null) return { titulo: `${nota}.`, detalhe: `${SOBRE_IDSS} ${ano}`, tom };
+  if (mediana === null) return { titulo: `${titNota}.`, detalhe: `${SOBRE_IDSS} ${ano}`, tom };
   const grupo = modalidadePlural(modalidade);
   const titulo =
     tom === "favoravel"
-      ? `${nota}, acima da típica das ${grupo}.`
+      ? `${titNota}, acima da típica das ${grupo}.`
       : tom === "desfavoravel"
-        ? `${nota}, abaixo da típica das ${grupo}.`
-        : `${nota}, no nível das ${grupo}.`;
+        ? `${titNota}, abaixo da típica das ${grupo}.`
+        : `${titNota}, no nível das ${grupo}.`;
   return {
     titulo,
     detalhe: `${SOBRE_IDSS} ${ano} A típica é a do meio entre ${fmtInt(i.operadoras_mesma_modalidade)} ${grupo}.`,
     tom,
     comparacao: {
-      esta: i.valor * 10,
-      tipica: mediana * 10,
-      max: 10,
-      casas: 1,
+      esta: i.valor,
+      tipica: mediana,
+      max: 1,
+      casas: 2,
       rotuloTipica: `Típica entre ${fmtInt(i.operadoras_mesma_modalidade)} ${grupo}`,
-      unidade: "Nota de 0 a 10",
+      unidade: "Nota de 0 a 1, como a ANS publica",
     },
   };
 }
@@ -213,7 +213,7 @@ export function fraseIdss(i: Idss | null, modalidade: string): Frase {
 export function fraseRessarcimento(r: Ressarcimento | null): Frase | null {
   if (!r) return null;
   const sobre =
-    "Quando um cliente de plano é atendido pelo SUS, a operadora tem de devolver ao SUS o custo do atendimento. Isso não muda o atendimento de quem tem o plano: mostra se a operadora paga o que deve.";
+    "Quando um cliente de plano é atendido pelo SUS, a operadora tem de devolver ao SUS o custo do atendimento. Mostra se a operadora paga o que deve; não afeta o atendimento de quem tem o plano.";
   if (r.indice_pagamento === null || !r.valor_cobrado) {
     return {
       titulo: "O SUS não cobrou nada desta operadora.",

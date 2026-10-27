@@ -47,6 +47,9 @@ the sources and the rebuild schedule; a git-ignored `NOTES.local.md` holds pendi
     once as the one in the middle (half above, half below); apresentação → dose e embalagem; alíquota → ICMS
     do estado; trimestre codes (3T2026) → "de julho a setembro de 2026". The ANS cancellation reasons go
     through `motivoCancelamento()` in `src/lib/frases.ts`.
+  - Explain once, plainly, as to an adult: no analogies ("como uma nota de escola"), no explaining the obvious,
+    no reassurance or advice the reader did not ask for. Numbers keep the scale their source publishes (the ANS
+    score stays 0 to 1).
   - Before a release, grep `dist/` for the phrases above.
 - Public text is pt-BR; code, comments, README, workflow and commit subjects are English.
 - The domain is `public/CNAME` plus the repository's Pages settings; those and the DNS record are the
