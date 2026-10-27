@@ -19,13 +19,13 @@ a risk label of its own. The wording rules are in `src/lib/frases.ts` and its te
 Nothing is typed by hand. At build time the site reads the operator data that
 [`ans-feeds`](https://github.com/vasfvitor/ans-feeds) publishes from the ANS open data:
 
-| Source                                                         | Used for                            |
-| -------------------------------------------------------------- | ----------------------------------- |
-| `https://ans.feeds.abelhaninja.de/dados/operadoras.json`       | search index, A-Z list              |
-| `https://ans.feeds.abelhaninja.de/dados/operadora/<r>.json`    | one page per operator (about 1,340) |
-| `https://ans.feeds.abelhaninja.de/meta.json`                   | the date of the data                |
-| `https://anvisa.feeds.abelhaninja.de/cmed/dados/produtos.json` | medicine index (about 7,600)        |
-| `https://anvisa.feeds.abelhaninja.de/cmed/dados/todos.json`    | every medicine, one page each       |
+| Source                                                         | Used for                                    |
+| -------------------------------------------------------------- | ------------------------------------------- |
+| `https://ans.feeds.abelhaninja.de/dados/operadoras.json`       | search index, A-Z list                      |
+| `https://ans.feeds.abelhaninja.de/dados/todas.json`            | every operator, one page each (about 1,340) |
+| `https://ans.feeds.abelhaninja.de/meta.json`                   | the date of the data                        |
+| `https://anvisa.feeds.abelhaninja.de/cmed/dados/produtos.json` | medicine index (about 7,600)                |
+| `https://anvisa.feeds.abelhaninja.de/cmed/dados/todos.json`    | every medicine, one page each               |
 
 The contract is `dados/schema.md` on the same site. Every source is required: a failed fetch or a record that
 does not validate fails the build, and the previous deploy stays live.

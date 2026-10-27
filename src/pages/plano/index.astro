@@ -7,7 +7,7 @@ import { fmtDate, fmtInt } from "../../lib/format";
 import { metaForBuild, nomeExibido, operadorasForBuild, paginaOperadora } from "../../lib/operadoras";
 
 const RECENTES_DIAS = 90;
-const [ops, meta] = await Promise.all([operadorasForBuild(DADOS_URL), metaForBuild(META_URL)]);
+const [ops, meta] = await Promise.all([operadorasForBuild(DADOS_URL, META_URL), metaForBuild(META_URL)]);
 const limite = new Date(`${meta.date}T00:00:00Z`);
 limite.setUTCDate(limite.getUTCDate() - RECENTES_DIAS);
 const desde = limite.toISOString().slice(0, 10);

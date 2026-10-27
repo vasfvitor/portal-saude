@@ -9,13 +9,14 @@ the sources and the rebuild schedule; a git-ignored `NOTES.local.md` holds pendi
 ## Facts to keep straight
 
 - Data comes from `https://ans.feeds.abelhaninja.de/dados/` (repo `vasfvitor/ans-feeds`): `operadoras.json`
-  (index) and `operadora/<registro>.json`, with the contract in `dados/schema.md`. A key change there needs a
-  follow-up in `src/lib/operadoras.ts` and `test/fixtures/`.
-- CMED prices come from `https://anvisa.feeds.abelhaninja.de/cmed/dados/` (contract in its `schema.md`); a key
-  change there needs a follow-up in `src/lib/remedios.ts` and `test/fixtures/cmed/`. The build reads `produtos.json`
-  and `todos.json` (every product in one file), never the ~7,600 `produto/<r>.json`: that many requests made
-  GitHub Pages answer 429. Every price is shown with
-  its ICMS rate; the page never states one price for a state on its own.
+  (index) and `todas.json` (every operator in one file), with the contract in `dados/schema.md`. A key change
+  there needs a follow-up in `src/lib/operadoras.ts` and `test/fixtures/`.
+- CMED prices come from `https://anvisa.feeds.abelhaninja.de/cmed/dados/` (contract in its `schema.md`): the
+  build reads `produtos.json` and `todos.json` (every product in one file). A key change there needs a
+  follow-up in `src/lib/remedios.ts` and `test/fixtures/cmed/`. Every price is shown with its ICMS rate; the
+  page never states one price for a state on its own.
+- The build never reads the per-entity files (`operadora/<r>.json`, `produto/<r>.json`): thousands of requests
+  in one build made GitHub Pages answer 429. Each bundle is checked against its index, field by field.
 - `src/lib/icms.ts` is the only hand-curated table: the default ICMS rate of each state for medicines, each
   row with a primary source and the day it was checked. Any change needs a source; the user reviews it.
 - Facts compared with peers, with their base and source; never a score, grade or risk label of our own. The

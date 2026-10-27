@@ -18,7 +18,7 @@ import {
 import { metaForBuild, nomeExibido, operadorasForBuild, paginaOperadora, type Operadora } from "../../lib/operadoras";
 
 export async function getStaticPaths() {
-  const [ops, meta] = await Promise.all([operadorasForBuild(DADOS_URL), metaForBuild(META_URL)]);
+  const [ops, meta] = await Promise.all([operadorasForBuild(DADOS_URL, META_URL), metaForBuild(META_URL)]);
   return ops.map((op) => ({
     params: { pagina: paginaOperadora(op).split("/")[2]! },
     props: { op, dia: meta.date },

@@ -8,6 +8,7 @@ import {
   parseIndice,
   parseMeta,
   parseOperadora,
+  parseTodas,
 } from "../src/lib/operadoras";
 import { slug } from "../src/lib/slug";
 
@@ -120,16 +121,37 @@ describe("fetching", () => {
   });
 
   it("loads every operator listed in the index, once per build", async () => {
-    const fetchMock = vi.fn((u: URL) => {
-      const path = u.pathname.replace(/^\/dados\//, "dados/");
-      return Promise.resolve(Response.json(fixture(path)));
-    });
+    const fetchMock = vi.fn((u: URL) => Promise.resolve(Response.json(fixture(u.pathname.slice(1)))));
     vi.stubGlobal("fetch", fetchMock);
     const dados = "https://fixtures.test/dados";
-    const ops = await operadorasForBuild(dados);
+    const ops = await operadorasForBuild(dados, "https://fixtures.test/meta.json");
     expect(ops.map((o) => o.registro)).toEqual((await indiceForBuild(dados)).map((o) => o.registro));
-    await operadorasForBuild(dados);
-    expect(fetchMock).toHaveBeenCalledTimes(1 + ops.length);
+    await operadorasForBuild(dados, "https://fixtures.test/meta.json");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("todas.json holds the operator files, and must match the index and meta.json", () => {
+    const indice = parseIndice(fixture("dados/operadoras.json"));
+    const meta = parseMeta(fixture("meta.json"));
+    const todas = fixture("dados/todas.json") as { date: string; operadoras: Record<string, unknown>[] };
+    expect(parseTodas(todas, indice, meta)).toEqual(
+      indice.map((o) => parseOperadora(fixture(`dados/operadora/${o.registro}.json`))),
+    );
+    expect(() => parseTodas({ ...todas, date: "2026-10-22" }, indice, meta)).toThrow(/date 2026-10-22.*2026-10-23/);
+    expect(() => parseTodas({ ...todas, operadoras: todas.operadoras.slice(1) }, indice, meta)).toThrow(
+      /2 operators.*3/,
+    );
+    const r0 = indice[0]!.registro;
+    const r2 = indice[2]!.registro;
+    expect(() => parseTodas({ ...todas, operadoras: [...todas.operadoras].reverse() }, indice, meta)).toThrow(
+      new RegExp(`todas.json\\[0\\] \\(${r2}\\): registro ${r2}, but operadoras.json has ${r0}`),
+    );
+    const com = (i: number, mudanca: Record<string, unknown>): unknown => ({
+      ...todas,
+      operadoras: todas.operadoras.map((o, j) => (j === i ? { ...o, ...mudanca } : o)),
+    });
+    expect(() => parseTodas(com(1, { nome: "OUTRA" }), indice, meta)).toThrow(/\[1\].*nome OUTRA/);
+    expect(() => parseTodas(com(2, { beneficiarios: 1 }), indice, meta)).toThrow(/\[2\].*beneficiarios 1/);
   });
 });
 

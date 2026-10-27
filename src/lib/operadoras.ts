@@ -2,7 +2,7 @@
 // required: a fetch or validation failure fails the build, so the previous deploy stays live and no page is
 // published half-filled. Validation covers what the pages read; a key change upstream fails loudly here.
 
-import { getJson, once, pool } from "./fetch";
+import { getJson, once } from "./fetch";
 import { slug } from "./slug";
 import { list, num, numOrNull, obj, str, strOrNull } from "./validar";
 
@@ -205,18 +205,51 @@ export function parseMeta(raw: unknown): Meta {
 
 // ---------------------------------------------------------------- fetching
 
-const CONCURRENCY = 12;
+// index fields the search, the A-Z list and the page URLs are built from: todas.json must agree on each of them
+const CAMPOS_DO_INDICE = [
+  "registro",
+  "nome",
+  "fantasia",
+  "uf",
+  "municipio",
+  "modalidade",
+  "situacao",
+  "beneficiarios",
+] as const;
+
+/** Every operator in one file (todas.json), checked against the index and meta.json: the same day of data and the
+ * same operators in the same order with the same index fields, so a half-deployed upstream fails the build. */
+export function parseTodas(raw: unknown, indice: ItemIndice[], meta: Meta): Operadora[] {
+  const o = obj(raw, "todas.json");
+  const date = str(o, "date", "todas.json");
+  if (date !== meta.date) throw new Error(`todas.json: date ${date}, but meta.json has ${meta.date}`);
+  const ops = list(o.operadoras, "todas.json operadoras").map((x) => parseOperadora(x));
+  if (ops.length !== indice.length)
+    throw new Error(`todas.json: ${ops.length} operators, but operadoras.json lists ${indice.length}`);
+  ops.forEach((op, i) => {
+    const item = indice[i]!;
+    for (const k of CAMPOS_DO_INDICE)
+      if (op[k] !== item[k])
+        throw new Error(
+          `todas.json[${i}] (${op.registro}): ${k} ${String(op[k])}, but operadoras.json has ${String(item[k])}`,
+        );
+  });
+  return ops;
+}
 
 export function indiceForBuild(dadosUrl: string): Promise<ItemIndice[]> {
   return once(`indice ${dadosUrl}`, async () => parseIndice(await getJson(`${dadosUrl}/operadoras.json`)));
 }
 
-export function operadorasForBuild(dadosUrl: string): Promise<Operadora[]> {
+// one request for ~1,340 operators: one file each is the kind of burst GitHub Pages answers with 429
+export function operadorasForBuild(dadosUrl: string, metaUrl: string): Promise<Operadora[]> {
   return once(`operadoras ${dadosUrl}`, async () => {
-    const indice = await indiceForBuild(dadosUrl);
-    return pool(indice, CONCURRENCY, async ({ registro }) =>
-      parseOperadora(await getJson(`${dadosUrl}/operadora/${registro}.json`)),
-    );
+    const [indice, todas, meta] = await Promise.all([
+      indiceForBuild(dadosUrl),
+      getJson(`${dadosUrl}/todas.json`),
+      metaForBuild(metaUrl),
+    ]);
+    return parseTodas(todas, indice, meta);
   });
 }
 
