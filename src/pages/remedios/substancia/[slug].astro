@@ -97,6 +97,8 @@ const doTipo = (t: string) =>
     .filter((p) => (p.tipo_produto ?? "Outro") === t)
     .sort((a, b) => Number(b.comercializado) - Number(a.comercializado) || nome(a).localeCompare(nome(b), "pt-BR"));
 const temGenerico = lista.some(ehGenerico);
+// the reference product(s) the "% menos" is measured against, named when there is only one
+const referencias = [...new Set(lista.filter((p) => p.tipo_produto === "Novo").map((p) => p.produto))];
 const resumo = `${contar(lista.length, "produto tem", "produtos têm")} esta substância${temGenerico ? ", entre marcas e genéricos" : ""}.`;
 ---
 
@@ -119,7 +121,10 @@ const resumo = `${contar(lista.length, "produto tem", "produtos têm")} esta sub
       <h2>A mesma dose e embalagem, do mais barato ao mais caro</h2>
       <p class="muted">
         Preço máximo: <span data-uf-rotulo>{`ICMS de ${aliquotaRotulo(ref)} (${ufsRef.join(", ")})`}</span>. Só entram
-        remédios com venda no último ano. O "% menos" compara com o remédio de referência (o "Novo") no mesmo estado.
+        remédios com venda no último ano.{" "}
+        {referencias.length === 1
+          ? `O "% menos" é em relação ao ${referencias[0]}, o remédio de referência, no mesmo estado.`
+          : 'O "% menos" é em relação ao remédio de referência (o "Novo"), no mesmo estado.'}
       </p>
       {grupos.map(({ legivel, linhas, alem }) => (
         <div class="cartao">

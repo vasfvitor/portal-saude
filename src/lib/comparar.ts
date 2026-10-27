@@ -45,9 +45,10 @@ export function porChave(produtos: Produto[], regime: Regime): Map<string, Opcao
   return out;
 }
 
-/** The cheapest option of another product with the same key, when it costs less than `preco`. */
-export function maisBarato(opcoes: Opcao[] | undefined, registro: string, preco: number): Opcao | undefined {
-  return opcoes?.find((o) => o.produto.registro_produto !== registro && o.preco < preco);
+/** The cheapest option of another product with the same key, when it costs less than `preco`; with no `preco`
+ * (the presentation itself is not on sale), the cheapest one on sale at any price. */
+export function maisBarato(opcoes: Opcao[] | undefined, registro: string, preco?: number): Opcao | undefined {
+  return opcoes?.find((o) => o.produto.registro_produto !== registro && (preco === undefined || o.preco < preco));
 }
 
 /** How much less, in whole percent, rounded down so it never overstates: 501,58 → 37,84 is 92. */

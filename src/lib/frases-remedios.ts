@@ -36,17 +36,15 @@ export const precosPorAliquota = (pmc: Apresentacao["pmc"]): string =>
     Object.fromEntries(TABELA.usadas.flatMap((k) => (pmc[k] === undefined ? [] : [[k, fmtMoney(pmc[k])]]))),
   );
 
-/** "De R$ 473,09 (ICMS 12%) a R$ 540,68 (ICMS 23%), conforme o estado." over the rates with a price. */
+/** "Entre R$ 501,58 e R$ 540,68, dependendo do estado." over the rates with a price. */
 export function faixaPreco(a: Apresentacao, aliquotas: readonly Aliquota[]): string | null {
   const com = aliquotas.filter((k) => a.pmc[k] !== undefined);
   if (com.length === 0) return null;
   const precos = com.map((k) => a.pmc[k]!);
   const min = Math.min(...precos);
   const max = Math.max(...precos);
-  const kMin = com[precos.indexOf(min)]!;
-  const kMax = com[precos.indexOf(max)]!;
-  if (min === max) return `${fmtMoney(min)} (ICMS ${aliquotaRotulo(kMin)}).`;
-  return `De ${fmtMoney(min)} (ICMS ${aliquotaRotulo(kMin)}) a ${fmtMoney(max)} (ICMS ${aliquotaRotulo(kMax)}), conforme o estado.`;
+  if (min === max) return `${fmtMoney(min)} em todos os estados.`;
+  return `Entre ${fmtMoney(min)} e ${fmtMoney(max)}, dependendo do estado.`;
 }
 
 export function avisoComercializacao(comercializado: boolean): string | null {
@@ -60,6 +58,10 @@ export const classeSemCodigo = (classe: string): string => classe.replace(/^[A-Z
 
 export const PRECO_MAXIMO =
   "O preço máximo é o teto que a farmácia pode cobrar; ela pode cobrar menos. Quem fixa o teto é a CMED, o órgão do governo que regula o preço dos remédios, e ele muda com o ICMS de cada estado.";
+
+/** When a page offers a cheaper product: what the law lets the pharmacist do (Lei 9.787/1999), and nothing more. */
+export const TROCA_NA_FARMACIA =
+  "Pela lei, o farmacêutico pode trocar o remédio de referência pelo genérico com a mesma substância e dose, se o médico não tiver proibido na receita. Para qualquer outra troca, pergunte ao farmacêutico ou ao médico.";
 
 export const SE_COBRAREM_MAIS =
   "Se cobrarem acima do preço máximo do seu estado, guarde a nota fiscal e procure o Procon da sua cidade.";

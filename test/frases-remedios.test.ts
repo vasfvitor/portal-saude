@@ -33,7 +33,8 @@ describe("remedios sentences", () => {
     expect(JSON.parse(precosPorAliquota(a.pmc))).toMatchObject({ "18": "R$ 507,70" });
     expect(JSON.parse(precosPorAliquota(a.pmc))).not.toHaveProperty("0");
     const sem0 = ALIQUOTAS.filter((k) => k !== "0");
-    expect(faixaPreco(a, sem0)).toBe("De R$ 473,09 (ICMS 12%) a R$ 540,68 (ICMS 23%), conforme o estado.");
+    expect(faixaPreco(a, sem0)).toBe("Entre R$ 473,09 e R$ 540,68, dependendo do estado.");
+    expect(faixaPreco({ ...a, pmc: { "18": 100 } }, sem0)).toBe("R$ 1,00 em todos os estados.");
     expect(faixaPreco({ ...a, pmc: {} }, sem0)).toBeNull();
   });
 

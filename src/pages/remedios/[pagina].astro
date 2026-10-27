@@ -29,6 +29,7 @@ import {
   precosPorAliquota,
   SE_COBRAREM_MAIS,
   tarjaExplicada,
+  TROCA_NA_FARMACIA,
   tipoExplicado,
 } from "../../lib/frases-remedios";
 import { TABELA, type Regime } from "../../lib/icms";
@@ -42,8 +43,10 @@ interface Barato {
   tipo: string | null;
   href: string;
   pmc: Apresentacao["pmc"];
-  /** whole percent less, at the rates each product pays in the regime */
+  /** whole percent less, at the rates each product pays in the regime (negative when it costs more) */
   menos: number;
+  /** offered because this presentation is not on sale, not because it is cheaper */
+  alternativa: boolean;
 }
 
 export async function getStaticPaths() {
@@ -58,7 +61,12 @@ export async function getStaticPaths() {
       const o =
         preco === undefined
           ? undefined
-          : maisBarato(grupos[regime].get(chaveComparacao(p, lida)), p.registro_produto, preco);
+          : // not on sale: the cheapest alternative on sale, even if it costs more
+            maisBarato(
+              grupos[regime].get(chaveComparacao(p, lida)),
+              p.registro_produto,
+              a.comercializado ? preco : undefined,
+            );
       if (!o || preco === undefined) return [];
       const { produto } = o;
       return [
@@ -70,6 +78,7 @@ export async function getStaticPaths() {
           href: paginaProduto(produto),
           pmc: o.apresentacao.pmc,
           menos: quantoMenos(preco, o.preco),
+          alternativa: !a.comercializado,
         },
       ];
     });
@@ -99,7 +108,6 @@ const tipo = tipoExplicado(p.tipo_produto);
 const tarja = tarjaExplicada(p.tarja);
 const aviso = avisoComercializacao(p.comercializado);
 const publicado = fmtStamp(p.stamp);
-const maisBaratoRotulo = (n: number) => (n >= 1 ? `Até ${n}% mais barato` : "Um pouco mais barato");
 const primeira = lerApresentacao(p.apresentacoes[0]!.apresentacao)?.legivel ?? p.apresentacoes[0]!.apresentacao;
 const descricao = `${p.produto} (${p.laboratorio}), ${primeira}: quanto a farmácia pode cobrar em cada estado, na lista da CMED de ${publicado}.`;
 const breadcrumb = {
@@ -130,6 +138,9 @@ const breadcrumb = {
   {aviso && (
     <Quadro tipo="alerta">
       <p>{aviso}</p>
+      {baratos.some((b) => b.some((x) => x.alternativa)) && (
+        <p>Mais abaixo aparece um remédio com a mesma substância, dose e embalagem que teve venda no último ano.</p>
+      )}
     </Quadro>
   )}
 
@@ -143,7 +154,7 @@ const breadcrumb = {
       <section class="cartao" data-apres data-generico={marca}>
         <h2>{lida?.legivel ?? a.apresentacao}</h2>
         <p class="codigo">
-          {lida && <>Na lista da CMED: {a.apresentacao}</>}
+          {lida && <>Como está na lista oficial: {a.apresentacao}</>}
           {!a.comercializado && <Selo tom="alerta">sem venda no último ano</Selo>}
         </p>
         <p class="no-estado" data-so-com-estado>
@@ -171,15 +182,17 @@ const breadcrumb = {
         </details>
         {baratos[i]!.map((b) => (
           <p class="barato" data-so-regime={b.regime} data-generico={b.tipo === "Genérico" ? "1" : "0"}>
-            <strong>{maisBaratoRotulo(b.menos)}</strong> com a mesma dose e embalagem: <a href={b.href}>{b.produto}</a>
+            <strong>{b.alternativa ? "Com venda no último ano" : "Opção mais barata"}</strong>, com a mesma dose e
+            embalagem: <a href={b.href}>{b.produto}</a>
             {b.tipo && ` (${b.tipo.toLowerCase()}, ${b.laboratorio})`}, até{" "}
             <span data-precos={precosPorAliquota(b.pmc)}>{precoMaximo(b.pmc, ref)}</span> (
-            <span data-uf-rotulo>{`ICMS ${aliquotaRotulo(ref)}`}</span>).
+            <span data-uf-rotulo>{`ICMS ${aliquotaRotulo(ref)}`}</span>){b.menos >= 1 ? `: ${b.menos}% a menos.` : "."}
           </p>
         ))}
       </section>
     );
   })}
+  {baratos.some((b) => b.length > 0) && <p class="muted">{TROCA_NA_FARMACIA}</p>}
   {aConfirmar && <p class="muted">* Estado com ICMS confirmado só por fontes não oficiais.</p>}
   <p class="muted">{SE_COBRAREM_MAIS}</p>
 
