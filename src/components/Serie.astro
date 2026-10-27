@@ -29,7 +29,7 @@ const partes = (t: string) => {
 const rotulo = serie
   .map((p) => `${fmtTrimestreCurto(p.trimestre)}: ${p.indice === null ? "sem dado" : fmtDec(p.indice, 1)}`)
   .join("; ");
-const aria = `Reclamações por mês a cada 100 mil clientes, por trimestre. ${rotulo}.${mediana === null ? "" : ` Operadora típica do mesmo porte: ${fmtDec(mediana, 1)}.`}`;
+const aria = `Reclamações por mês a cada 100 mil clientes, por trimestre. ${rotulo}.${mediana === null ? "" : ` Operadora típica do mesmo tamanho: ${fmtDec(mediana, 1)}.`}`;
 ---
 
 {serie.length > 1 && (
@@ -77,7 +77,7 @@ const aria = `Reclamações por mês a cada 100 mil clientes, por trimestre. ${r
     </svg>
     <figcaption>
       Os últimos {serie.length} trimestres, na mesma medida.
-      {mediana !== null && " A linha tracejada é a operadora típica do mesmo porte, no trimestre mais recente."}
+      {mediana !== null && " A linha tracejada é a operadora típica do mesmo tamanho, no trimestre mais recente."}
     </figcaption>
   </figure>
 )}

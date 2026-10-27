@@ -23,12 +23,13 @@ const ativas = ops.filter((o) => o.situacao === "ativa").length;
 
 <Base
   title="Plano de saúde"
-  description="Procure a sua operadora de plano de saúde: reclamações comparadas com planos do mesmo porte, nota de desempenho da ANS, cancelamentos e portabilidade de carências."
+  description="Procure a sua operadora de plano de saúde: reclamações comparadas com operadoras do mesmo tamanho, nota de desempenho da ANS, cancelamentos e portabilidade de carências."
 >
   <h1>Plano de saúde</h1>
   <p class="lead">
-    Cada operadora tem uma página com as reclamações, a nota da ANS e os pagamentos ao SUS, ao lado dos números de
-    operadoras parecidas. São {fmtInt(ativas)} com registro ativo, com dados de {fmtDate(meta.date)}.
+    Procure a empresa do seu plano (a operadora, como Unimed, Amil ou Bradesco Saúde) para ver se ela recebe mais
+    reclamações que outras do mesmo tamanho, que nota a ANS deu a ela e o que fazer se tiver problema. São{" "}
+    {fmtInt(ativas)} operadoras com registro ativo; dados de {fmtDate(meta.date)}.
   </p>
   <Busca
     indice="/plano/busca.json"
@@ -77,12 +78,12 @@ const ativas = ops.filter((o) => o.situacao === "ativa").length;
     <h2>O que a página de cada operadora mostra</h2>
     <ul>
       <li>
-        <strong>Reclamações na ANS</strong>, contadas a cada 100 mil clientes para dar para comparar operadoras de
-        tamanhos diferentes, ao lado de uma operadora típica do mesmo porte.
+        <strong>Reclamações na ANS</strong>, contadas em proporção ao número de clientes ("1 reclamação para cada 400
+        clientes"), ao lado de uma operadora típica do mesmo tamanho.
       </li>
       <li>
-        <strong>A nota de desempenho</strong> que a ANS dá todo ano, de 0 a 1, ao lado da nota típica das operadoras do
-        mesmo tipo.
+        <strong>A nota de desempenho</strong> que a ANS dá todo ano, mostrada de 0 a 10, ao lado da nota típica das
+        operadoras do mesmo tipo.
       </li>
       <li>
         <strong>Os pagamentos ao SUS</strong>: quanto a operadora devolveu do que o SUS gastou atendendo os clientes

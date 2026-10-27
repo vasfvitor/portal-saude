@@ -26,10 +26,13 @@ export function fmtPct(value: number): string {
   return `${int.format(shown)}%`;
 }
 
-/** 456053738.7 → "R$ 456 mi"; 690728.47 → "R$ 690 mil"; small values in full reais. */
+/** 456053738.7 → "R$ 456 milhões"; 690728.47 → "R$ 691 mil"; small values in full reais. */
 export function fmtReais(value: number): string {
-  if (value >= 1e9) return `R$ ${fmtDec(value / 1e9, 1)} bi`;
-  if (value >= 1e6) return `R$ ${int.format(Math.round(value / 1e6))} mi`;
+  if (value >= 1e9) return `R$ ${fmtDec(value / 1e9, 1)} ${value < 2e9 ? "bilhão" : "bilhões"}`;
+  if (value >= 1e6) {
+    const mi = Math.round(value / 1e6);
+    return `R$ ${int.format(mi)} ${mi === 1 ? "milhão" : "milhões"}`;
+  }
   if (value >= 1e4) return `R$ ${int.format(Math.round(value / 1e3))} mil`;
   return `R$ ${int.format(Math.round(value))}`;
 }

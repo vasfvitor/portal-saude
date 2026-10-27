@@ -41,9 +41,11 @@ describe("format", () => {
   });
 
   it("money, decimals and dates", () => {
-    expect(fmtReais(456053738.7)).toBe("R$ 456 mi");
+    expect(fmtReais(456053738.7)).toBe("R$ 456 milhões");
+    expect(fmtReais(1.2e6)).toBe("R$ 1 milhão");
     expect(fmtReais(690728.47)).toBe("R$ 691 mil");
-    expect(fmtReais(1.5e9)).toBe("R$ 1,5 bi");
+    expect(fmtReais(1.5e9)).toBe("R$ 1,5 bilhão");
+    expect(fmtReais(2.5e9)).toBe("R$ 2,5 bilhões");
     expect(fmtDec(0.8112)).toBe("0,81");
     expect(fmtDate("2026-10-08")).toBe("08/10/2026");
   });

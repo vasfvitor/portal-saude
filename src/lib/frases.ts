@@ -13,7 +13,7 @@ export interface Comparacao {
   /** the end of the bar scale */
   max: number;
   casas: number;
-  /** "Típica entre as 94 de porte grande" */
+  /** "Típica entre as 94 do mesmo tamanho" */
   rotuloTipica: string;
   /** what both numbers measure: "Reclamações por mês a cada 100 mil clientes" */
   unidade: string;
@@ -51,57 +51,90 @@ const PLURAL: Record<string, string> = {
 };
 export const modalidadePlural = (m: string): string => PLURAL[m] ?? `operadoras da modalidade ${m}`;
 
-export function fraseReclamacoes(r: Reclamacoes): Frase {
-  const porte = r.porte.toLowerCase();
-  const tipo = r.cobertura === "odontológica" ? "plano odontológico" : "plano médico-hospitalar";
-  const base = `${contar(r.reclamacoes, "reclamação", "reclamações")} na ANS ${fmtTrimestre(r.trimestre)}, para ${fmtClientes(r.beneficiarios_media)} em média.`;
+/** 1 complaint for every N clients in the quarter, from the monthly index per 100,000: rounded to two digits,
+ * which is all the precision the reader needs ("1 para cada 400"). Null when there were none. */
+export function umParaCada(indice: number): number | null {
+  if (indice <= 0) return null;
+  const n = 100000 / (3 * indice);
+  if (n < 100) return Math.max(1, Math.round(n));
+  const passo = 10 ** (Math.floor(Math.log10(n)) - 1);
+  return Math.round(n / passo) * passo;
+}
+
+const paraCada = (indice: number): string => {
+  const n = umParaCada(indice);
+  return n === null ? "nenhuma reclamação" : `1 reclamação para cada ${fmtInt(n)} ${n === 1 ? "cliente" : "clientes"}`;
+};
+
+/** How many times the typical operator's complaints, in words: "mais que o dobro", "cerca de 5 vezes". */
+function vezes(razao: number): string {
+  if (razao < 2.1) return "o dobro";
+  if (razao < 3) return "mais que o dobro";
+  if (razao < 3.1) return "o triplo";
+  if (razao < 4) return "mais que o triplo";
+  return `cerca de ${fmtInt(Math.floor(razao))} vezes`;
+}
+
+/** The comparison with the typical operator, short: for the title and the summary at the top of the page. */
+export function comparativoReclamacoes(r: Reclamacoes): { texto: string; tom: Tom } {
   if (r.indice === null || r.mediana_mesmo_porte === null || r.mediana_mesmo_porte <= 0) {
-    return { titulo: "Sem comparação de reclamações neste trimestre.", detalhe: base, tom: "sem-base" };
+    return { texto: "sem comparação", tom: "sem-base" };
   }
-  const tipica = `A operadora típica é a do meio entre as ${fmtInt(r.operadoras_mesmo_porte)} de ${tipo} de porte ${porte}: metade recebe mais reclamações que ela, metade recebe menos.`;
+  if (r.reclamacoes < POUCAS_RECLAMACOES) return { texto: "poucas para comparar", tom: "sem-base" };
+  const razao = r.indice / r.mediana_mesmo_porte;
+  if (razao >= 2) return { texto: `${vezes(razao)} da típica`, tom: "desfavoravel" };
+  if (razao >= 1.25) return { texto: "mais que a típica", tom: "desfavoravel" };
+  if (razao > 0.8) return { texto: "no nível da típica", tom: "neutro" };
+  if (razao > 0.5) return { texto: "menos que a típica", tom: "favoravel" };
+  return { texto: "bem menos que a típica", tom: "favoravel" };
+}
+
+export function fraseReclamacoes(r: Reclamacoes): Frase {
+  const quando = fmtTrimestre(r.trimestre);
+  const contagem = `Foram ${contar(r.reclamacoes, "reclamação", "reclamações")} ${quando}, para ${fmtClientes(r.beneficiarios_media)} em média.`;
+  // after the practical reading, which already names the period
+  const total = `No total, foram ${contar(r.reclamacoes, "reclamação", "reclamações")} para ${fmtClientes(r.beneficiarios_media)} em média.`;
+  if (r.indice === null || r.mediana_mesmo_porte === null || r.mediana_mesmo_porte <= 0) {
+    return { titulo: "Sem comparação de reclamações neste trimestre.", detalhe: contagem, tom: "sem-base" };
+  }
+  const tipo = r.cobertura === "odontológica" ? "plano odontológico" : "plano médico-hospitalar";
+  const tamanho = r.porte.toLowerCase();
+  const pratica = `Na prática, ${quando}, houve ${paraCada(r.indice)} nesta operadora; na típica, ${paraCada(r.mediana_mesmo_porte).replace(" reclamação", "")}.`;
+  const tipica = `A típica é a do meio entre as ${fmtInt(r.operadoras_mesmo_porte)} operadoras de ${tipo} de tamanho ${tamanho}: metade recebe mais reclamações que ela, metade recebe menos.`;
+  const { texto, tom } = comparativoReclamacoes(r);
   if (r.reclamacoes < POUCAS_RECLAMACOES) {
     return {
-      titulo: "Poucas reclamações no trimestre: com números tão pequenos, a comparação não diz muito.",
-      detalhe: `${base} Por mês, a cada 100 mil clientes: ${fmtDec(r.indice, 1)} nesta operadora e ${fmtDec(r.mediana_mesmo_porte, 1)} na típica do mesmo porte.`,
-      tom: "sem-base",
+      titulo: `Poucas reclamações no trimestre (${fmtInt(r.reclamacoes)}): números tão pequenos não dão uma comparação confiável.`,
+      // no per-client reading here: with a small base it swings wildly and would look alarming for nothing
+      detalhe: `${contagem} Com tão poucas reclamações, uma a mais ou a menos muda muito a conta, então o site não compara.`,
+      tom,
     };
   }
-  const razao = r.indice / r.mediana_mesmo_porte;
-  const alvo = "uma operadora típica do mesmo porte";
-  let titulo: string;
-  let tom: Tom;
-  if (razao >= 2) {
-    titulo = `Recebe ${fmtDec(razao, 1)} vezes as reclamações de ${alvo}.`;
-    tom = "desfavoravel";
-  } else if (razao >= 1.25) {
-    titulo = `Recebe mais reclamações que ${alvo}.`;
-    tom = "desfavoravel";
-  } else if (razao > 0.8) {
-    titulo = `Recebe reclamações no nível de ${alvo}.`;
-    tom = "neutro";
-  } else if (razao > 0.5) {
-    titulo = `Recebe menos reclamações que ${alvo}.`;
-    tom = "favoravel";
-  } else {
-    titulo = `Recebe bem menos reclamações que ${alvo}.`;
-    tom = "favoravel";
-  }
+  const titulos: Record<string, string> = {
+    "mais que a típica": "Recebe mais reclamações que uma operadora típica do mesmo tamanho.",
+    "no nível da típica": "Recebe reclamações no nível de uma operadora típica do mesmo tamanho.",
+    "menos que a típica": "Recebe menos reclamações que uma operadora típica do mesmo tamanho.",
+    "bem menos que a típica": "Recebe bem menos reclamações que uma operadora típica do mesmo tamanho.",
+  };
+  const titulo =
+    titulos[texto] ??
+    `Recebe ${texto.replace(" da típica", "")} das reclamações de uma operadora típica do mesmo tamanho.`;
   return {
     titulo,
-    detalhe: `${base} ${tipica}`,
+    detalhe: `${pratica} ${total} ${tipica}`,
     tom,
     comparacao: {
       esta: r.indice,
       tipica: r.mediana_mesmo_porte,
       max: Math.max(r.indice, r.mediana_mesmo_porte),
       casas: 1,
-      rotuloTipica: `Típica entre as ${fmtInt(r.operadoras_mesmo_porte)} de porte ${porte}`,
+      rotuloTipica: `Típica entre as ${fmtInt(r.operadoras_mesmo_porte)} do mesmo tamanho`,
       unidade: "Reclamações por mês a cada 100 mil clientes",
     },
   };
 }
 
-/** The same quarter one year earlier, when the series has it: up, down or about the same. */
+/** The same quarter one year earlier, when the series has it: better, worse or about the same. */
 export function fraseAnoAnterior(serie: PontoSerie[]): string | null {
   const ultimo = serie.at(-1);
   if (ultimo?.indice == null) return null;
@@ -109,15 +142,31 @@ export function fraseAnoAnterior(serie: PontoSerie[]): string | null {
   if (!m) return null;
   const antes = serie.find((p) => p.trimestre === `${m[1]}T${Number(m[2]) - 1}`);
   if (antes?.indice == null) return null;
-  const quando = `${fmtDec(antes.indice, 1)} ${fmtTrimestre(antes.trimestre)}`;
+  // a change between two tiny counts is noise, not a trend
+  if (ultimo.reclamacoes < POUCAS_RECLAMACOES || antes.reclamacoes < POUCAS_RECLAMACOES) return null;
+  const era = `${fmtTrimestre(antes.trimestre)}, era ${paraCada(antes.indice)}`;
   if (antes.indice > 0 && Math.abs(ultimo.indice / antes.indice - 1) < VARIACAO_PEQUENA) {
-    return `Parecido com um ano antes: eram ${quando}.`;
+    return `Parecido com um ano antes: ${era}.`;
   }
-  return ultimo.indice > antes.indice ? `Subiu em um ano: eram ${quando}.` : `Caiu em um ano: eram ${quando}.`;
+  return ultimo.indice > antes.indice ? `Piorou em um ano: ${era}.` : `Melhorou em um ano: ${era}.`;
 }
 
 const SOBRE_IDSS =
-  "A ANS dá essa nota todo ano, de 0 a 1, olhando a qualidade do atendimento, o acesso aos serviços, a saúde financeira e a gestão da operadora.";
+  "A ANS dá essa nota todo ano, olhando a qualidade do atendimento, o acesso a médicos e exames, a saúde financeira e a gestão da operadora. A ANS publica a nota de 0 a 1; aqui ela aparece de 0 a 10, como uma nota de escola.";
+
+/** The ANS score (0 to 1) on the 0-10 scale everyone knows: 0.8112 → "8,1". */
+export const notaDe10 = (valor: number): string => fmtDec(valor * 10, 1);
+
+/** The score compared with the typical one of the same kind of operator: higher is better. */
+export function comparativoIdss(i: Idss | null): { texto: string; tom: Tom } {
+  if (i?.valor == null) return { texto: "sem nota", tom: "sem-base" };
+  const nota = `${notaDe10(i.valor)} de 10`;
+  const mediana = i.mediana_mesma_modalidade;
+  if (mediana === null) return { texto: nota, tom: "sem-base" };
+  if (i.valor >= mediana + IDSS_FAIXA) return { texto: `${nota}, acima da típica`, tom: "favoravel" };
+  if (i.valor <= mediana - IDSS_FAIXA) return { texto: `${nota}, abaixo da típica`, tom: "desfavoravel" };
+  return { texto: `${nota}, no nível da típica`, tom: "neutro" };
+}
 
 export function fraseIdss(i: Idss | null, modalidade: string): Frase {
   if (!i) {
@@ -131,49 +180,51 @@ export function fraseIdss(i: Idss | null, modalidade: string): Frase {
   if (i.valor === null) {
     return {
       titulo: `Sem nota de desempenho em ${i.ano}: ${i.motivo ?? "a ANS não divulgou"}.`,
-      detalhe: `${SOBRE_IDSS} Ela não é divulgada em alguns casos, como quando a operadora está sob intervenção da ANS ou foi fechada.`,
+      detalhe: `${SOBRE_IDSS} A nota não sai em alguns casos, como quando a operadora está sob intervenção da ANS ou foi fechada.`,
       tom: "sem-base",
     };
   }
-  const nota = `Nota ${fmtDec(i.valor)} de 1`;
+  const nota = `Nota ${notaDe10(i.valor)} de 10`;
   const mediana = i.mediana_mesma_modalidade;
-  if (mediana === null) {
-    return { titulo: `${nota}.`, detalhe: `${SOBRE_IDSS} ${ano}`, tom: "sem-base" };
-  }
+  const { tom } = comparativoIdss(i);
+  if (mediana === null) return { titulo: `${nota}.`, detalhe: `${SOBRE_IDSS} ${ano}`, tom };
   const grupo = modalidadePlural(modalidade);
-  const detalhe = `${SOBRE_IDSS} ${ano} A típica é a do meio entre ${fmtInt(i.operadoras_mesma_modalidade)} ${grupo}.`;
-  const comparacao: Comparacao = {
-    esta: i.valor,
-    tipica: mediana,
-    max: 1,
-    casas: 2,
-    rotuloTipica: `Típica entre ${fmtInt(i.operadoras_mesma_modalidade)} ${grupo}`,
-    unidade: "Nota de 0 a 1",
+  const titulo =
+    tom === "favoravel"
+      ? `${nota}, acima da típica das ${grupo}.`
+      : tom === "desfavoravel"
+        ? `${nota}, abaixo da típica das ${grupo}.`
+        : `${nota}, no nível das ${grupo}.`;
+  return {
+    titulo,
+    detalhe: `${SOBRE_IDSS} ${ano} A típica é a do meio entre ${fmtInt(i.operadoras_mesma_modalidade)} ${grupo}.`,
+    tom,
+    comparacao: {
+      esta: i.valor * 10,
+      tipica: mediana * 10,
+      max: 10,
+      casas: 1,
+      rotuloTipica: `Típica entre ${fmtInt(i.operadoras_mesma_modalidade)} ${grupo}`,
+      unidade: "Nota de 0 a 10",
+    },
   };
-  if (i.valor >= mediana + IDSS_FAIXA) {
-    return { titulo: `${nota}, acima da típica das ${grupo}.`, detalhe, tom: "favoravel", comparacao };
-  }
-  if (i.valor <= mediana - IDSS_FAIXA) {
-    return { titulo: `${nota}, abaixo da típica das ${grupo}.`, detalhe, tom: "desfavoravel", comparacao };
-  }
-  return { titulo: `${nota}, no nível das ${grupo}.`, detalhe, tom: "neutro", comparacao };
 }
 
 export function fraseRessarcimento(r: Ressarcimento | null): Frase | null {
   if (!r) return null;
   const sobre =
-    "Quando um cliente de plano é atendido pelo SUS, a operadora tem de devolver ao SUS o custo do atendimento.";
+    "Quando um cliente de plano é atendido pelo SUS, a operadora tem de devolver ao SUS o custo do atendimento. Isso não muda o atendimento de quem tem o plano: mostra se a operadora paga o que deve.";
   if (r.indice_pagamento === null || !r.valor_cobrado) {
     return {
-      titulo: "Nenhuma cobrança do SUS registrada para esta operadora.",
+      titulo: "O SUS não cobrou nada desta operadora.",
       detalhe: `${sobre} Situação em ${fmtMes(r.competencia)}.`,
       tom: "sem-base",
     };
   }
   const pago = r.indice_pagamento;
   return {
-    titulo: `Pagou ${fmtPct(pago)} do que devia ao SUS.`,
-    detalhe: `${sobre} Valor cobrado desta operadora até ${fmtMes(r.competencia)}: ${fmtReais(r.valor_cobrado)}.`,
+    titulo: pago >= 100 ? "Pagou ao SUS tudo o que devia." : `Pagou ${fmtPct(pago)} do que devia ao SUS.`,
+    detalhe: `${sobre} O SUS cobrou ${fmtReais(r.valor_cobrado)} desta operadora até ${fmtMes(r.competencia)}.`,
     tom: pago >= 100 ? "favoravel" : pago >= 90 ? "neutro" : "desfavoravel",
   };
 }
@@ -223,47 +274,23 @@ export interface ItemResumo {
   ancora: string;
 }
 
-// for the score, higher is better: a favourable tone means above the typical one
-const NOTA_PERTO: Record<Tom, string> = {
-  favoravel: "acima da típica",
-  neutro: "no nível da típica",
-  desfavoravel: "abaixo da típica",
-  "sem-base": "sem comparação",
-};
-
 export function resumo(op: Pick<Operadora, "reclamacoes" | "idss" | "modalidade" | "ressarcimento">): ItemResumo[] {
-  const out: ItemResumo[] = op.reclamacoes.map((r) => {
-    const f = fraseReclamacoes(r);
-    const razao = f.comparacao ? f.comparacao.esta / f.comparacao.tipica : 0;
-    const texto =
-      f.tom === "desfavoravel" && razao >= 2
-        ? `${fmtDec(razao, 1)} vezes a típica`
-        : f.tom === "favoravel"
-          ? "menos que a típica"
-          : f.tom === "desfavoravel"
-            ? "mais que a típica"
-            : f.tom === "neutro"
-              ? "no nível da típica"
-              : "sem comparação";
-    const assunto = op.reclamacoes.length > 1 ? `Reclamações (${cobertura(r.cobertura).toLowerCase()})` : "Reclamações";
-    return { assunto, texto, tom: f.tom, ancora: "reclamacoes" };
-  });
-  const idss = fraseIdss(op.idss, op.modalidade);
-  out.push({
-    assunto: "Nota da ANS",
-    texto: op.idss?.valor != null ? `${fmtDec(op.idss.valor)}, ${NOTA_PERTO[idss.tom]}` : "sem nota",
-    tom: idss.tom,
-    ancora: "nota",
-  });
+  const out: ItemResumo[] = op.reclamacoes.map((r) => ({
+    assunto: op.reclamacoes.length > 1 ? `Reclamações (${cobertura(r.cobertura).toLowerCase()})` : "Reclamações",
+    ...comparativoReclamacoes(r),
+    ancora: "reclamacoes",
+  }));
+  out.push({ assunto: "Nota da ANS", ...comparativoIdss(op.idss), ancora: "nota" });
   const sus = fraseRessarcimento(op.ressarcimento);
   if (sus) {
     const pago = op.ressarcimento?.indice_pagamento;
-    out.push({
-      assunto: "Pagamentos ao SUS",
-      texto: pago != null && op.ressarcimento?.valor_cobrado ? `pagou ${fmtPct(pago)} do que devia` : "nada cobrado",
-      tom: sus.tom,
-      ancora: "sus",
-    });
+    const texto =
+      pago == null || !op.ressarcimento?.valor_cobrado
+        ? "nada cobrado"
+        : pago >= 100
+          ? "pagou tudo"
+          : `pagou ${fmtPct(pago)} do que devia`;
+    out.push({ assunto: "Pagamentos ao SUS", texto, tom: sus.tom, ancora: "sus" });
   }
   return out;
 }
