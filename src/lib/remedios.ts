@@ -75,8 +75,7 @@ function parseItem(o: Obj, where: string): Omit<ItemProduto, "apresentacoes"> {
 
 export function parseIndiceProdutos(raw: unknown): IndiceProdutos {
   const o = obj(raw, "produtos.json");
-  const stamp = str(o, "stamp", "produtos.json");
-  if (!STAMP.test(stamp)) throw new Error(`produtos.json: bad stamp ${stamp}`);
+  const stamp = listaStamp(o, "produtos.json");
   const produtos = list(o.produtos, "produtos.json produtos").map((x, i) => {
     const where = `produtos.json[${i}]`;
     const p = obj(x, where);
@@ -84,6 +83,13 @@ export function parseIndiceProdutos(raw: unknown): IndiceProdutos {
   });
   if (produtos.length === 0) throw new Error("produtos.json: empty");
   return { stamp, publicado_em: str(o, "publicado_em", "produtos.json"), produtos };
+}
+
+// the pages turn the stamp into a date: a malformed one fails the build instead of printing a broken date
+function listaStamp(o: Obj, where: string): string {
+  const stamp = str(o, "stamp", where);
+  if (!STAMP.test(stamp)) throw new Error(`${where}: bad stamp ${stamp}`);
+  return stamp;
 }
 
 export function parseProduto(raw: unknown): Produto {
@@ -112,22 +118,43 @@ export function parseProduto(raw: unknown): Produto {
     cnpj: str(o, "cnpj", where),
     classe_terapeutica: strOrNull(o, "classe_terapeutica", where),
     tarja: strOrNull(o, "tarja", where),
-    stamp: str(o, "stamp", where),
+    stamp: listaStamp(o, where),
     publicado_em: str(o, "publicado_em", where),
     apresentacoes,
   };
 }
 
-/** Every product in one file (todos.json), checked against the index: the same list month and the same products
- * in the same order, so a half-deployed upstream fails the build instead of mixing two lists. */
+// index fields the search, the A-Z list and the page URLs are built from: todos.json must agree on each of them
+const CAMPOS_DO_INDICE = [
+  "registro_produto",
+  "produto",
+  "laboratorio",
+  "substancia",
+  "tipo_produto",
+  "comercializado",
+] as const;
+
+/** Every product in one file (todos.json), checked against the index: the same list (stamp and publication date,
+ * on the file and on each product) and the same products in the same order with the same index fields, so a
+ * half-deployed upstream fails the build instead of mixing two lists or linking to pages that do not exist. */
 export function parseTodos(raw: unknown, indice: IndiceProdutos): Produto[] {
   const o = obj(raw, "todos.json");
-  const stamp = str(o, "stamp", "todos.json");
-  if (stamp !== indice.stamp) throw new Error(`todos.json: list ${stamp}, but produtos.json is ${indice.stamp}`);
+  const lista = { stamp: listaStamp(o, "todos.json"), publicado_em: str(o, "publicado_em", "todos.json") };
+  for (const k of ["stamp", "publicado_em"] as const)
+    if (lista[k] !== indice[k]) throw new Error(`todos.json: ${k} ${lista[k]}, but produtos.json has ${indice[k]}`);
   const produtos = list(o.produtos, "todos.json produtos").map((x) => parseProduto(x));
-  const registros = (xs: { registro_produto: string }[]): string => xs.map((x) => x.registro_produto).join(",");
-  if (registros(produtos) !== registros(indice.produtos))
-    throw new Error("todos.json: products differ from produtos.json");
+  if (produtos.length !== indice.produtos.length)
+    throw new Error(`todos.json: ${produtos.length} products, but produtos.json lists ${indice.produtos.length}`);
+  produtos.forEach((p, i) => {
+    const item = indice.produtos[i]!;
+    const where = `todos.json[${i}] (${p.registro_produto})`;
+    for (const k of ["stamp", "publicado_em"] as const)
+      if (p[k] !== lista[k]) throw new Error(`${where}: ${k} ${p[k]}, but the file has ${lista[k]}`);
+    for (const k of CAMPOS_DO_INDICE)
+      if (p[k] !== item[k]) throw new Error(`${where}: ${k} ${String(p[k])}, but produtos.json has ${String(item[k])}`);
+    if (p.apresentacoes.length !== item.apresentacoes)
+      throw new Error(`${where}: ${p.apresentacoes.length} apresentacoes, but produtos.json has ${item.apresentacoes}`);
+  });
   return produtos;
 }
 

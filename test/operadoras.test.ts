@@ -60,6 +60,7 @@ describe("fetching", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const url = fetchMock.mock.calls[0]![0] as URL;
     expect(url.searchParams.has("t")).toBe(true);
+    expect((fetchMock.mock.calls[0]![1] as RequestInit).signal).toBeInstanceOf(AbortSignal);
   });
 
   it("does not retry a 404", async () => {

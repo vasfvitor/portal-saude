@@ -6,6 +6,8 @@ const RETRIES = 5;
 // unless the server sends Retry-After, capped so one file cannot stall the build.
 const BASE_DELAY_MS = 1000;
 const MAX_DELAY_MS = 60_000;
+// per attempt, body included: the CMED file is 13 MB, and a stalled transfer must not hold the build for long
+const TIMEOUT_MS = 60_000;
 
 /** How long to wait before attempt `attempt + 1`: the server's Retry-After (seconds) when given, else 2^attempt s. */
 export function backoff(attempt: number, retryAfter: string | null = null): number {
@@ -16,7 +18,8 @@ export function backoff(attempt: number, retryAfter: string | null = null): numb
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
-/** GET JSON past the 600 s GitHub Pages cache; transport errors, 429 and 5xx are retried, other 4xx fail at once. */
+/** GET JSON past the 600 s GitHub Pages cache; transport errors, timeouts, 429 and 5xx are retried, other 4xx fail
+ * at once. */
 export async function getJson(url: string): Promise<unknown> {
   const u = new URL(url);
   u.searchParams.set("t", String(Date.now()));
@@ -24,7 +27,7 @@ export async function getJson(url: string): Promise<unknown> {
   for (let attempt = 0; attempt <= RETRIES; attempt++) {
     let retryAfter: string | null = null;
     try {
-      const res = await fetch(u, { cache: "no-store" });
+      const res = await fetch(u, { cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS) });
       if (res.ok) return (await res.json()) as unknown;
       last = new Error(`HTTP ${res.status} at ${url}`);
       if (res.status < 500 && res.status !== 429) break;
