@@ -136,7 +136,7 @@ const breadcrumb = {
   </p>
 
   {aviso && (
-    <Quadro tipo="alerta">
+    <Quadro tipo="atencao">
       <p>{aviso}</p>
       {baratos.some((b) => b.some((x) => x.alternativa)) && (
         <p>Mais abaixo aparece um remédio com a mesma substância, dose e embalagem que teve venda no último ano.</p>
@@ -155,7 +155,7 @@ const breadcrumb = {
         <h2>{lida?.legivel ?? a.apresentacao}</h2>
         <p class="codigo">
           {lida && <>Como está na lista oficial: {a.apresentacao}</>}
-          {!a.comercializado && <Selo tom="alerta">sem venda no último ano</Selo>}
+          {!a.comercializado && <Selo tom="atencao">sem venda no último ano</Selo>}
         </p>
         <p class="no-estado" data-so-com-estado>
           No seu estado (<span data-uf-rotulo />

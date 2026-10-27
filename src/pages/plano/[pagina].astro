@@ -123,7 +123,7 @@ const breadcrumb = {
         {op.reclamacoes.length > 1 && <h3>{cobertura(r.cobertura)}</h3>}
         <Frase frase={fraseReclamacoes(r)}>
           {fraseAnoAnterior(r.serie) && <p class="detalhe">{fraseAnoAnterior(r.serie)}</p>}
-          <Serie serie={r.serie} mediana={r.mediana_mesmo_porte} />
+          <Serie serie={r.serie} mediana={r.mediana_mesmo_porte} tom={fraseReclamacoes(r).tom} />
         </Frase>
       </>
     ))}
@@ -234,7 +234,9 @@ const breadcrumb = {
   .desfavoravel a {
     border-left-color: var(--alert);
   }
-  .neutro a,
+  .neutro a {
+    border-left-color: var(--neutral);
+  }
   .ajuda a {
     border-left-color: var(--accent);
   }

@@ -123,6 +123,13 @@ const graph = {
 </html>
 
 <style is:global>
+  /* One job per colour, in both themes:
+     --accent  the brand and everything you can act on (links, focus, the picker, your state's row, the help box)
+     --good    a good result or good news (fewer complaints, score above, portability)
+     --neutral a result in line with the typical one
+     --alert   a bad result or something that went wrong (more complaints, a closed operator)
+     --warn    worth checking, not bad (no sales last year, a rate still to confirm)
+     --line    no comparison possible */
   :root {
     --bg: #f6faf9;
     --fg: #14211f;
@@ -135,6 +142,10 @@ const graph = {
     --alert: #b42318;
     --alert-soft: rgba(180, 35, 24, 0.08);
     --good: #157a3a;
+    --good-soft: rgba(21, 122, 58, 0.08);
+    --neutral: #64748b;
+    --warn: #b45309;
+    --warn-soft: rgba(180, 83, 9, 0.08);
     --shadow: 0 1px 2px rgba(20, 33, 31, 0.06), 0 8px 24px rgba(20, 33, 31, 0.06);
   }
   @media (prefers-color-scheme: dark) {
@@ -150,6 +161,10 @@ const graph = {
       --alert: #f87171;
       --alert-soft: rgba(248, 113, 113, 0.1);
       --good: #4ade80;
+      --good-soft: rgba(74, 222, 128, 0.1);
+      --neutral: #94a3b8;
+      --warn: #fbbf24;
+      --warn-soft: rgba(251, 191, 36, 0.1);
       --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
     }
   }

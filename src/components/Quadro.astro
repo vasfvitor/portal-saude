@@ -1,8 +1,9 @@
 ---
-// A boxed note: `alerta` for what went wrong (a cancelled operator, a medicine off the market), `destaque` for
-// good news to act on (portability, a cheaper generic), `ajuda` for what the person can do next.
+// A boxed note, coloured by its job (see the palette in Base.astro): `alerta` for what went wrong (a closed
+// operator), `atencao` for something worth checking (a medicine with no sales last year), `destaque` for good news
+// to act on (portability), `ajuda` for what the person can do next.
 interface Props {
-  tipo: "alerta" | "destaque" | "ajuda";
+  tipo: "alerta" | "atencao" | "destaque" | "ajuda";
   titulo?: string;
   /** anchor target, so a summary can link to the box */
   id?: string;
@@ -41,9 +42,13 @@ const { tipo, titulo, id } = Astro.props;
     background: var(--alert-soft);
     border-color: var(--alert);
   }
+  .atencao {
+    background: var(--warn-soft);
+    border-color: var(--warn);
+  }
   .destaque {
-    background: var(--accent-soft);
-    border-color: var(--accent);
+    background: var(--good-soft);
+    border-color: var(--good);
   }
   .ajuda {
     border-left: 4px solid var(--accent);

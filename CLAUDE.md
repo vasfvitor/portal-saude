@@ -32,6 +32,11 @@ the sources and the rebuild schedule; a git-ignored `NOTES.local.md` holds pendi
   choice in `localStorage`, wrapped in try/catch. `pnpm check:dist` enforces this. JSON-LD `<script>` tags are
   fine.
 - Numbers are never hand-typed. If a value is missing in the data, the page says so.
+- Colours have one job each, defined once in `src/layouts/Base.astro` for both themes: `--accent` is the brand and
+  what you can act on, `--good` a good result or good news, `--neutral` a result in line with the typical one,
+  `--alert` a bad result or something that went wrong, `--warn` worth checking but not bad (no sales, a rate to
+  confirm), `--line` no comparison. No colour values outside those tokens (the logo SVG aside), and meaning is
+  always in the words too, never in colour alone.
 - Copy is short and plain, for people who do not know the jargon: "reclamações", not IGR; every situation
   ends in what the person can do. Write like a person explaining to a neighbour, not like an ad or an
   assistant:

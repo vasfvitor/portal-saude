@@ -175,7 +175,7 @@ const resumo = `${contar(lista.length, "produto tem", "produtos têm")} esta sub
                 {detalhe(p) && ` · ${detalhe(p)}`} ·{" "}
                 {contar(p.apresentacoes.length, "dose e embalagem", "doses e embalagens")}
               </span>
-              {!p.comercializado && <Selo tom="alerta">sem venda no último ano</Selo>}
+              {!p.comercializado && <Selo tom="atencao">sem venda no último ano</Selo>}
             </li>
           ))}
         </ul>

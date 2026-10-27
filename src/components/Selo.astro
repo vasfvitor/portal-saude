@@ -1,7 +1,7 @@
 ---
-// A short label next to a name: the medicine type, "cancelada", "sem venda no último ano".
+// A short label next to a name: the medicine type (neutral), "fechada" (alerta), "sem venda no último ano" (atencao).
 interface Props {
-  tom?: "neutro" | "alerta";
+  tom?: "neutro" | "alerta" | "atencao";
 }
 const { tom = "neutro" } = Astro.props;
 ---
@@ -24,6 +24,10 @@ const { tom = "neutro" } = Astro.props;
     white-space: nowrap;
     vertical-align: 0.1em;
     margin-left: 0.4em;
+  }
+  .atencao {
+    border-color: var(--warn);
+    color: var(--warn);
   }
   .alerta {
     border-color: var(--alert);
