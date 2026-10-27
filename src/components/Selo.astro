@@ -1,0 +1,31 @@
+---
+// A short label next to a name: the medicine type, "cancelada", "sem venda no último ano".
+interface Props {
+  tom?: "neutro" | "alerta";
+}
+const { tom = "neutro" } = Astro.props;
+---
+
+<span class={`selo ${tom}`}>
+  <slot />
+</span>
+
+<style>
+  .selo {
+    display: inline-block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.5;
+    border-radius: 999px;
+    padding: 0 9px;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    background: var(--card);
+    white-space: nowrap;
+    vertical-align: 0.1em;
+  }
+  .alerta {
+    border-color: var(--alert);
+    color: var(--alert);
+  }
+</style>

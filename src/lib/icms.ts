@@ -297,3 +297,8 @@ export function colunas(estados: EstadoIcms[] = ESTADOS): Aliquota[] {
   );
   return ALIQUOTAS.filter((a) => usadas.has(a));
 }
+
+/** The rate each state applies to a product, keyed by UF, for the "seu estado" picker. */
+export function aliquotaPorUf(generico: boolean, estados: EstadoIcms[] = ESTADOS): Record<string, Aliquota> {
+  return Object.fromEntries(estados.map((e) => [e.uf, aliquotaDoEstado(e, generico)]));
+}

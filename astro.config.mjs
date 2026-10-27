@@ -7,6 +7,8 @@ export default defineConfig({
   site: "https://saude.abelhaninja.de",
   output: "static",
   trailingSlash: "always",
-  build: { format: "directory" },
+  // CSS and scripts as shared files, cached once, instead of inlined in each of the ~10,700 pages
+  build: { format: "directory", inlineStylesheets: "never" },
+  vite: { build: { assetsInlineLimit: 0 } },
   integrations: [sitemap({ filter: (page) => !page.endsWith("/404/") })],
 });

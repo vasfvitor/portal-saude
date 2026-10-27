@@ -1,11 +1,14 @@
-// Checks on the built site (run after `pnpm build`): the only client JavaScript is the search on /plano/ and /remedios/,
-// no e-mail address is published, every internal link resolves, and every operator and medicine in the search
-// indexes has its page. Exits 1 with the list of problems.
+// Checks on the built site (run after `pnpm build`): the only client JavaScript is the search on /plano/ and
+// /remedios/ and the "seu estado" picker on the medicine and substância pages, no e-mail address is published,
+// every internal link resolves, and every operator and medicine in the search indexes has its page. Exits 1 with
+// the list of problems.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const DIST = new URL("../dist/", import.meta.url).pathname;
 const SEARCH_PAGES = new Set(["plano/index.html", "remedios/index.html"]);
+// product pages (remedios/<registro>-<slug>/) and substância pages carry the state picker
+const STATE_PAGES = /^remedios\/(\d{9}-[^/]+|substancia\/[^/]+)\/index\.html$/;
 const problems = [];
 
 function* htmlFiles(dir) {
@@ -29,7 +32,7 @@ for (const file of htmlFiles(DIST)) {
   const html = readFileSync(file, "utf-8");
   for (const [, attrs] of html.matchAll(/<script\b([^>]*)>/g)) {
     if (/type="application\/ld\+json"/.test(attrs)) continue;
-    if (SEARCH_PAGES.has(page) && /type="module"/.test(attrs)) continue;
+    if ((SEARCH_PAGES.has(page) || STATE_PAGES.test(page)) && /type="module"/.test(attrs)) continue;
     problems.push(`${page}: unexpected <script${attrs}>`);
   }
   const email = /[\w.+-]+@[\w-]+\.[a-z]{2,}/i.exec(

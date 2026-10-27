@@ -1,48 +1,122 @@
 ---
-// One page per product: what it is in plain words, then the maximum consumer price of each presentation at
-// each ICMS rate, with the states whose default is that rate in the column header. Prices come from the CMED
-// list as published; the page never names one price for a state without the rate next to it.
+// One page per product: what it is, then one block per dose and package with the maximum price in each state
+// (a line per ICMS rate, with the states that use it), the price in the reader's state once they pick it, and the
+// cheapest product with the same dose and package. Prices come from the CMED list as published; a price is never
+// shown without its rate or its state next to it.
+import Quadro from "../../components/Quadro.astro";
+import Selo from "../../components/Selo.astro";
+import SeuEstado from "../../components/SeuEstado.astro";
 import Base from "../../layouts/Base.astro";
+import { lerApresentacao } from "../../lib/apresentacao";
+import { maisBarato, porChave, quantoMenos } from "../../lib/comparar";
 import { CMED_DADOS_URL } from "../../lib/config";
-import { fmtDate } from "../../lib/format";
+import { fmtDate, fmtMoney } from "../../lib/format";
 import {
   aliquotaRotulo,
   avisoComercializacao,
+  classeSemCodigo,
   faixaPreco,
   PRECO_MAXIMO,
-  precoMaximo,
   SE_COBRAREM_MAIS,
   tarjaExplicada,
   tipoExplicado,
 } from "../../lib/frases-remedios";
-import { colunas, ufsPorAliquota } from "../../lib/icms";
-import { paginaProduto, produtosForBuild, slugsSubstancias, type Produto } from "../../lib/remedios";
+import { aliquotaPorUf, aliquotaReferencia, colunas, ufsPorAliquota } from "../../lib/icms";
+import {
+  paginaProduto,
+  produtosForBuild,
+  slugsSubstancias,
+  type Aliquota,
+  type Apresentacao,
+  type Produto,
+} from "../../lib/remedios";
+
+interface Barato {
+  produto: string;
+  laboratorio: string;
+  tipo: string | null;
+  href: string;
+  pmc: Apresentacao["pmc"];
+  /** whole percent less at the comparison rate, and in each state (generics pay less ICMS in some states) */
+  menos: number;
+  menosPorUf: Record<string, number>;
+}
 
 export async function getStaticPaths() {
   const produtos = await produtosForBuild(CMED_DADOS_URL);
   const substancias = slugsSubstancias(produtos.map((p) => p.substancia));
+  const ref = aliquotaReferencia().aliquota;
+  const grupos = porChave(produtos, ref);
   return produtos.map((p) => ({
     params: { pagina: paginaProduto(p).split("/")[2]! },
-    props: { p, substanciaSlug: substancias.get(p.substancia)! },
+    props: {
+      p,
+      substanciaSlug: substancias.get(p.substancia)!,
+      baratos: p.apresentacoes.map((a): Barato | null => {
+        const lida = lerApresentacao(a.apresentacao);
+        const preco = a.pmc[ref];
+        if (!lida || preco === undefined) return null;
+        const o = maisBarato(grupos.get(lida.chave), p.registro_produto, preco);
+        if (!o) return null;
+        const meu = aliquotaPorUf(p.tipo_produto === "Genérico");
+        const dele = aliquotaPorUf(o.produto.tipo_produto === "Genérico");
+        const menosPorUf: Record<string, number> = {};
+        for (const uf of Object.keys(meu)) {
+          const de = a.pmc[meu[uf]!];
+          const para = o.apresentacao.pmc[dele[uf]!];
+          // -1: in this state the other option is not cheaper (it pays a higher ICMS than this generic)
+          if (de !== undefined && para !== undefined) menosPorUf[uf] = para < de ? quantoMenos(de, para) : -1;
+        }
+        return {
+          produto: o.produto.produto,
+          laboratorio: o.produto.laboratorio,
+          tipo: o.produto.tipo_produto,
+          href: paginaProduto(o.produto),
+          pmc: o.apresentacao.pmc,
+          menos: quantoMenos(preco, o.preco),
+          menosPorUf,
+        };
+      }),
+    },
   }));
 }
 
 interface Props {
   p: Produto;
   substanciaSlug: string;
+  baratos: (Barato | null)[];
 }
-const { p, substanciaSlug } = Astro.props;
-const ufs = ufsPorAliquota(undefined, p.tipo_produto === "Genérico");
+const { p, substanciaSlug, baratos } = Astro.props;
+const generico = p.tipo_produto === "Genérico";
+const ufs = ufsPorAliquota(undefined, generico);
 const aConfirmar = [...ufs.values()].flat().some((u) => u.endsWith("*"));
 // only the rates some state uses for this product (generics move SP and MG to 12%)
 const cols = ufs.size > 0 ? colunas().filter((a) => ufs.has(a)) : colunas();
+const ref = aliquotaReferencia().aliquota;
 const tipo = tipoExplicado(p.tipo_produto);
 const tarja = tarjaExplicada(p.tarja);
 const aviso = avisoComercializacao(p.comercializado);
 const publicado = fmtDate(`${p.stamp.slice(0, 4)}-${p.stamp.slice(4, 6)}-${p.stamp.slice(6, 8)}`);
-const primeira = p.apresentacoes[0]!;
-const faixa = faixaPreco(primeira, cols);
-const descricao = `${p.produto} (${p.laboratorio}): preço máximo que a farmácia pode cobrar, por apresentação e por ICMS do estado. Lista da CMED de ${publicado}.`;
+const precos = (pmc: Apresentacao["pmc"]) =>
+  JSON.stringify(
+    Object.fromEntries(
+      Object.entries(pmc)
+        .filter(([k]) => k !== "0")
+        .map(([k, c]) => [k, fmtMoney(c)]),
+    ),
+  );
+const maisBaratoRotulo = (n: number) =>
+  n >= 1 ? `Até ${n}% mais barato` : n === 0 ? "Um pouco mais barato" : "Outra opção";
+// only the states where the label differs from the one shown without a state
+const rotulosPorUf = (por: Record<string, number>, padrao: number) =>
+  Object.fromEntries(
+    Object.entries(por)
+      .filter(([, n]) => maisBaratoRotulo(n) !== maisBaratoRotulo(padrao))
+      .map(([uf, n]) => [uf, maisBaratoRotulo(n)]),
+  );
+const preco = (pmc: Apresentacao["pmc"], k: Aliquota) => (pmc[k] === undefined ? null : fmtMoney(pmc[k]));
+const primeira = lerApresentacao(p.apresentacoes[0]!.apresentacao)?.legivel ?? p.apresentacoes[0]!.apresentacao;
+const descricao = `${p.produto} (${p.laboratorio}), ${primeira}: quanto a farmácia pode cobrar em cada estado, na lista da CMED de ${publicado}.`;
 const breadcrumb = {
   "@type": "BreadcrumbList",
   itemListElement: [
@@ -65,59 +139,77 @@ const breadcrumb = {
   <h1>{p.produto}</h1>
   <p class="ficha">
     <span>{p.laboratorio}</span>
-    {p.tipo_produto && <span>{p.tipo_produto}</span>}
-    <span>Registro ANVISA {p.registro_produto}</span>
+    {p.tipo_produto && <Selo>{p.tipo_produto}</Selo>}
   </p>
 
-  {aviso && <p class="faixa aviso">{aviso}</p>}
-
-  <p class="lead">{PRECO_MAXIMO}</p>
-  {faixa && (
-    <p>
-      <strong>{primeira.apresentacao}</strong>: {faixa}
-    </p>
+  {aviso && (
+    <Quadro tipo="alerta">
+      <p>{aviso}</p>
+    </Quadro>
   )}
 
-  <section>
-    <h2>Preço máximo por apresentação e ICMS do estado</h2>
-    <p class="muted">
-      O ICMS muda de estado para estado. Cada coluna mostra os estados que usam aquela alíquota como padrão para
-      remédios; alguns remédios têm alíquota diferente (por exemplo, genéricos em alguns estados). Na dúvida, confira em{" "}
-      <a href="/remedios/sobre-o-preco/">como ler o preço</a>.
-    </p>
-    <div class="rolagem" tabindex="0" role="region" aria-label="Tabela de preços máximos">
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">Apresentação</th>
-            {cols.map((a) => (
-              <th scope="col" class="n">
-                ICMS {aliquotaRotulo(a)}
-                {ufs.get(a) && <small>{ufs.get(a)!.join(", ")}</small>}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {p.apresentacoes.map((a) => (
-            <tr class={a.comercializado ? "" : "fora"}>
-              <th scope="row">
-                {a.apresentacao}
-                {!a.comercializado && <small>sem venda no último ano</small>}
-              </th>
-              {cols.map((k) => (
-                <td class="n">{precoMaximo(a, k) ?? "–"}</td>
+  <p class="lead">{PRECO_MAXIMO}</p>
+  <SeuEstado />
+
+  {p.apresentacoes.map((a, i) => {
+    const lida = lerApresentacao(a.apresentacao);
+    const faixa = faixaPreco(a, cols);
+    const barato = baratos[i];
+    return (
+      <section class="apres">
+        <h2>{lida?.legivel ?? a.apresentacao}</h2>
+        <p class="codigo">
+          {lida && <>Na lista da CMED: {a.apresentacao}</>}
+          {!a.comercializado && <Selo tom="alerta">sem venda no último ano</Selo>}
+        </p>
+        <p class="no-estado" data-so-com-estado hidden>
+          No seu estado (<span data-uf-rotulo data-generico={generico || undefined} />
+          ): até{" "}
+          <strong data-precos={precos(a.pmc)} data-generico={generico || undefined}>
+            {faixa}
+          </strong>
+        </p>
+        {faixa && (
+          <p class="faixa" data-so-sem-estado>
+            {faixa}
+          </p>
+        )}
+        <details data-recolher open>
+          <summary>Preço máximo em cada estado</summary>
+          <ul class="aliquotas" data-generico-lista={generico || undefined}>
+            {cols
+              .filter((k) => a.pmc[k] !== undefined)
+              .map((k) => (
+                <li data-aliquota={k}>
+                  <span class="ufs">{ufs.get(k)?.join(", ") ?? "nenhum estado como padrão"}</span>
+                  <span class="icms">ICMS {aliquotaRotulo(k)}</span>
+                  <strong>{preco(a.pmc, k)}</strong>
+                </li>
               ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-    {aConfirmar && <p class="muted">* Alíquota do estado confirmada só por fontes não oficiais.</p>}
-    <p class="muted">
-      Preços da lista da CMED publicada em {publicado}. {SE_COBRAREM_MAIS}
-    </p>
-  </section>
+          </ul>
+        </details>
+        {barato && (
+          <p class="barato">
+            <strong data-por-uf={JSON.stringify(rotulosPorUf(barato.menosPorUf, barato.menos))}>
+              {maisBaratoRotulo(barato.menos)}
+            </strong>{" "}
+            com a mesma dose e embalagem: <a href={barato.href}>{barato.produto}</a>
+            {barato.tipo && ` (${barato.tipo.toLowerCase()}, ${barato.laboratorio})`}, até{" "}
+            <span data-precos={precos(barato.pmc)} data-generico={barato.tipo === "Genérico" || undefined}>
+              {preco(barato.pmc, ref)}
+            </span>{" "}
+            (
+            <span data-uf-rotulo data-generico={barato.tipo === "Genérico" || undefined}>
+              ICMS {aliquotaRotulo(ref)}
+            </span>
+            ).
+          </p>
+        )}
+      </section>
+    );
+  })}
+  {aConfirmar && <p class="muted">* Estado com ICMS confirmado só por fontes não oficiais.</p>}
+  <p class="muted">{SE_COBRAREM_MAIS}</p>
 
   <section>
     <h2>Sobre este remédio</h2>
@@ -125,18 +217,20 @@ const breadcrumb = {
       {tipo && <li>{tipo}</li>}
       {tarja && <li>{tarja}</li>}
       <li>
-        Substância: <a href={`/remedios/substancia/${substanciaSlug}/`}>{p.substancia}</a> (veja outras marcas e
-        genéricos)
+        Substância: <a href={`/remedios/substancia/${substanciaSlug}/`}>{p.substancia}</a>, com as outras marcas e os
+        genéricos
       </li>
-      {p.classe_terapeutica && <li>Classe terapêutica: {p.classe_terapeutica}</li>}
+      {p.classe_terapeutica && <li>Grupo de remédios: {classeSemCodigo(p.classe_terapeutica)}</li>}
+      <li>Registro na ANVISA: {p.registro_produto}</li>
     </ul>
   </section>
 
   <section class="fontes">
     <h2>Fontes</h2>
     <p>
-      Lista de preços da CMED (ANVISA), publicada em {publicado}. Dados deste produto:{" "}
-      <a href={`${CMED_DADOS_URL}/produto/${p.registro_produto}.json`}>JSON</a>.
+      Lista de preços da CMED (ANVISA), publicada em {publicado}. O ICMS de cada estado e a lei de origem estão em{" "}
+      <a href="/remedios/sobre-o-preco/">por que o preço muda de estado para estado</a>. Todos os números deste remédio,
+      num arquivo só: <a href={`${CMED_DADOS_URL}/produto/${p.registro_produto}.json`}>JSON</a>.
     </p>
   </section>
 </Base>
@@ -156,66 +250,86 @@ const breadcrumb = {
   .ficha {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 16px;
+    align-items: center;
+    gap: 4px 12px;
     color: var(--muted);
     font-size: 0.95rem;
   }
-  .faixa {
-    border-radius: 10px;
-    padding: 12px 16px;
-    margin: 1rem 0;
-    font-weight: 600;
-  }
-  .aviso {
-    background: var(--alert-soft);
-    border: 1px solid var(--alert);
-  }
-  .rolagem {
-    overflow-x: auto;
-    border: 1px solid var(--line);
-    border-radius: 10px;
+  .apres {
     background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 4px 18px 14px;
+    margin: 1rem 0;
   }
-  table {
-    border-collapse: collapse;
-    font-size: 0.9rem;
-    min-width: 100%;
+  .apres h2 {
+    font-size: 1.1rem;
+    margin: 0.9rem 0 0.1rem;
   }
-  th,
-  td {
-    padding: 8px 10px;
-    border-bottom: 1px solid var(--line);
-    text-align: left;
-    vertical-align: top;
-  }
-  thead th {
+  .codigo {
     font-size: 0.8rem;
     color: var(--muted);
-    white-space: nowrap;
+    margin: 0 0 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    align-items: center;
   }
-  th small {
-    display: block;
-    font-weight: 400;
-    white-space: normal;
-    max-width: 8rem;
+  .no-estado {
+    font-size: 1.1rem;
   }
-  tbody th {
-    font-weight: 500;
-    min-width: 14rem;
+  .no-estado strong {
+    font-size: 1.35rem;
   }
-  tbody th small {
-    color: var(--alert);
-    max-width: none;
+  .faixa {
+    font-weight: 600;
   }
-  .n {
-    text-align: right;
-    white-space: nowrap;
+  details {
+    margin: 0.5rem 0;
   }
-  tr.fora td {
-    color: var(--muted);
+  summary {
+    cursor: pointer;
+    color: var(--accent-ink);
+    font-weight: 600;
+    font-size: 0.95rem;
   }
-  tr:last-child th,
-  tr:last-child td {
+  .aliquotas {
+    list-style: none;
+    padding: 0;
+    margin: 0.5rem 0 0;
+  }
+  .aliquotas li {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 2px 14px;
+    align-items: baseline;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--line);
+    border-radius: 6px;
+  }
+  .aliquotas li:last-child {
     border-bottom: 0;
+  }
+  .aliquotas :global(li.sua) {
+    background: var(--accent-soft);
+    outline: 1px solid var(--accent);
+  }
+  .ufs {
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .icms {
+    font-size: 0.85rem;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .aliquotas strong {
+    white-space: nowrap;
+    text-align: right;
+  }
+  .barato {
+    border-top: 1px dashed var(--line);
+    padding-top: 0.6rem;
+    margin-top: 0.6rem;
   }
 </style>

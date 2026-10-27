@@ -26,8 +26,11 @@ the sources and the rebuild schedule; a git-ignored `NOTES.local.md` holds pendi
   wording rules live in `src/lib/frases.ts` and are tested.
 - Left out on purpose, and explained on `/sobre/`: the prudential class S1-S4 (a size segment for capital
   rules, not a financial health grade), contact data from the registry, series the ANS stopped updating.
-- The only client JavaScript is the search box (`src/components/Busca.astro`) on `/plano/` and `/remedios/`;
-  every page works without it (`/plano/todas/`, `/remedios/substancias/`). JSON-LD `<script>` tags are fine.
+- The only client JavaScript is the search box (`src/components/Busca.astro`) on `/plano/` and `/remedios/`
+  and the "seu estado" picker (`src/components/SeuEstado.astro`) on the product and substância pages; every
+  page works without them (`/plano/todas/`, `/remedios/substancias/`, every rate listed). The picker keeps the
+  choice in `localStorage`, wrapped in try/catch. `pnpm check:dist` enforces this. JSON-LD `<script>` tags are
+  fine.
 - Numbers are never hand-typed. If a value is missing in the data, the page says so.
 - Copy is short and plain, for people who do not know the jargon: "reclamações", not IGR; every situation
   ends in what the person can do. Write like a person explaining to a neighbour, not like an ad or an

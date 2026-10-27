@@ -1,0 +1,136 @@
+---
+// "Seu estado": a select of the 27 states, remembered in localStorage, that turns the price lists into the price
+// for that state. The pages work without it: the select is hidden until the script runs, and every list shows all
+// rates. Elements opt in with data attributes (read by the script below):
+//   data-precos='{"17":"R$ 501,58",...}' data-generico  the text becomes the price at the state's rate
+//   data-aliquota="18"                                  gets class "sua" when it is the state's rate
+//   data-so-com-estado / data-so-sem-estado             shown only with / without a state chosen
+//   data-uf-rotulo                                      becomes "SP, ICMS 18%" (its own text without a state)
+//   data-por-uf='{"SP":"93",...}'                       the text becomes the value for the state
+//   details[data-recolher]                              closed once a state is chosen
+import { ESTADOS } from "../lib/icms";
+
+const estados = [...ESTADOS].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+---
+
+<div class="seu-estado" hidden>
+  <label for="uf">Seu estado</label>
+  <select id="uf">
+    <option value="">Escolha para ver o preço de lá</option>
+    {estados.map((e) => (
+      <option value={e.uf}>{e.nome}</option>
+    ))}
+  </select>
+  <p class="nota" data-so-com-estado hidden>
+    O site guarda a escolha só neste navegador. Alguns remédios têm ICMS diferente do padrão do estado.
+  </p>
+</div>
+
+<script>
+  import { aliquotaRotulo } from "../lib/frases-remedios";
+  import { aliquotaPorUf, ESTADOS } from "../lib/icms";
+
+  // built into the shared script from icms.ts: the same table the pages were built with
+  const config = {
+    normal: aliquotaPorUf(false),
+    generico: aliquotaPorUf(true),
+    aConfirmar: ESTADOS.filter((e) => !e.confirmado).map((e) => e.uf),
+  };
+  const CHAVE = "saude.uf";
+  const caixa = document.querySelector<HTMLDivElement>(".seu-estado");
+  const select = caixa?.querySelector<HTMLSelectElement>("select");
+  const originais = new WeakMap<Element, string>();
+
+  function ler(): string {
+    try {
+      return localStorage.getItem(CHAVE) ?? "";
+    } catch {
+      return "";
+    }
+  }
+  function guardar(uf: string) {
+    try {
+      if (uf) localStorage.setItem(CHAVE, uf);
+      else localStorage.removeItem(CHAVE);
+    } catch {
+      /* private mode: the choice lasts for this page only */
+    }
+  }
+
+  function aplicar(uf: string) {
+    const tem = uf in config.normal;
+    document.documentElement.dataset.uf = tem ? uf : "";
+    const aliquota = (generico: boolean) => (generico ? config.generico : config.normal)[uf];
+    for (const el of document.querySelectorAll<HTMLElement>("[data-precos]")) {
+      if (!originais.has(el)) originais.set(el, el.textContent ?? "");
+      const precos = JSON.parse(el.dataset.precos ?? "{}") as Record<string, string>;
+      const a = tem ? aliquota(el.hasAttribute("data-generico")) : undefined;
+      el.textContent = a && precos[a] ? precos[a] : originais.get(el)!;
+    }
+    for (const el of document.querySelectorAll<HTMLElement>("[data-por-uf]")) {
+      if (!originais.has(el)) originais.set(el, el.textContent ?? "");
+      const valores = JSON.parse(el.dataset.porUf ?? "{}") as Record<string, string>;
+      el.textContent = tem && valores[uf] ? valores[uf] : originais.get(el)!;
+    }
+    for (const el of document.querySelectorAll<HTMLElement>("[data-aliquota]")) {
+      const lista = el.closest<HTMLElement>("[data-generico-lista]");
+      el.classList.toggle("sua", tem && el.dataset.aliquota === aliquota(Boolean(lista)));
+    }
+    for (const el of document.querySelectorAll<HTMLElement>("[data-uf-rotulo]")) {
+      if (!originais.has(el)) originais.set(el, el.textContent ?? "");
+      const a = aliquota(el.hasAttribute("data-generico"));
+      const duvida = config.aConfirmar.includes(uf) ? ", a confirmar" : "";
+      el.textContent = tem && a ? `${uf}, ICMS ${aliquotaRotulo(a)}${duvida}` : originais.get(el)!;
+    }
+    for (const el of document.querySelectorAll<HTMLElement>("[data-so-com-estado]")) el.hidden = !tem;
+    for (const el of document.querySelectorAll<HTMLElement>("[data-so-sem-estado]")) el.hidden = tem;
+    for (const el of document.querySelectorAll<HTMLDetailsElement>("details[data-recolher]")) el.open = !tem;
+  }
+
+  if (caixa && select) {
+    caixa.hidden = false;
+    const uf = ler();
+    select.value = uf in config.normal ? uf : "";
+    aplicar(select.value);
+    select.addEventListener("change", () => {
+      guardar(select.value);
+      aplicar(select.value);
+    });
+  }
+</script>
+
+<style>
+  .seu-estado {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin: 1rem 0 1.25rem;
+  }
+  .seu-estado[hidden] {
+    display: none;
+  }
+  label {
+    font-weight: 700;
+  }
+  select {
+    font: inherit;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--fg);
+    min-width: 14rem;
+    max-width: 100%;
+  }
+  .nota {
+    flex-basis: 100%;
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+</style>

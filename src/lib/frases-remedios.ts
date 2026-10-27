@@ -43,11 +43,16 @@ export function faixaPreco(a: Apresentacao, aliquotas: readonly Aliquota[]): str
 }
 
 export function avisoComercializacao(comercializado: boolean): string | null {
-  return comercializado ? null : "Sem venda informada à CMED no último ano: pode não estar à venda nas farmácias.";
+  return comercializado
+    ? null
+    : "O fabricante não informou nenhuma venda deste remédio à CMED no último ano. Ele pode estar em falta ou fora das farmácias.";
 }
 
+/** "J1G1 - FLUORQUINOLONAS ORAIS" → "FLUORQUINOLONAS ORAIS": the ATC-like code means nothing to the reader. */
+export const classeSemCodigo = (classe: string): string => classe.replace(/^[A-Z0-9]{2,6}\s*-\s*/, "");
+
 export const PRECO_MAXIMO =
-  "É o preço máximo que a farmácia pode cobrar, fixado pela CMED (Câmara de Regulação do Mercado de Medicamentos). A farmácia pode cobrar menos, nunca mais.";
+  "A farmácia pode cobrar até este valor, e pode cobrar menos. O teto é fixado pela CMED, o órgão do governo que regula o preço dos remédios, e muda com o ICMS de cada estado.";
 
 export const SE_COBRAREM_MAIS =
   "Se cobrarem acima do preço máximo do seu estado, guarde a nota fiscal e procure o Procon da sua cidade.";
