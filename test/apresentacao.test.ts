@@ -15,6 +15,9 @@ describe("CMED presentation codes in plain words", () => {
 
   it("boxes with several blisters or bottles are multiplied", () => {
     expect(leg("10 MG COM CT 2 BL AL PLAS AMB X 15")).toBe("10 mg · 30 comprimidos (2 cartelas de 15)");
+    expect(leg("500 MG COM REV CT 2 BL AL PLAS TRANS X 07")).toBe(
+      "500 mg · 14 comprimidos revestidos (2 cartelas de 7)",
+    );
     expect(leg("(10 + 10) MG CAP DURA CT 3 FR PLAS PEAD OPC X 30")).toBe(
       "(10 + 10) mg · 90 cápsulas (3 frascos de 30)",
     );
@@ -57,6 +60,9 @@ describe("CMED presentation codes in plain words", () => {
     const a = lerApresentacao("35,0 MG CAP DURA CT BL AL PLAS PVC/PVDC OPC X 14")!;
     const b = lerApresentacao("35 MG CAP DURA CT BL AL AL X 14")!;
     expect(a.chave).toBe(b.chave);
+    expect(lerApresentacao("500 MG COM REV CT 2 BL AL PLAS TRANS X 07")!.chave).toBe(
+      lerApresentacao("500 MG COM REV CT BL AL AL X 14")!.chave,
+    );
     expect(lerApresentacao("500 MG COM REV CT BL AL AL X 14")!.chave).not.toBe(
       lerApresentacao("500 MG COM CT BL AL AL X 14")!.chave,
     );

@@ -185,7 +185,7 @@ function ler(texto: string): ApresentacaoLida | null {
     const caixas = /\b(?:CT|CX)\s+(\d+)\s+(BL|STR|FR|ENV)\b/.exec(semExtras);
     if (m && caixas && caixas[1] !== "1") {
       const total = String(Number(caixas[1]) * Number(m[1]));
-      conteudo = `${plural(total, forma.conta)} (${plural(caixas[1]!, CARTELAS[caixas[2]!]!)} de ${m[1]})`;
+      conteudo = `${plural(total, forma.conta)} (${plural(caixas[1]!, CARTELAS[caixas[2]!]!)} de ${Number(m[1])})`;
     } else if (m) {
       conteudo = plural(m[1]!, forma.conta);
     }
@@ -212,6 +212,7 @@ function ler(texto: string): ApresentacaoLida | null {
   }
   if (!conteudo) return null;
   // the content already names the form, so CMED spellings of the same form ("CAP", "CAP DURA") compare as one
-  const chave = `${chaveDose(dose)}|${conteudo}`;
+  // and how the box is split ("2 cartelas de 7") does not change what is bought: 14 tablets are 14 tablets
+  const chave = `${chaveDose(dose)}|${conteudo.replace(/ \(.*\)$/, "")}`;
   return { dose, conteudo, legivel: dose ? `${dose} · ${conteudo}` : conteudo, chave };
 }
