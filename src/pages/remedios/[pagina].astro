@@ -8,7 +8,15 @@ import Selo from "../../components/Selo.astro";
 import SeuEstado from "../../components/SeuEstado.astro";
 import Base from "../../layouts/Base.astro";
 import { lerApresentacao } from "../../lib/apresentacao";
-import { ehGenerico, maisBarato, porChave, precoNoRegime, quantoMenos, REGIMES } from "../../lib/comparar";
+import {
+  chaveComparacao,
+  ehGenerico,
+  maisBarato,
+  porChave,
+  precoNoRegime,
+  quantoMenos,
+  REGIMES,
+} from "../../lib/comparar";
 import { CMED_DADOS_URL } from "../../lib/config";
 import { fmtStamp } from "../../lib/format";
 import {
@@ -47,7 +55,10 @@ export async function getStaticPaths() {
     if (!lida) return [];
     const porRegime = REGIMES.flatMap((regime): Barato[] => {
       const preco = precoNoRegime(p, a, regime);
-      const o = preco === undefined ? undefined : maisBarato(grupos[regime].get(lida.chave), p.registro_produto, preco);
+      const o =
+        preco === undefined
+          ? undefined
+          : maisBarato(grupos[regime].get(chaveComparacao(p, lida)), p.registro_produto, preco);
       if (!o || preco === undefined) return [];
       const { produto } = o;
       return [

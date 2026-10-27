@@ -17,6 +17,10 @@ export interface Opcao {
 
 export const ehGenerico = (p: Produto): boolean => p.tipo_produto === "Genérico";
 
+/** What makes two presentations interchangeable: the same substância (as the CMED spells it) and the same dose,
+ * form and quantity. The substância keeps two medicines with the same dose and package apart. */
+export const chaveComparacao = (p: Produto, lida: ApresentacaoLida): string => `${p.substancia}|${lida.chave}`;
+
 /** The price of a presentation of `p` in a regime, in centavos. */
 export const precoNoRegime = (p: Produto, a: Apresentacao, regime: Regime): number | undefined =>
   a.pmc[TABELA.noRegime(regime, ehGenerico(p))];
@@ -29,9 +33,10 @@ export function porChave(produtos: Produto[], regime: Regime): Map<string, Opcao
       const preco = precoNoRegime(produto, apresentacao, regime);
       const lida = lerApresentacao(apresentacao.apresentacao);
       if (!apresentacao.comercializado || preco === undefined || !lida) continue;
-      const lista = out.get(lida.chave) ?? [];
+      const chave = chaveComparacao(produto, lida);
+      const lista = out.get(chave) ?? [];
       lista.push({ produto, apresentacao, lida, preco });
-      out.set(lida.chave, lista);
+      out.set(chave, lista);
     }
   }
   for (const lista of out.values()) {

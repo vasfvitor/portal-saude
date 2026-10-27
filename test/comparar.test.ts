@@ -39,6 +39,14 @@ describe("same dose and package across brands", () => {
     expect(quantoMenos(1000, 999)).toBe(0);
   });
 
+  it("never compares two different substâncias with the same dose and package", () => {
+    const outro = { ...eurofarma, registro_produto: "999999999", substancia: "AMOXICILINA" };
+    const grupos = porChave([eurofarma, outro], "p");
+    for (const lista of grupos.values()) {
+      expect(new Set(lista.map((o) => o.produto.substancia)).size).toBe(1);
+    }
+  });
+
   it("each regime ranks at the rates its products pay: generics at 12% where generics pay less", () => {
     const a = eurofarma.apresentacoes[0]!;
     expect(precoNoRegime(eurofarma, a, "g")).toBe(a.pmc["12"]);
