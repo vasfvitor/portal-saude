@@ -51,11 +51,14 @@ const faqLd = {
     {vigentes.map((o) => (
       <li>
         <a href={paginaOperadora(o)}>{nomeExibido(o)}</a>
-        <span class="muted">
-          {" "}
-          · liberada em {fmtDate(o.portabilidade_vigente[0]!.data)}
-          {o.uf && ` · ${o.uf}`}
-          {o.beneficiarios !== null && ` · ${fmtClientes(o.beneficiarios)}`}
+        <span class="sub">
+          {[
+            `liberada em ${fmtDate(o.portabilidade_vigente[0]!.data)}`,
+            o.uf,
+            o.beneficiarios !== null && fmtClientes(o.beneficiarios),
+          ]
+            .filter(Boolean)
+            .join(" · ")}
         </span>
       </li>
     ))}
@@ -71,6 +74,11 @@ const faqLd = {
     padding-left: 1.1rem;
   }
   .vigentes li {
-    margin: 6px 0;
+    margin: 8px 0;
+  }
+  .sub {
+    display: block;
+    color: var(--muted);
+    font-size: 0.9rem;
   }
 </style>

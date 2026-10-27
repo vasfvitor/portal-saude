@@ -59,7 +59,7 @@ export function avisoComercializacao(comercializado: boolean): string | null {
 export const classeSemCodigo = (classe: string): string => classe.replace(/^[A-Z0-9]{2,6}\s*-\s*/, "");
 
 export const PRECO_MAXIMO =
-  "A farmácia pode cobrar até este valor, e pode cobrar menos. O teto é fixado pela CMED, o órgão do governo que regula o preço dos remédios, e muda com o ICMS de cada estado.";
+  "O preço máximo é o teto que a farmácia pode cobrar; ela pode cobrar menos. Quem fixa o teto é a CMED, o órgão do governo que regula o preço dos remédios, e ele muda com o ICMS de cada estado.";
 
 export const SE_COBRAREM_MAIS =
   "Se cobrarem acima do preço máximo do seu estado, guarde a nota fiscal e procure o Procon da sua cidade.";

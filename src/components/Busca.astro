@@ -83,7 +83,7 @@ const { indice, rotulo, exemplo, nomes, todas } = Astro.props;
       if (item.d) {
         const info = document.createElement("span");
         info.className = "info";
-        info.textContent = ` ${item.d}`;
+        info.textContent = item.d;
         li.append(info);
       }
       lista.append(li);
@@ -134,6 +134,7 @@ const { indice, rotulo, exemplo, nomes, todas } = Astro.props;
     border-bottom: 1px solid var(--line);
   }
   .resultados :global(.info) {
+    display: block;
     color: var(--muted);
     font-size: 0.9rem;
   }

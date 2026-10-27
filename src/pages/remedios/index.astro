@@ -4,7 +4,7 @@ import Busca from "../../components/Busca.astro";
 import Base from "../../layouts/Base.astro";
 import { CMED_DADOS_URL } from "../../lib/config";
 import { fmtInt, fmtStamp } from "../../lib/format";
-import { PRECO_MAXIMO, SE_COBRAREM_MAIS } from "../../lib/frases-remedios";
+import { SE_COBRAREM_MAIS } from "../../lib/frases-remedios";
 import { indiceProdutosForBuild } from "../../lib/remedios";
 
 const { stamp, produtos } = await indiceProdutosForBuild(CMED_DADOS_URL);
@@ -18,8 +18,9 @@ const substancias = new Set(produtos.map((p) => p.substancia)).size;
 >
   <h1>Remédios: quanto a farmácia pode cobrar</h1>
   <p class="lead">
-    {PRECO_MAXIMO} São {fmtInt(produtos.length)} remédios vendidos em farmácia, com {fmtInt(substancias)} substâncias,
-    na lista de {publicado}.
+    Veja o preço máximo de cada remédio no seu estado e se existe outro com a mesma dose que custa menos. São{" "}
+    {fmtInt(produtos.length)} remédios vendidos em farmácia, com {fmtInt(substancias)} substâncias, na lista oficial de
+    preços de {publicado}.
   </p>
   <Busca
     indice="/remedios/busca.json"

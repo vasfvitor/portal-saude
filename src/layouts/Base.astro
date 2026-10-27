@@ -175,11 +175,11 @@ const graph = {
     display: flex;
     flex-direction: column;
   }
+  /* an underline, not a border, so a link that wraps onto two lines stays underlined on both */
   a {
     color: var(--fg);
-    text-decoration: none;
-    border-bottom: 2px solid var(--accent);
-    padding-bottom: 1px;
+    text-decoration: underline 2px var(--accent);
+    text-underline-offset: 3px;
   }
   a:hover,
   a:focus-visible {
@@ -211,7 +211,7 @@ const graph = {
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    border: 0;
+    text-decoration: none;
     font-weight: 600;
   }
   header.site .mark svg {
@@ -225,12 +225,12 @@ const graph = {
     gap: 8px 22px;
   }
   header.site nav a {
-    border-bottom-color: transparent;
+    text-decoration-color: transparent;
     font-weight: 500;
   }
   header.site nav a[aria-current="page"],
   header.site nav a:hover {
-    border-bottom-color: var(--accent);
+    text-decoration-color: var(--accent);
   }
   main {
     flex: 1;
