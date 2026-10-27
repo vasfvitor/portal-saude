@@ -1,5 +1,5 @@
 // Fetching the upstream JSON at build time, shared by every data source: one fetch per key per build,
-// retries with backoff on transport errors, 429 and 5xx, bounded concurrency for the per-entity files.
+// retries with backoff on transport errors, 429 and 5xx.
 
 const RETRIES = 5;
 // GitHub Pages answers 429 when a build reads thousands of files in a row; waits double from 1 s (31 s in all)
@@ -38,20 +38,6 @@ export async function getJson(url: string): Promise<unknown> {
     if (attempt < RETRIES) await sleep(backoff(attempt, retryAfter));
   }
   throw last instanceof Error ? last : new Error(`fetch failed at ${url}`);
-}
-
-/** Run `fn` over `items` with at most `limit` in flight; results keep the input order. */
-export async function pool<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
-  const out: R[] = new Array<R>(items.length);
-  let next = 0;
-  const worker = async (): Promise<void> => {
-    while (next < items.length) {
-      const i = next++;
-      out[i] = await fn(items[i]!);
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
-  return out;
 }
 
 // one load per key per build, shared by every page and endpoint

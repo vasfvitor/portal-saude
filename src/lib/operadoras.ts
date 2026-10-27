@@ -4,7 +4,7 @@
 
 import { getJson, once } from "./fetch";
 import { slug } from "./slug";
-import { list, num, numOrNull, obj, str, strOrNull } from "./validar";
+import { conferirComIndice, list, num, numOrNull, obj, str, strOrNull } from "./validar";
 
 export type Situacao = "ativa" | "cancelada";
 
@@ -224,16 +224,13 @@ export function parseTodas(raw: unknown, indice: ItemIndice[], meta: Meta): Oper
   const date = str(o, "date", "todas.json");
   if (date !== meta.date) throw new Error(`todas.json: date ${date}, but meta.json has ${meta.date}`);
   const ops = list(o.operadoras, "todas.json operadoras").map((x) => parseOperadora(x));
-  if (ops.length !== indice.length)
-    throw new Error(`todas.json: ${ops.length} operators, but operadoras.json lists ${indice.length}`);
-  ops.forEach((op, i) => {
-    const item = indice[i]!;
-    for (const k of CAMPOS_DO_INDICE)
-      if (op[k] !== item[k])
-        throw new Error(
-          `todas.json[${i}] (${op.registro}): ${k} ${String(op[k])}, but operadoras.json has ${String(item[k])}`,
-        );
-  });
+  const nomes = {
+    pacote: "todas.json",
+    indice: "operadoras.json",
+    unidade: "operators",
+    id: (x: Operadora) => x.registro,
+  };
+  conferirComIndice(ops, indice, CAMPOS_DO_INDICE, nomes);
   return ops;
 }
 

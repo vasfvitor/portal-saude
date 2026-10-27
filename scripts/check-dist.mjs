@@ -6,9 +6,8 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const DIST = new URL("../dist/", import.meta.url).pathname;
-const SEARCH_PAGES = new Set(["plano/index.html", "remedios/index.html"]);
-// product pages (remedios/<registro>-<slug>/) and substância pages carry the state picker
-const STATE_PAGES = /^remedios\/(\d{9}-[^/]+|substancia\/[^/]+)\/index\.html$/;
+// a module script is allowed only where the component that owns it is on the page: the search box or the picker
+const DONOS_DE_SCRIPT = /class="(busca|seu-estado)"/;
 const problems = [];
 
 function* htmlFiles(dir) {
@@ -32,7 +31,7 @@ for (const file of htmlFiles(DIST)) {
   const html = readFileSync(file, "utf-8");
   for (const [, attrs] of html.matchAll(/<script\b([^>]*)>/g)) {
     if (/type="application\/ld\+json"/.test(attrs)) continue;
-    if ((SEARCH_PAGES.has(page) || STATE_PAGES.test(page)) && /type="module"/.test(attrs)) continue;
+    if (DONOS_DE_SCRIPT.test(html) && /type="module" src="\/_astro\/(Busca|SeuEstado)\./.test(attrs)) continue;
     problems.push(`${page}: unexpected <script${attrs}>`);
   }
   const email = /[\w.+-]+@[\w-]+\.[a-z]{2,}/i.exec(

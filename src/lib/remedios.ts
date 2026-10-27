@@ -3,7 +3,7 @@
 // upstream fails the build instead of publishing a wrong price. Prices are in centavos, per ICMS rate.
 import { getJson, once } from "./fetch";
 import { slug } from "./slug";
-import { bool, list, num, obj, str, strOrNull, type Obj } from "./validar";
+import { bool, conferirComIndice, list, num, obj, str, strOrNull, type Obj } from "./validar";
 
 /** ICMS rates in the CMED list, as the JSON keys spell them. */
 export const ALIQUOTAS = ["0", "12", "17", "17.5", "18", "19", "19.5", "20", "20.5", "21", "22", "22.5", "23"] as const;
@@ -143,15 +143,15 @@ export function parseTodos(raw: unknown, indice: IndiceProdutos): Produto[] {
   for (const k of ["stamp", "publicado_em"] as const)
     if (lista[k] !== indice[k]) throw new Error(`todos.json: ${k} ${lista[k]}, but produtos.json has ${indice[k]}`);
   const produtos = list(o.produtos, "todos.json produtos").map((x) => parseProduto(x));
-  if (produtos.length !== indice.produtos.length)
-    throw new Error(`todos.json: ${produtos.length} products, but produtos.json lists ${indice.produtos.length}`);
-  produtos.forEach((p, i) => {
-    const item = indice.produtos[i]!;
-    const where = `todos.json[${i}] (${p.registro_produto})`;
+  const nomes = {
+    pacote: "todos.json",
+    indice: "produtos.json",
+    unidade: "products",
+    id: (p: Produto) => p.registro_produto,
+  };
+  conferirComIndice(produtos, indice.produtos, CAMPOS_DO_INDICE, nomes, (p, item, where) => {
     for (const k of ["stamp", "publicado_em"] as const)
       if (p[k] !== lista[k]) throw new Error(`${where}: ${k} ${p[k]}, but the file has ${lista[k]}`);
-    for (const k of CAMPOS_DO_INDICE)
-      if (p[k] !== item[k]) throw new Error(`${where}: ${k} ${String(p[k])}, but produtos.json has ${String(item[k])}`);
     if (p.apresentacoes.length !== item.apresentacoes)
       throw new Error(`${where}: ${p.apresentacoes.length} apresentacoes, but produtos.json has ${item.apresentacoes}`);
   });

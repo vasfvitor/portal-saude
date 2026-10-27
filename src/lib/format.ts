@@ -75,13 +75,30 @@ export function fmtMes(anoMes: string): string {
   return m ? `${MESES_LONGOS[Number(m[2]) - 1]} de ${m[1]}` : anoMes;
 }
 
+/** "3T2026" → the quarter's first and last month (0-11) and the year, or null. */
+function quarto(t: string): { de: number; ate: number; ano: string } | null {
+  const m = /^([1-4])T(\d{4})$/.exec(t);
+  return m ? { de: (Number(m[1]) - 1) * 3, ate: Number(m[1]) * 3 - 1, ano: m[2]! } : null;
+}
+
 /** "3T2026" → "de julho a setembro de 2026". */
 export function fmtTrimestre(t: string): string {
-  const m = /^([1-4])T(\d{4})$/.exec(t);
-  if (!m) return t;
-  const q = Number(m[1]);
-  return `de ${MESES_LONGOS[(q - 1) * 3]} a ${MESES_LONGOS[q * 3 - 1]} de ${m[2]}`;
+  const q = quarto(t);
+  return q ? `de ${MESES_LONGOS[q.de]} a ${MESES_LONGOS[q.ate]} de ${q.ano}` : t;
 }
+
+/** "3T2026" → "jul-set/26", for chart labels. */
+export function fmtTrimestreCurto(t: string): string {
+  const q = quarto(t);
+  const curto = (i: number) => MESES_LONGOS[i]!.slice(0, 3);
+  return q ? `${curto(q.de)}-${curto(q.ate)}/${q.ano.slice(2)}` : t;
+}
+
+/** 1 → "1 produto"; 16 → "16 produtos" (the number written with fmtInt). */
+export const contar = (n: number, um: string, varios: string): string => `${int.format(n)} ${n === 1 ? um : varios}`;
+
+/** A CMED list stamp, "20261009" → "09/10/2026". */
+export const fmtStamp = (stamp: string): string => `${stamp.slice(6, 8)}/${stamp.slice(4, 6)}/${stamp.slice(0, 4)}`;
 
 /** "2026-10-08" or an ISO timestamp → "08/10/2026". */
 export function fmtDate(iso: string): string {

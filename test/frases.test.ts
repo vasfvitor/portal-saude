@@ -9,8 +9,6 @@ import {
   fraseRessarcimento,
   modalidadePlural,
   motivoCancelamento,
-  trimestre,
-  trimestreCurto,
 } from "../src/lib/frases";
 import { parseOperadora, type Idss, type Reclamacoes } from "../src/lib/operadoras";
 
@@ -31,14 +29,6 @@ const recl = (indice: number | null, mediana: number | null, reclamacoes = 100):
   serie: [],
 });
 
-describe("quarters", () => {
-  it("long and short labels", () => {
-    expect(trimestre("3T2026")).toBe("3º trimestre de 2026 (jul a set)");
-    expect(trimestre("1T2025")).toBe("1º trimestre de 2025 (jan a mar)");
-    expect(trimestreCurto("4T2024")).toBe("out-dez/24");
-  });
-});
-
 describe("complaints", () => {
   it("each band, with the base in the detail", () => {
     expect(fraseReclamacoes(recl(83.58, 37.55))).toMatchObject({
@@ -57,7 +47,7 @@ describe("complaints", () => {
     expect(detalhe).toContain("a do meio entre as 94 de plano médico-hospitalar de porte grande");
     expect(detalhe).toContain("metade recebe mais reclamações que ela, metade recebe menos");
     expect(comparacao).toMatchObject({ esta: 83.58, tipica: 37.55, max: 83.58, casas: 1 });
-    expect(comparacao?.rotuloTipica).toBe("típica entre as 94 de porte grande");
+    expect(comparacao?.rotuloTipica).toBe("Típica entre as 94 de porte grande");
   });
 
   it("small base and missing data are never compared", () => {

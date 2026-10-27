@@ -3,12 +3,12 @@
 import Busca from "../../components/Busca.astro";
 import Base from "../../layouts/Base.astro";
 import { CMED_DADOS_URL } from "../../lib/config";
-import { fmtDate, fmtInt } from "../../lib/format";
+import { fmtInt, fmtStamp } from "../../lib/format";
 import { PRECO_MAXIMO, SE_COBRAREM_MAIS } from "../../lib/frases-remedios";
 import { indiceProdutosForBuild } from "../../lib/remedios";
 
 const { stamp, produtos } = await indiceProdutosForBuild(CMED_DADOS_URL);
-const publicado = fmtDate(`${stamp.slice(0, 4)}-${stamp.slice(4, 6)}-${stamp.slice(6, 8)}`);
+const publicado = fmtStamp(stamp);
 const substancias = new Set(produtos.map((p) => p.substancia)).size;
 ---
 

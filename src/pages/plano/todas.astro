@@ -3,7 +3,7 @@
 import Selo from "../../components/Selo.astro";
 import Base from "../../layouts/Base.astro";
 import { DADOS_URL } from "../../lib/config";
-import { fmtInt } from "../../lib/format";
+import { contar, fmtInt } from "../../lib/format";
 import { indiceForBuild, nomeExibido, paginaOperadora } from "../../lib/operadoras";
 
 const indice = await indiceForBuild(DADOS_URL);
@@ -24,17 +24,16 @@ const ativas = indice.filter((o) => o.situacao === "ativa").length;
 >
   <h1>Todas as operadoras</h1>
   <p class="lead">
-    {fmtInt(ativas)} operadoras ativas e {fmtInt(indice.length - ativas)}{" "}
-    {indice.length - ativas === 1 ? "fechada" : "fechadas"} nos últimos 5 anos, pelo estado da sede. A sede nem sempre é
-    onde o plano atende.
+    {fmtInt(ativas)} operadoras ativas e {contar(indice.length - ativas, "fechada", "fechadas")} nos últimos 5 anos,
+    pelo estado da sede. A sede nem sempre é onde o plano atende.
   </p>
-  <nav class="ufs" aria-label="Estados">
+  <nav class="indice-az" aria-label="Estados">
     {ufs.map((uf) => (
       <a href={`#uf-${uf}`}>{uf}</a>
     ))}
   </nav>
   {ufs.map((uf) => (
-    <section id={`uf-${uf}`}>
+    <section class="lista-az" id={`uf-${uf}`}>
       <h2>{uf}</h2>
       <ul>
         {porUf.get(uf)!.map((o) => (
@@ -48,38 +47,3 @@ const ativas = indice.filter((o) => o.situacao === "ativa").length;
     </section>
   ))}
 </Base>
-
-<style>
-  .ufs {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background: var(--bg);
-    padding: 8px 0;
-    border-bottom: 1px solid var(--line);
-  }
-  section {
-    scroll-margin-top: 3.5rem;
-  }
-  @media (min-width: 48rem) {
-    section ul {
-      columns: 2;
-      column-gap: 2.5rem;
-    }
-    section li {
-      break-inside: avoid;
-    }
-  }
-  .ufs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px 12px;
-    margin: 0 0 1rem;
-  }
-  ul {
-    padding-left: 1.1rem;
-  }
-  li {
-    margin: 4px 0;
-  }
-</style>

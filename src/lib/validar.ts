@@ -38,3 +38,25 @@ export function bool(o: Obj, k: string, where: string): boolean {
   if (typeof v !== "boolean") throw new Error(`${where}: no ${k}`);
   return v;
 }
+
+/** A bundle (todos.json, todas.json) checked against its index: the same number of entries and, position by
+ * position, the same index fields, so a half-deployed upstream fails the build instead of mixing two versions.
+ * `extra` checks anything else per entry and throws with the `where` it gets. */
+export function conferirComIndice<T, I>(
+  itens: T[],
+  indice: I[],
+  campos: readonly (keyof T & keyof I & string)[],
+  nomes: { pacote: string; indice: string; unidade: string; id: (x: T) => string },
+  extra?: (x: T, item: I, where: string) => void,
+): void {
+  if (itens.length !== indice.length)
+    throw new Error(`${nomes.pacote}: ${itens.length} ${nomes.unidade}, but ${nomes.indice} lists ${indice.length}`);
+  itens.forEach((x, i) => {
+    const item = indice[i]!;
+    const where = `${nomes.pacote}[${i}] (${nomes.id(x)})`;
+    for (const k of campos)
+      if (x[k] !== (item[k] as unknown))
+        throw new Error(`${where}: ${k} ${String(x[k])}, but ${nomes.indice} has ${String(item[k])}`);
+    extra?.(x, item, where);
+  });
+}

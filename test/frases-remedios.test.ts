@@ -7,6 +7,7 @@ import {
   classeSemCodigo,
   faixaPreco,
   precoMaximo,
+  precosPorAliquota,
   tarjaExplicada,
   tipoExplicado,
 } from "../src/lib/frases-remedios";
@@ -28,7 +29,9 @@ describe("remedios sentences", () => {
 
   it("prices of the real Cipro, always with the rate", () => {
     const a = produto("170560103").apresentacoes[0]!;
-    expect(precoMaximo(a, "18")).toBe("R$ 507,70");
+    expect(precoMaximo(a.pmc, "18")).toBe("R$ 507,70");
+    expect(JSON.parse(precosPorAliquota(a.pmc))).toMatchObject({ "18": "R$ 507,70" });
+    expect(JSON.parse(precosPorAliquota(a.pmc))).not.toHaveProperty("0");
     const sem0 = ALIQUOTAS.filter((k) => k !== "0");
     expect(faixaPreco(a, sem0)).toBe("De R$ 473,09 (ICMS 12%) a R$ 540,68 (ICMS 23%), conforme o estado.");
     expect(faixaPreco({ ...a, pmc: {} }, sem0)).toBeNull();

@@ -1,6 +1,7 @@
 // Plain pt-BR for the CMED prices. The price is a ceiling set by the government, never a price we quote:
 // the pharmacy may charge less. Every price shown carries its ICMS rate next to it.
 import { fmtMoney } from "./format";
+import { TABELA } from "./icms";
 import type { Aliquota, Apresentacao } from "./remedios";
 
 const TIPOS: Record<string, string> = {
@@ -24,10 +25,16 @@ export const tarjaExplicada = (tarja: string | null): string | null => (tarja ? 
 /** "18" → "18%"; "17.5" → "17,5%". */
 export const aliquotaRotulo = (a: string): string => `${a.replace(".", ",")}%`;
 
-export function precoMaximo(a: Apresentacao, aliquota: Aliquota): string | null {
-  const c = a.pmc[aliquota];
+export function precoMaximo(pmc: Apresentacao["pmc"], aliquota: Aliquota): string | null {
+  const c = pmc[aliquota];
   return c === undefined ? null : fmtMoney(c);
 }
+
+/** The prices the "seu estado" picker swaps in (`data-precos`): rate → "R$ 507,70", only rates some state uses. */
+export const precosPorAliquota = (pmc: Apresentacao["pmc"]): string =>
+  JSON.stringify(
+    Object.fromEntries(TABELA.usadas.flatMap((k) => (pmc[k] === undefined ? [] : [[k, fmtMoney(pmc[k])]]))),
+  );
 
 /** "De R$ 473,09 (ICMS 12%) a R$ 540,68 (ICMS 23%), conforme o estado." over the rates with a price. */
 export function faixaPreco(a: Apresentacao, aliquotas: readonly Aliquota[]): string | null {

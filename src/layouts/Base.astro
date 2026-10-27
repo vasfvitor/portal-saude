@@ -254,6 +254,89 @@ const graph = {
     margin: 0.5rem 0;
     max-width: 44rem;
   }
+  /* the "seu estado" picker (SeuEstado.astro) sets data-uf and data-regime on <html>; without it, the defaults */
+  :root:not([data-uf]) [data-so-com-estado],
+  :root[data-uf] [data-so-sem-estado],
+  :root[data-regime="g"] [data-so-regime="p"],
+  :root:not([data-regime="g"]) [data-so-regime="g"] {
+    display: none;
+  }
+  /* a boxed block (a dose and package, a group of products) and its price rows */
+  .cartao {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 4px 16px 12px;
+    margin: 1rem 0;
+  }
+  .cartao > :is(h2, h3):first-child {
+    margin: 0.9rem 0 0.2rem;
+  }
+  .linhas {
+    list-style: none;
+    padding: 0;
+    margin: 0.5rem 0 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .linhas > li {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 2px 14px;
+    align-items: center;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--line);
+    border-radius: 6px;
+    order: var(--ordem, 0);
+  }
+  .linhas > li:last-child {
+    border-bottom: 0;
+  }
+  .linhas > li.sua {
+    background: var(--accent-soft);
+    outline: 1px solid var(--accent);
+  }
+  /* rows ranked per ICMS regime: --ordem-g, data-menor="p g" (cheapest) and data-fora="p g" (past the cut) */
+  :root[data-regime="g"] .linhas > li {
+    order: var(--ordem-g, var(--ordem, 0));
+  }
+  :root:not([data-regime="g"]) .linhas > li[data-menor~="p"],
+  :root[data-regime="g"] .linhas > li[data-menor~="g"] {
+    background: var(--accent-soft);
+  }
+  :root:not([data-regime="g"]) .linhas > li[data-fora~="p"],
+  :root[data-regime="g"] .linhas > li[data-fora~="g"] {
+    display: none;
+  }
+  /* A-Z pages: the jump index stays at the top, the list takes two columns on wide screens */
+  .indice-az {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--bg);
+    padding: 8px 0;
+    margin: 0 0 1rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .lista-az {
+    scroll-margin-top: 3.5rem;
+  }
+  .lista-az ul {
+    padding-left: 1.1rem;
+  }
+  .lista-az li {
+    margin: 4px 0;
+    break-inside: avoid;
+  }
+  @media (min-width: 48rem) {
+    .lista-az ul {
+      columns: 2;
+      column-gap: 2.5rem;
+    }
+  }
   /* breadcrumb above the h1 of a detail page */
   .trilha {
     color: var(--muted);

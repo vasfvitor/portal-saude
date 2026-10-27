@@ -273,8 +273,11 @@ export function ufsPorAliquota(estados: EstadoIcms[] = ESTADOS, generico = false
   const out = new Map<Aliquota, string[]>();
   for (const e of estados) {
     const a = aliquotaDoEstado(e, generico);
-    out.set(a, [...(out.get(a) ?? []), e.confirmado ? e.uf : `${e.uf}*`].sort());
+    const lista = out.get(a) ?? [];
+    lista.push(e.confirmado ? e.uf : `${e.uf}*`);
+    out.set(a, lista);
   }
+  for (const lista of out.values()) lista.sort();
   return out;
 }
 
@@ -302,3 +305,33 @@ export function colunas(estados: EstadoIcms[] = ESTADOS): Aliquota[] {
 export function aliquotaPorUf(generico: boolean, estados: EstadoIcms[] = ESTADOS): Record<string, Aliquota> {
   return Object.fromEntries(estados.map((e) => [e.uf, aliquotaDoEstado(e, generico)]));
 }
+
+/** "p": every product pays the state's default rate; "g": generics pay less than the rest (SP and MG today). The
+ * order of prices across products only depends on the regime: within "p" it is the same at any rate. */
+export type Regime = "p" | "g";
+
+export const regimeDoEstado = (e: EstadoIcms): Regime =>
+  e.aliquota_genericos && e.aliquota_genericos !== e.aliquota ? "g" : "p";
+
+/** The table sorted by state name, for lists and the picker. */
+export const ESTADOS_POR_NOME: EstadoIcms[] = [...ESTADOS].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+
+/** What the medicine pages derive from the table, computed once per build instead of once per page. */
+export const TABELA = (() => {
+  const ref = aliquotaReferencia().aliquota;
+  const g = ESTADOS.find((e) => regimeDoEstado(e) === "g");
+  const ufs = { normal: ufsPorAliquota(ESTADOS, false), generico: ufsPorAliquota(ESTADOS, true) };
+  const cols = colunas();
+  return {
+    /** the rate prices are shown at before the reader picks a state */
+    ref,
+    ufs,
+    /** rate columns some state uses, for regular products and for generics */
+    colunas: { normal: cols.filter((a) => ufs.normal.has(a)), generico: cols.filter((a) => ufs.generico.has(a)) },
+    /** every rate some state uses: the keys worth sending to the browser */
+    usadas: cols,
+    /** the rate a product is ranked at in each regime ("g" uses the pair of the states in it) */
+    noRegime: (regime: Regime, generico: boolean): Aliquota =>
+      regime === "g" && g ? (generico ? g.aliquota_genericos! : g.aliquota) : ref,
+  };
+})();

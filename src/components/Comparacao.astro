@@ -21,13 +21,13 @@ const largura = (v: number) => `${Math.max(2, Math.min(100, (v / c.max) * 100)).
     </dd>
   </div>
   <div class="linha">
-    <dt>{c.rotuloTipica.charAt(0).toUpperCase() + c.rotuloTipica.slice(1)}</dt>
+    <dt>{c.rotuloTipica}</dt>
     <dd>
       <span class="barra" style={`width: ${largura(c.tipica)}`}></span>
       <span class="valor">{fmtDec(c.tipica, c.casas)}</span>
     </dd>
   </div>
-  <p class="unidade">{c.unidade.charAt(0).toUpperCase() + c.unidade.slice(1)}.</p>
+  <p class="unidade">{c.unidade}.</p>
 </dl>
 
 <style>

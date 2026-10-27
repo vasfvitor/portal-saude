@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  ESTADOS_POR_NOME,
+  regimeDoEstado,
+  TABELA,
   aliquotaDoEstado,
   aliquotaReferencia,
   colunas,
@@ -60,5 +63,18 @@ describe("ICMS table helpers", () => {
     expect(ufsPorAliquota(ESTADOS, false).get("12")).toBeUndefined();
     expect(ufsPorAliquota(ESTADOS).get("20")).toEqual(["AM", "CE", "PB", "RN*", "RR*", "TO"]);
     expect(colunas()).toEqual(["12", "17", "18", "19", "19.5", "20", "20.5", "22", "22.5", "23"]);
+  });
+
+  it("two regimes: every state ranks like the reference, except where generics pay less", () => {
+    const g = ESTADOS.filter((x) => regimeDoEstado(x) === "g");
+    expect(g.map((x) => x.uf).sort()).toEqual(["MG", "SP"]);
+    // one "g" regime only works while every such state uses the same pair of rates
+    expect(new Set(g.map((x) => `${x.aliquota}/${x.aliquota_genericos}`)).size).toBe(1);
+    expect(TABELA.noRegime("p", true)).toBe(TABELA.ref);
+    expect(TABELA.noRegime("g", true)).toBe("12");
+    expect(TABELA.noRegime("g", false)).toBe("18");
+    expect(TABELA.colunas.normal).not.toContain("12");
+    expect(TABELA.colunas.generico).toContain("12");
+    expect(ESTADOS_POR_NOME[0]!.uf).toBe("AC");
   });
 });

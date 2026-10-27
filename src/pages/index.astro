@@ -3,12 +3,12 @@
 import Base from "../layouts/Base.astro";
 import { TITLE } from "../lib/brand";
 import { ANVISA_HUB_URL, CMED_DADOS_URL, CONTEM_URL, META_URL } from "../lib/config";
-import { fmtDate } from "../lib/format";
+import { fmtDate, fmtStamp } from "../lib/format";
 import { metaForBuild } from "../lib/operadoras";
 import { indiceProdutosForBuild } from "../lib/remedios";
 
 const [meta, { stamp }] = await Promise.all([metaForBuild(META_URL), indiceProdutosForBuild(CMED_DADOS_URL)]);
-const listaCmed = fmtDate(`${stamp.slice(0, 4)}-${stamp.slice(4, 6)}-${stamp.slice(6, 8)}`);
+const listaCmed = fmtStamp(stamp);
 ---
 
 <Base title={TITLE}>

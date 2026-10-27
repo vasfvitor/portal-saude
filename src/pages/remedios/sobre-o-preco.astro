@@ -4,10 +4,9 @@
 import Base from "../../layouts/Base.astro";
 import { fmtDate } from "../../lib/format";
 import { aliquotaRotulo, PRECO_MAXIMO, SE_COBRAREM_MAIS } from "../../lib/frases-remedios";
-import { ESTADOS } from "../../lib/icms";
+import { ESTADOS_POR_NOME as estados } from "../../lib/icms";
 
 const CMED_URL = "https://www.gov.br/anvisa/pt-br/assuntos/medicamentos/cmed";
-const estados = [...ESTADOS].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 const faq = [
   { q: "O que é o preço máximo?", a: PRECO_MAXIMO },
   {

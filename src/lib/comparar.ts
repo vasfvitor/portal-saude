@@ -1,29 +1,42 @@
-// The same dose, form and quantity across brands: the key comes from lerApresentacao, and prices are compared at
-// one ICMS rate (every product's price moves the same way from rate to rate, so the order holds in any state).
-// Only presentations sold in the last year are offered as the cheaper option.
-import { lerApresentacao } from "./apresentacao";
-import type { Aliquota, Apresentacao, Produto } from "./remedios";
+// The same dose, form and quantity across brands: the key comes from lerApresentacao, and prices are ranked in an
+// ICMS regime (see Regime in icms.ts). Within a regime the order is the same in every state, so a page ranks once
+// per regime, never per state. Only presentations sold in the last year are offered as the cheaper option.
+import { lerApresentacao, type ApresentacaoLida } from "./apresentacao";
+import { TABELA, type Regime } from "./icms";
+import type { Apresentacao, Produto } from "./remedios";
+
+export const REGIMES: readonly Regime[] = ["p", "g"];
 
 export interface Opcao {
   produto: Produto;
   apresentacao: Apresentacao;
-  /** centavos at the comparison rate */
+  lida: ApresentacaoLida;
+  /** centavos at the rate this product pays in the regime */
   preco: number;
 }
 
-/** Presentations sold in the last year with a price at `aliquota`, grouped by key, cheapest first. */
-export function porChave(produtos: Produto[], aliquota: Aliquota): Map<string, Opcao[]> {
+export const ehGenerico = (p: Produto): boolean => p.tipo_produto === "Genérico";
+
+/** The price of a presentation of `p` in a regime, in centavos. */
+export const precoNoRegime = (p: Produto, a: Apresentacao, regime: Regime): number | undefined =>
+  a.pmc[TABELA.noRegime(regime, ehGenerico(p))];
+
+/** Presentations sold in the last year with a price in the regime, grouped by key, cheapest first. */
+export function porChave(produtos: Produto[], regime: Regime): Map<string, Opcao[]> {
   const out = new Map<string, Opcao[]>();
   for (const produto of produtos) {
     for (const apresentacao of produto.apresentacoes) {
-      const preco = apresentacao.pmc[aliquota];
+      const preco = precoNoRegime(produto, apresentacao, regime);
       const lida = lerApresentacao(apresentacao.apresentacao);
       if (!apresentacao.comercializado || preco === undefined || !lida) continue;
-      out.set(lida.chave, [...(out.get(lida.chave) ?? []), { produto, apresentacao, preco }]);
+      const lista = out.get(lida.chave) ?? [];
+      lista.push({ produto, apresentacao, lida, preco });
+      out.set(lida.chave, lista);
     }
   }
-  for (const lista of out.values())
+  for (const lista of out.values()) {
     lista.sort((a, b) => a.preco - b.preco || a.produto.produto.localeCompare(b.produto.produto));
+  }
   return out;
 }
 

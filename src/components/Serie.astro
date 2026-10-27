@@ -2,8 +2,7 @@
 // Quarterly complaint index as small SVG bars, with the typical operator as a dashed line labelled at its end.
 // The latest quarter and the highest one carry their value. The aria-label reads every value out, so the
 // chart says the same to a screen reader.
-import { fmtDec } from "../lib/format";
-import { trimestreCurto } from "../lib/frases";
+import { fmtDec, fmtTrimestreCurto } from "../lib/format";
 import type { PontoSerie } from "../lib/operadoras";
 
 interface Props {
@@ -24,11 +23,11 @@ const y = (v: number) => base - (v / max) * (base - topo);
 const ultimo = serie.length - 1;
 const maior = valores.indexOf(Math.max(...valores));
 const partes = (t: string) => {
-  const [meses, ano] = trimestreCurto(t).split("/");
+  const [meses, ano] = fmtTrimestreCurto(t).split("/");
   return { meses: meses ?? t, ano: ano ? `20${ano}` : "" };
 };
 const rotulo = serie
-  .map((p) => `${trimestreCurto(p.trimestre)}: ${p.indice === null ? "sem dado" : fmtDec(p.indice, 1)}`)
+  .map((p) => `${fmtTrimestreCurto(p.trimestre)}: ${p.indice === null ? "sem dado" : fmtDec(p.indice, 1)}`)
   .join("; ");
 const aria = `Reclamações por mês a cada 100 mil clientes, por trimestre. ${rotulo}.${mediana === null ? "" : ` Operadora típica do mesmo porte: ${fmtDec(mediana, 1)}.`}`;
 ---

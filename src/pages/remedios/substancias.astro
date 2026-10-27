@@ -20,13 +20,13 @@ const letras = [...new Set(nomes.map(inicial))];
 >
   <h1>Todas as substâncias</h1>
   <p class="lead">{fmtInt(nomes.length)} substâncias de remédios vendidos em farmácia, de A a Z.</p>
-  <nav class="letras" aria-label="Letras">
+  <nav class="indice-az" aria-label="Letras">
     {letras.map((l) => (
       <a href={`#letra-${l}`}>{l}</a>
     ))}
   </nav>
   {letras.map((l) => (
-    <section id={`letra-${l}`}>
+    <section class="lista-az" id={`letra-${l}`}>
       <h2>{l}</h2>
       <ul>
         {nomes
@@ -41,37 +41,3 @@ const letras = [...new Set(nomes.map(inicial))];
     </section>
   ))}
 </Base>
-
-<style>
-  .letras {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background: var(--bg);
-    padding: 8px 0;
-    border-bottom: 1px solid var(--line);
-  }
-  section {
-    scroll-margin-top: 3.5rem;
-  }
-  @media (min-width: 48rem) {
-    section ul {
-      columns: 2;
-      column-gap: 2.5rem;
-    }
-    section li {
-      break-inside: avoid;
-    }
-  }
-  .letras {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px 12px;
-  }
-  ul {
-    padding-left: 1.1rem;
-  }
-  li {
-    margin: 3px 0;
-  }
-</style>

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { backoff, getJson, pool } from "../src/lib/fetch";
+import { backoff, getJson } from "../src/lib/fetch";
 import {
   indiceForBuild,
   operadorasForBuild,
@@ -104,20 +104,6 @@ describe("fetching", () => {
     expect(backoff(2, "Wed, 21 Oct 2026 07:28:00 GMT")).toBe(4000);
     expect(backoff(0, "600")).toBe(60_000);
     expect(backoff(9)).toBe(60_000);
-  });
-
-  it("pool keeps the order and the limit", async () => {
-    let inFlight = 0;
-    let peak = 0;
-    const out = await pool([1, 2, 3, 4, 5, 6, 7], 3, async (n) => {
-      inFlight++;
-      peak = Math.max(peak, inFlight);
-      await new Promise((r) => setTimeout(r, 5 * (8 - n)));
-      inFlight--;
-      return n * 10;
-    });
-    expect(out).toEqual([10, 20, 30, 40, 50, 60, 70]);
-    expect(peak).toBe(3);
   });
 
   it("loads every operator listed in the index, once per build", async () => {

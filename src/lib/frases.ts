@@ -1,7 +1,7 @@
 // Numbers into plain pt-BR sentences. Facts compared with peers, always with their base; never a score or
 // a risk label of our own. "Típica" in the text is the operator in the middle of its peers (the median), and
 // each `detalhe` says so in words. `tom` only drives styling and is never shown as words.
-import { fmtClientes, fmtDate, fmtDec, fmtInt, fmtMes, fmtPct, fmtReais, fmtTrimestre } from "./format";
+import { contar, fmtClientes, fmtDate, fmtDec, fmtInt, fmtMes, fmtPct, fmtReais, fmtTrimestre } from "./format";
 import type { Idss, Operadora, PontoSerie, Reclamacoes, Ressarcimento } from "./operadoras";
 
 export type Tom = "favoravel" | "neutro" | "desfavoravel" | "sem-base";
@@ -13,9 +13,9 @@ export interface Comparacao {
   /** the end of the bar scale */
   max: number;
   casas: number;
-  /** "típica entre as 94 de porte grande" */
+  /** "Típica entre as 94 de porte grande" */
   rotuloTipica: string;
-  /** what both numbers measure: "reclamações por mês a cada 100 mil clientes" */
+  /** what both numbers measure: "Reclamações por mês a cada 100 mil clientes" */
   unidade: string;
 }
 
@@ -35,24 +35,6 @@ export const IDSS_FAIXA = 0.05;
 /** a change under this share, year on year, reads as "parecido" */
 const VARIACAO_PEQUENA = 0.1;
 
-const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
-
-/** "3T2026" → "3º trimestre de 2026 (jul a set)". */
-export function trimestre(t: string): string {
-  const m = /^([1-4])T(\d{4})$/.exec(t);
-  if (!m) return t;
-  const q = Number(m[1]);
-  return `${q}º trimestre de ${m[2]} (${MESES[(q - 1) * 3]} a ${MESES[q * 3 - 1]})`;
-}
-
-/** "3T2026" → "jul-set/26", for chart labels. */
-export function trimestreCurto(t: string): string {
-  const m = /^([1-4])T\d{2}(\d{2})$/.exec(t);
-  if (!m) return t;
-  const q = Number(m[1]);
-  return `${MESES[(q - 1) * 3]}-${MESES[q * 3 - 1]}/${m[2]}`;
-}
-
 export function cobertura(c: string): string {
   return c === "odontológica" ? "Plano odontológico" : "Plano médico-hospitalar";
 }
@@ -69,12 +51,10 @@ const PLURAL: Record<string, string> = {
 };
 export const modalidadePlural = (m: string): string => PLURAL[m] ?? `operadoras da modalidade ${m}`;
 
-const reclamacoesN = (n: number): string => `${fmtInt(n)} ${n === 1 ? "reclamação" : "reclamações"}`;
-
 export function fraseReclamacoes(r: Reclamacoes): Frase {
   const porte = r.porte.toLowerCase();
   const tipo = r.cobertura === "odontológica" ? "plano odontológico" : "plano médico-hospitalar";
-  const base = `${reclamacoesN(r.reclamacoes)} na ANS ${fmtTrimestre(r.trimestre)}, para ${fmtClientes(r.beneficiarios_media)} em média.`;
+  const base = `${contar(r.reclamacoes, "reclamação", "reclamações")} na ANS ${fmtTrimestre(r.trimestre)}, para ${fmtClientes(r.beneficiarios_media)} em média.`;
   if (r.indice === null || r.mediana_mesmo_porte === null || r.mediana_mesmo_porte <= 0) {
     return { titulo: "Sem comparação de reclamações neste trimestre.", detalhe: base, tom: "sem-base" };
   }
@@ -115,8 +95,8 @@ export function fraseReclamacoes(r: Reclamacoes): Frase {
       tipica: r.mediana_mesmo_porte,
       max: Math.max(r.indice, r.mediana_mesmo_porte),
       casas: 1,
-      rotuloTipica: `típica entre as ${fmtInt(r.operadoras_mesmo_porte)} de porte ${porte}`,
-      unidade: "reclamações por mês a cada 100 mil clientes",
+      rotuloTipica: `Típica entre as ${fmtInt(r.operadoras_mesmo_porte)} de porte ${porte}`,
+      unidade: "Reclamações por mês a cada 100 mil clientes",
     },
   };
 }
@@ -167,8 +147,8 @@ export function fraseIdss(i: Idss | null, modalidade: string): Frase {
     tipica: mediana,
     max: 1,
     casas: 2,
-    rotuloTipica: `típica entre ${fmtInt(i.operadoras_mesma_modalidade)} ${grupo}`,
-    unidade: "nota de 0 a 1",
+    rotuloTipica: `Típica entre ${fmtInt(i.operadoras_mesma_modalidade)} ${grupo}`,
+    unidade: "Nota de 0 a 1",
   };
   if (i.valor >= mediana + IDSS_FAIXA) {
     return { titulo: `${nota}, acima da típica das ${grupo}.`, detalhe, tom: "favoravel", comparacao };

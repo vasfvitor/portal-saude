@@ -8,113 +8,87 @@ import Selo from "../../components/Selo.astro";
 import SeuEstado from "../../components/SeuEstado.astro";
 import Base from "../../layouts/Base.astro";
 import { lerApresentacao } from "../../lib/apresentacao";
-import { maisBarato, porChave, quantoMenos } from "../../lib/comparar";
+import { ehGenerico, maisBarato, porChave, precoNoRegime, quantoMenos, REGIMES } from "../../lib/comparar";
 import { CMED_DADOS_URL } from "../../lib/config";
-import { fmtDate, fmtMoney } from "../../lib/format";
+import { fmtStamp } from "../../lib/format";
 import {
   aliquotaRotulo,
   avisoComercializacao,
   classeSemCodigo,
   faixaPreco,
   PRECO_MAXIMO,
+  precoMaximo,
+  precosPorAliquota,
   SE_COBRAREM_MAIS,
   tarjaExplicada,
   tipoExplicado,
 } from "../../lib/frases-remedios";
-import { aliquotaPorUf, aliquotaReferencia, colunas, ufsPorAliquota } from "../../lib/icms";
-import {
-  paginaProduto,
-  produtosForBuild,
-  slugsSubstancias,
-  type Aliquota,
-  type Apresentacao,
-  type Produto,
-} from "../../lib/remedios";
+import { TABELA, type Regime } from "../../lib/icms";
+import { paginaProduto, produtosForBuild, slugsSubstancias, type Apresentacao, type Produto } from "../../lib/remedios";
 
+/** The cheapest product with the same dose and package, in one ICMS regime or in both (`regime` undefined). */
 interface Barato {
+  regime?: Regime;
   produto: string;
   laboratorio: string;
   tipo: string | null;
   href: string;
   pmc: Apresentacao["pmc"];
-  /** whole percent less at the comparison rate, and in each state (generics pay less ICMS in some states) */
+  /** whole percent less, at the rates each product pays in the regime */
   menos: number;
-  menosPorUf: Record<string, number>;
 }
 
 export async function getStaticPaths() {
   const produtos = await produtosForBuild(CMED_DADOS_URL);
   const substancias = slugsSubstancias(produtos.map((p) => p.substancia));
-  const ref = aliquotaReferencia().aliquota;
-  const grupos = porChave(produtos, ref);
-  return produtos.map((p) => ({
-    params: { pagina: paginaProduto(p).split("/")[2]! },
-    props: {
-      p,
-      substanciaSlug: substancias.get(p.substancia)!,
-      baratos: p.apresentacoes.map((a): Barato | null => {
-        const lida = lerApresentacao(a.apresentacao);
-        const preco = a.pmc[ref];
-        if (!lida || preco === undefined) return null;
-        const o = maisBarato(grupos.get(lida.chave), p.registro_produto, preco);
-        if (!o) return null;
-        const meu = aliquotaPorUf(p.tipo_produto === "Genérico");
-        const dele = aliquotaPorUf(o.produto.tipo_produto === "Genérico");
-        const menosPorUf: Record<string, number> = {};
-        for (const uf of Object.keys(meu)) {
-          const de = a.pmc[meu[uf]!];
-          const para = o.apresentacao.pmc[dele[uf]!];
-          // -1: in this state the other option is not cheaper (it pays a higher ICMS than this generic)
-          if (de !== undefined && para !== undefined) menosPorUf[uf] = para < de ? quantoMenos(de, para) : -1;
-        }
-        return {
-          produto: o.produto.produto,
-          laboratorio: o.produto.laboratorio,
-          tipo: o.produto.tipo_produto,
-          href: paginaProduto(o.produto),
+  const grupos = { p: porChave(produtos, "p"), g: porChave(produtos, "g") };
+  const baratos = (p: Produto, a: Apresentacao): Barato[] => {
+    const lida = lerApresentacao(a.apresentacao);
+    if (!lida) return [];
+    const porRegime = REGIMES.flatMap((regime): Barato[] => {
+      const preco = precoNoRegime(p, a, regime);
+      const o = preco === undefined ? undefined : maisBarato(grupos[regime].get(lida.chave), p.registro_produto, preco);
+      if (!o || preco === undefined) return [];
+      const { produto } = o;
+      return [
+        {
+          regime,
+          produto: produto.produto,
+          laboratorio: produto.laboratorio,
+          tipo: produto.tipo_produto,
+          href: paginaProduto(produto),
           pmc: o.apresentacao.pmc,
           menos: quantoMenos(preco, o.preco),
-          menosPorUf,
-        };
-      }),
-    },
+        },
+      ];
+    });
+    // the same answer in both regimes is shown once, for every state
+    const [x, y] = porRegime;
+    return x && y && x.href === y.href && x.menos === y.menos ? [{ ...x, regime: undefined }] : porRegime;
+  };
+  return produtos.map((p) => ({
+    params: { pagina: paginaProduto(p).split("/")[2]! },
+    props: { p, substanciaSlug: substancias.get(p.substancia)!, baratos: p.apresentacoes.map((a) => baratos(p, a)) },
   }));
 }
 
 interface Props {
   p: Produto;
   substanciaSlug: string;
-  baratos: (Barato | null)[];
+  baratos: Barato[][];
 }
 const { p, substanciaSlug, baratos } = Astro.props;
-const generico = p.tipo_produto === "Genérico";
-const ufs = ufsPorAliquota(undefined, generico);
+const generico = ehGenerico(p);
+const marca = generico ? "1" : "0";
+const ufs = generico ? TABELA.ufs.generico : TABELA.ufs.normal;
+const cols = generico ? TABELA.colunas.generico : TABELA.colunas.normal;
 const aConfirmar = [...ufs.values()].flat().some((u) => u.endsWith("*"));
-// only the rates some state uses for this product (generics move SP and MG to 12%)
-const cols = ufs.size > 0 ? colunas().filter((a) => ufs.has(a)) : colunas();
-const ref = aliquotaReferencia().aliquota;
+const ref = TABELA.ref;
 const tipo = tipoExplicado(p.tipo_produto);
 const tarja = tarjaExplicada(p.tarja);
 const aviso = avisoComercializacao(p.comercializado);
-const publicado = fmtDate(`${p.stamp.slice(0, 4)}-${p.stamp.slice(4, 6)}-${p.stamp.slice(6, 8)}`);
-const precos = (pmc: Apresentacao["pmc"]) =>
-  JSON.stringify(
-    Object.fromEntries(
-      Object.entries(pmc)
-        .filter(([k]) => k !== "0")
-        .map(([k, c]) => [k, fmtMoney(c)]),
-    ),
-  );
-const maisBaratoRotulo = (n: number) =>
-  n >= 1 ? `Até ${n}% mais barato` : n === 0 ? "Um pouco mais barato" : "Outra opção";
-// only the states where the label differs from the one shown without a state
-const rotulosPorUf = (por: Record<string, number>, padrao: number) =>
-  Object.fromEntries(
-    Object.entries(por)
-      .filter(([, n]) => maisBaratoRotulo(n) !== maisBaratoRotulo(padrao))
-      .map(([uf, n]) => [uf, maisBaratoRotulo(n)]),
-  );
-const preco = (pmc: Apresentacao["pmc"], k: Aliquota) => (pmc[k] === undefined ? null : fmtMoney(pmc[k]));
+const publicado = fmtStamp(p.stamp);
+const maisBaratoRotulo = (n: number) => (n >= 1 ? `Até ${n}% mais barato` : "Um pouco mais barato");
 const primeira = lerApresentacao(p.apresentacoes[0]!.apresentacao)?.legivel ?? p.apresentacoes[0]!.apresentacao;
 const descricao = `${p.produto} (${p.laboratorio}), ${primeira}: quanto a farmácia pode cobrar em cada estado, na lista da CMED de ${publicado}.`;
 const breadcrumb = {
@@ -154,20 +128,16 @@ const breadcrumb = {
   {p.apresentacoes.map((a, i) => {
     const lida = lerApresentacao(a.apresentacao);
     const faixa = faixaPreco(a, cols);
-    const barato = baratos[i];
     return (
-      <section class="apres">
+      <section class="cartao" data-apres data-generico={marca}>
         <h2>{lida?.legivel ?? a.apresentacao}</h2>
         <p class="codigo">
           {lida && <>Na lista da CMED: {a.apresentacao}</>}
           {!a.comercializado && <Selo tom="alerta">sem venda no último ano</Selo>}
         </p>
-        <p class="no-estado" data-so-com-estado hidden>
-          No seu estado (<span data-uf-rotulo data-generico={generico || undefined} />
-          ): até{" "}
-          <strong data-precos={precos(a.pmc)} data-generico={generico || undefined}>
-            {faixa}
-          </strong>
+        <p class="no-estado" data-so-com-estado>
+          No seu estado (<span data-uf-rotulo />
+          ): até <strong data-preco-da-lista>{faixa}</strong>
         </p>
         {faixa && (
           <p class="faixa" data-so-sem-estado>
@@ -176,35 +146,26 @@ const breadcrumb = {
         )}
         <details data-recolher open>
           <summary>Preço máximo em cada estado</summary>
-          <ul class="aliquotas" data-generico-lista={generico || undefined}>
+          <ul class="linhas">
             {cols
               .filter((k) => a.pmc[k] !== undefined)
               .map((k) => (
                 <li data-aliquota={k}>
                   <span class="ufs">{ufs.get(k)?.join(", ") ?? "nenhum estado como padrão"}</span>
                   <span class="icms">ICMS {aliquotaRotulo(k)}</span>
-                  <strong>{preco(a.pmc, k)}</strong>
+                  <strong>{precoMaximo(a.pmc, k)}</strong>
                 </li>
               ))}
           </ul>
         </details>
-        {barato && (
-          <p class="barato">
-            <strong data-por-uf={JSON.stringify(rotulosPorUf(barato.menosPorUf, barato.menos))}>
-              {maisBaratoRotulo(barato.menos)}
-            </strong>{" "}
-            com a mesma dose e embalagem: <a href={barato.href}>{barato.produto}</a>
-            {barato.tipo && ` (${barato.tipo.toLowerCase()}, ${barato.laboratorio})`}, até{" "}
-            <span data-precos={precos(barato.pmc)} data-generico={barato.tipo === "Genérico" || undefined}>
-              {preco(barato.pmc, ref)}
-            </span>{" "}
-            (
-            <span data-uf-rotulo data-generico={barato.tipo === "Genérico" || undefined}>
-              ICMS {aliquotaRotulo(ref)}
-            </span>
-            ).
+        {baratos[i]!.map((b) => (
+          <p class="barato" data-so-regime={b.regime} data-generico={b.tipo === "Genérico" ? "1" : "0"}>
+            <strong>{maisBaratoRotulo(b.menos)}</strong> com a mesma dose e embalagem: <a href={b.href}>{b.produto}</a>
+            {b.tipo && ` (${b.tipo.toLowerCase()}, ${b.laboratorio})`}, até{" "}
+            <span data-precos={precosPorAliquota(b.pmc)}>{precoMaximo(b.pmc, ref)}</span> (
+            <span data-uf-rotulo>{`ICMS ${aliquotaRotulo(ref)}`}</span>).
           </p>
-        )}
+        ))}
       </section>
     );
   })}
@@ -244,17 +205,6 @@ const breadcrumb = {
     color: var(--muted);
     font-size: 0.95rem;
   }
-  .apres {
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 4px 18px 14px;
-    margin: 1rem 0;
-  }
-  .apres h2 {
-    font-size: 1.1rem;
-    margin: 0.9rem 0 0.1rem;
-  }
   .codigo {
     font-size: 0.8rem;
     color: var(--muted);
@@ -282,27 +232,6 @@ const breadcrumb = {
     font-weight: 600;
     font-size: 0.95rem;
   }
-  .aliquotas {
-    list-style: none;
-    padding: 0;
-    margin: 0.5rem 0 0;
-  }
-  .aliquotas li {
-    display: grid;
-    grid-template-columns: 1fr auto auto;
-    gap: 2px 14px;
-    align-items: baseline;
-    padding: 6px 8px;
-    border-bottom: 1px solid var(--line);
-    border-radius: 6px;
-  }
-  .aliquotas li:last-child {
-    border-bottom: 0;
-  }
-  .aliquotas :global(li.sua) {
-    background: var(--accent-soft);
-    outline: 1px solid var(--accent);
-  }
   .ufs {
     color: var(--muted);
     font-size: 0.9rem;
@@ -312,7 +241,7 @@ const breadcrumb = {
     color: var(--muted);
     white-space: nowrap;
   }
-  .aliquotas strong {
+  .linhas strong {
     white-space: nowrap;
     text-align: right;
   }

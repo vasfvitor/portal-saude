@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { fmtClientes, fmtDate, fmtDec, fmtMes, fmtPct, fmtPessoas, fmtReais, fmtTrimestre } from "../src/lib/format";
+import {
+  contar,
+  fmtStamp,
+  fmtClientes,
+  fmtDate,
+  fmtDec,
+  fmtMes,
+  fmtPct,
+  fmtPessoas,
+  fmtReais,
+  fmtTrimestre,
+  fmtTrimestreCurto,
+} from "../src/lib/format";
 import { nomeExibido } from "../src/lib/operadoras";
 
 describe("format", () => {
@@ -12,8 +24,13 @@ describe("format", () => {
     expect(fmtClientes(98203)).toBe("98 mil clientes");
     expect(fmtClientes(1)).toBe("1 cliente");
     expect(fmtMes("2026-09")).toBe("setembro de 2026");
+    expect(contar(1, "produto", "produtos")).toBe("1 produto");
+    expect(contar(1340, "operadora", "operadoras")).toBe("1.340 operadoras");
+    expect(fmtStamp("20261009")).toBe("09/10/2026");
     expect(fmtTrimestre("3T2026")).toBe("de julho a setembro de 2026");
     expect(fmtTrimestre("1T2025")).toBe("de janeiro a março de 2025");
+    expect(fmtTrimestreCurto("4T2024")).toBe("out-dez/24");
+    expect(fmtTrimestreCurto("x")).toBe("x");
   });
 
   it("percent never rounds a shortfall up to 100%", () => {
