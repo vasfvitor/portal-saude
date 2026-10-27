@@ -48,10 +48,39 @@ export function fmtPessoas(n: number): string {
   return int.format(n);
 }
 
-/** 3391379 → "3,4 milhões de beneficiários"; 98203 → "98 mil beneficiários"; 1 → "1 beneficiário". */
-export function fmtBeneficiarios(n: number): string {
-  if (n === 1) return "1 beneficiário";
-  return `${fmtPessoas(n)}${n >= 1e6 ? " de" : ""} beneficiários`;
+/** 3391379 → "3,4 milhões de clientes"; 98203 → "98 mil clientes"; 1 → "1 cliente". */
+export function fmtClientes(n: number): string {
+  if (n === 1) return "1 cliente";
+  return `${fmtPessoas(n)}${n >= 1e6 ? " de" : ""} clientes`;
+}
+
+const MESES_LONGOS = [
+  "janeiro",
+  "fevereiro",
+  "março",
+  "abril",
+  "maio",
+  "junho",
+  "julho",
+  "agosto",
+  "setembro",
+  "outubro",
+  "novembro",
+  "dezembro",
+];
+
+/** "2026-09" → "setembro de 2026". */
+export function fmtMes(anoMes: string): string {
+  const m = /^(\d{4})-(\d{2})/.exec(anoMes);
+  return m ? `${MESES_LONGOS[Number(m[2]) - 1]} de ${m[1]}` : anoMes;
+}
+
+/** "3T2026" → "de julho a setembro de 2026". */
+export function fmtTrimestre(t: string): string {
+  const m = /^([1-4])T(\d{4})$/.exec(t);
+  if (!m) return t;
+  const q = Number(m[1]);
+  return `de ${MESES_LONGOS[(q - 1) * 3]} a ${MESES_LONGOS[q * 3 - 1]} de ${m[2]}`;
 }
 
 /** "2026-10-08" or an ISO timestamp → "08/10/2026". */

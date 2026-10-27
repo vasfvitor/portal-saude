@@ -18,6 +18,11 @@ export const CMED_URL = "https://anvisa.feeds.abelhaninja.de/cmed/";
 
 export const ANS_URL = "https://www.gov.br/ans/pt-br";
 export const ANVISA_URL = "https://www.gov.br/anvisa/pt-br";
+// The ANS consumer channels, checked on 2026-10-26 at the page below: Disque ANS on weekdays 8h-20h, free from
+// any phone, and the line for deaf people. Recheck when the page moves.
+export const ANS_CANAIS_URL = "https://www.gov.br/ans/pt-br/canais_atendimento/canais-de-atendimento-ao-consumidor-1";
+export const DISQUE_ANS = "0800 701 9656";
+export const DISQUE_ANS_SURDOS = "0800 021 2105";
 export const ANS_PORTABILIDADE_URL =
   "https://www.gov.br/ans/pt-br/assuntos/contratacao-e-troca-de-plano/operadoras-em-fase-de-portabilidade-especial-e-portabilidade-extraordinaria";
 

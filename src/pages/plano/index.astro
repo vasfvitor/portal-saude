@@ -4,6 +4,7 @@ import Busca from "../../components/Busca.astro";
 import Base from "../../layouts/Base.astro";
 import { DADOS_URL, META_URL } from "../../lib/config";
 import { fmtDate, fmtInt } from "../../lib/format";
+import { motivoCancelamento } from "../../lib/frases";
 import { metaForBuild, nomeExibido, operadorasForBuild, paginaOperadora } from "../../lib/operadoras";
 
 const RECENTES_DIAS = 90;
@@ -26,7 +27,8 @@ const ativas = ops.filter((o) => o.situacao === "ativa").length;
 >
   <h1>Plano de saúde</h1>
   <p class="lead">
-    Procure a sua operadora entre as {fmtInt(ativas)} com registro ativo na ANS. Dados de {fmtDate(meta.date)}.
+    Cada operadora tem uma página com as reclamações, a nota da ANS e os pagamentos ao SUS, ao lado dos números de
+    operadoras parecidas. São {fmtInt(ativas)} com registro ativo, com dados de {fmtDate(meta.date)}.
   </p>
   <Busca
     indice="/plano/busca.json"
@@ -37,31 +39,34 @@ const ativas = ops.filter((o) => o.situacao === "ativa").length;
   />
 
   <section>
-    <h2>Pode trocar de plano sem carência</h2>
-    {portabilidade.length === 0 && <p class="muted">Nenhuma operadora em portabilidade especial nesta coleta.</p>}
+    <h2>Quem pode trocar de plano sem carência agora</h2>
+    <p class="muted">
+      Clientes destas operadoras podem ir para outro plano sem cumprir carência de novo, porque a ANS liberou a
+      portabilidade especial.
+    </p>
+    {portabilidade.length === 0 && <p class="muted">Nenhuma operadora com portabilidade especial hoje.</p>}
     <ul class="lista">
       {portabilidade.slice(0, 10).map((o) => (
         <li>
           <a href={paginaOperadora(o)}>{nomeExibido(o)}</a>
-          <span class="muted"> · desde {fmtDate(o.portabilidade_vigente[0]!.data)}</span>
+          <span class="sub">liberada em {fmtDate(o.portabilidade_vigente[0]!.data)}</span>
         </li>
       ))}
     </ul>
     <p>
-      <a href="/plano/portabilidade/">O que é portabilidade especial e como pedir</a>
+      <a href="/plano/portabilidade/">Como pedir a troca, e a lista completa</a>
     </p>
   </section>
 
   <section>
-    <h2>Canceladas nos últimos {RECENTES_DIAS} dias</h2>
-    {canceladas.length === 0 && <p class="muted">Nenhum cancelamento no período.</p>}
+    <h2>Operadoras fechadas nos últimos {RECENTES_DIAS} dias</h2>
+    {canceladas.length === 0 && <p class="muted">Nenhuma no período.</p>}
     <ul class="lista">
       {canceladas.map((o) => (
         <li>
           <a href={paginaOperadora(o)}>{nomeExibido(o)}</a>
-          <span class="muted">
-            {" "}
-            · {fmtDate(o.cancelamento!.data)} · {o.cancelamento!.motivo}
+          <span class="sub">
+            {fmtDate(o.cancelamento!.data)}: {motivoCancelamento(o.cancelamento!.motivo)}
           </span>
         </li>
       ))}
@@ -69,23 +74,26 @@ const ativas = ops.filter((o) => o.situacao === "ativa").length;
   </section>
 
   <section>
-    <h2>Como ler as comparações</h2>
+    <h2>O que a página de cada operadora mostra</h2>
     <ul>
       <li>
-        <strong>Reclamações</strong>: quantas reclamações a operadora recebe na ANS para cada 100 mil clientes,
-        comparado com o plano típico do mesmo porte (pequeno, médio ou grande).
+        <strong>Reclamações na ANS</strong>, contadas a cada 100 mil clientes para dar para comparar operadoras de
+        tamanhos diferentes, ao lado de uma operadora típica do mesmo porte.
       </li>
       <li>
-        <strong>Nota de desempenho (IDSS)</strong>: nota de 0 a 1 que a ANS dá todo ano, comparada com a das operadoras
-        do mesmo tipo.
+        <strong>A nota de desempenho</strong> que a ANS dá todo ano, de 0 a 1, ao lado da nota típica das operadoras do
+        mesmo tipo.
       </li>
       <li>
-        <strong>Ressarcimento ao SUS</strong>: quanto a operadora pagou do que deve ao SUS por atendimentos dos seus
-        clientes.
+        <strong>Os pagamentos ao SUS</strong>: quanto a operadora devolveu do que o SUS gastou atendendo os clientes
+        dela.
+      </li>
+      <li>
+        <strong>O que fazer</strong> se você teve problema com o plano.
       </li>
     </ul>
     <p class="muted">
-      Nenhuma nota é dada pelo site: só fatos, com a base e a fonte. <a href="/sobre/">Saiba mais</a>.
+      O site não dá nota própria. <a href="/sobre/">Como as comparações são feitas</a>.
     </p>
   </section>
 </Base>
@@ -95,6 +103,11 @@ const ativas = ops.filter((o) => o.situacao === "ativa").length;
     padding-left: 1.1rem;
   }
   .lista li {
-    margin: 5px 0;
+    margin: 8px 0;
+  }
+  .sub {
+    display: block;
+    color: var(--muted);
+    font-size: 0.9rem;
   }
 </style>

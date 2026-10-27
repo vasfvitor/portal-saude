@@ -30,7 +30,16 @@ the sources and the rebuild schedule; a git-ignored `NOTES.local.md` holds pendi
   every page works without it (`/plano/todas/`, `/remedios/substancias/`). JSON-LD `<script>` tags are fine.
 - Numbers are never hand-typed. If a value is missing in the data, the page says so.
 - Copy is short and plain, for people who do not know the jargon: "reclamações", not IGR; every situation
-  ends in what the person can do.
+  ends in what the person can do. Write like a person explaining to a neighbour, not like an ad or an
+  assistant:
+  - No stock phrases: "respostas diretas", "sem cadastro, sem anúncio" (or any "sem X, sem Y" pair), "saiba
+    mais", "na dúvida, confira", "simples assim", "tudo o que você precisa", "só fatos", "tão em dia quanto".
+    A link says where it goes ("Como pedir a troca"), never "clique aqui" or "saiba mais".
+  - Words to swap: beneficiários → clientes (unless quoting the ANS); mediana → "operadora típica", explained
+    once as the one in the middle (half above, half below); apresentação → dose e embalagem; alíquota → ICMS
+    do estado; trimestre codes (3T2026) → "de julho a setembro de 2026". The ANS cancellation reasons go
+    through `motivoCancelamento()` in `src/lib/frases.ts`.
+  - Before a release, grep `dist/` for the phrases above.
 - Public text is pt-BR; code, comments, README, workflow and commit subjects are English.
 - The domain is `public/CNAME` plus the repository's Pages settings; those and the DNS record are the
   user's. `anvisa-hub` (`anvisa.abelhaninja.de`) stays the technical showcase of the ANVISA projects.

@@ -3,7 +3,7 @@
 // each Resolução Operacional, linked from the operator's page; this page does not restate them.
 import Base from "../../layouts/Base.astro";
 import { ANS_PORTABILIDADE_URL, DADOS_URL, META_URL } from "../../lib/config";
-import { fmtBeneficiarios, fmtDate } from "../../lib/format";
+import { fmtClientes, fmtDate } from "../../lib/format";
 import { nomeExibido, operadorasForBuild, paginaOperadora } from "../../lib/operadoras";
 
 const ops = await operadorasForBuild(DADOS_URL, META_URL);
@@ -13,11 +13,11 @@ const vigentes = ops
 const faq = [
   {
     q: "O que é portabilidade especial?",
-    a: "É quando a ANS autoriza os clientes de uma operadora a trocar de plano sem cumprir carência de novo. Acontece, em geral, quando a operadora tem problemas graves ou está saindo do mercado.",
+    a: "É quando a ANS autoriza os clientes de uma operadora a ir para outro plano sem cumprir carência de novo. Acontece, em geral, quando a operadora tem problemas graves ou vai ser fechada.",
   },
   {
     q: "Como pedir?",
-    a: "Escolha um plano de outra operadora, compatível com o seu, e peça a portabilidade à nova operadora, informando a Resolução Operacional da ANS. O prazo e as condições estão na própria Resolução.",
+    a: "Escolha um plano de outra operadora com preço e cobertura parecidos com os do seu e peça a portabilidade à nova operadora, dizendo o número da Resolução Operacional da ANS. O prazo para pedir e as condições estão nessa Resolução, que tem link na página da operadora.",
   },
 ];
 const faqLd = {
@@ -32,7 +32,9 @@ const faqLd = {
   structured={[faqLd]}
 >
   <h1>Portabilidade especial</h1>
-  <p class="lead">Quando a ANS libera, os clientes da operadora podem trocar de plano sem cumprir carência de novo.</p>
+  <p class="lead">
+    Quando a ANS libera, os clientes da operadora podem ir para outro plano sem cumprir carência de novo.
+  </p>
   {faq.map(({ q, a }) => (
     <>
       <h2>{q}</h2>
@@ -40,26 +42,27 @@ const faqLd = {
     </>
   ))}
   <p>
-    Lista oficial e regras: <a href={ANS_PORTABILIDADE_URL}>página de portabilidade especial da ANS</a>.
+    A lista oficial e as regras estão na <a href={ANS_PORTABILIDADE_URL}>página de portabilidade especial da ANS</a>.
   </p>
 
-  <h2>Operadoras com portabilidade especial em vigor</h2>
-  {vigentes.length === 0 && <p class="muted">Nenhuma na lista da ANS nesta coleta.</p>}
+  <h2>Operadoras com portabilidade especial agora</h2>
+  {vigentes.length === 0 && <p class="muted">Nenhuma na lista da ANS hoje.</p>}
   <ul class="vigentes">
     {vigentes.map((o) => (
       <li>
         <a href={paginaOperadora(o)}>{nomeExibido(o)}</a>
         <span class="muted">
           {" "}
-          · desde {fmtDate(o.portabilidade_vigente[0]!.data)}
+          · liberada em {fmtDate(o.portabilidade_vigente[0]!.data)}
           {o.uf && ` · ${o.uf}`}
-          {o.beneficiarios !== null && ` · ${fmtBeneficiarios(o.beneficiarios)}`}
+          {o.beneficiarios !== null && ` · ${fmtClientes(o.beneficiarios)}`}
         </span>
       </li>
     ))}
   </ul>
   <p class="muted">
-    A página da ANS de onde vem esta lista nem sempre está em dia; na dúvida, confira a Resolução Operacional.
+    A página da ANS de onde vem esta lista às vezes demora a ser atualizada. O prazo que vale é o da Resolução
+    Operacional.
   </p>
 </Base>
 

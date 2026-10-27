@@ -1,0 +1,79 @@
+---
+// Two numbers side by side, this operator and the typical one, each with a bar on the same scale. Plain HTML
+// and CSS: the numbers are text, so the bars add nothing a screen reader would miss.
+import { fmtDec } from "../lib/format";
+import type { Comparacao, Tom } from "../lib/frases";
+
+interface Props {
+  c: Comparacao;
+  tom: Tom;
+}
+const { c, tom } = Astro.props;
+const largura = (v: number) => `${Math.max(2, Math.min(100, (v / c.max) * 100)).toFixed(1)}%`;
+---
+
+<dl class={`comparacao ${tom}`}>
+  <div class="linha esta">
+    <dt>Esta operadora</dt>
+    <dd>
+      <span class="barra" style={`width: ${largura(c.esta)}`}></span>
+      <span class="valor">{fmtDec(c.esta, c.casas)}</span>
+    </dd>
+  </div>
+  <div class="linha">
+    <dt>{c.rotuloTipica.charAt(0).toUpperCase() + c.rotuloTipica.slice(1)}</dt>
+    <dd>
+      <span class="barra" style={`width: ${largura(c.tipica)}`}></span>
+      <span class="valor">{fmtDec(c.tipica, c.casas)}</span>
+    </dd>
+  </div>
+  <p class="unidade">{c.unidade.charAt(0).toUpperCase() + c.unidade.slice(1)}.</p>
+</dl>
+
+<style>
+  .comparacao {
+    margin: 0.75rem 0 0.25rem;
+    display: grid;
+    gap: 8px;
+    max-width: 30rem;
+  }
+  .linha {
+    display: grid;
+    gap: 2px;
+  }
+  dt {
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  dd {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .barra {
+    display: block;
+    height: 12px;
+    border-radius: 6px;
+    background: var(--line);
+  }
+  .esta .barra {
+    background: var(--accent);
+  }
+  .desfavoravel .esta .barra {
+    background: var(--alert);
+  }
+  .favoravel .esta .barra {
+    background: var(--good);
+  }
+  .valor {
+    font-weight: 700;
+    font-size: 1.15rem;
+    white-space: nowrap;
+  }
+  .unidade {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+</style>

@@ -2,10 +2,11 @@
 // One page per operator: what happened to it, then each comparison as a sentence with its base, then the
 // sources. Every number comes from the ans-feeds record; nothing is typed here.
 import Frase from "../../components/Frase.astro";
+import Quadro from "../../components/Quadro.astro";
 import Serie from "../../components/Serie.astro";
 import Base from "../../layouts/Base.astro";
-import { DADOS_URL, META_URL } from "../../lib/config";
-import { fmtBeneficiarios, fmtDate } from "../../lib/format";
+import { ANS_CANAIS_URL, DADOS_URL, DISQUE_ANS, DISQUE_ANS_SURDOS, META_URL } from "../../lib/config";
+import { fmtClientes, fmtDate } from "../../lib/format";
 import {
   cobertura,
   fraseAnoAnterior,
@@ -68,12 +69,16 @@ const breadcrumb = {
     <span>Registro ANS {op.registro}</span>
     <span>{op.modalidade}</span>
     {local && <span>{local}</span>}
-    {op.beneficiarios !== null && <span>{fmtBeneficiarios(op.beneficiarios)}</span>}
+    {op.beneficiarios !== null && <span>{fmtClientes(op.beneficiarios)}</span>}
   </p>
 
-  {cancelamento && <p class="faixa cancelada">{cancelamento}</p>}
+  {cancelamento && (
+    <Quadro tipo="alerta" titulo="Esta operadora foi fechada">
+      <p>{cancelamento}</p>
+    </Quadro>
+  )}
   {portabilidade && (
-    <div class="faixa portabilidade">
+    <Quadro tipo="destaque" titulo="Pode trocar de plano sem carência">
       <p>{portabilidade}</p>
       <p>
         <a href="/plano/portabilidade/">Como pedir a troca</a>
@@ -84,7 +89,7 @@ const breadcrumb = {
           </>
         )}
       </p>
-    </div>
+    </Quadro>
   )}
 
   <section>
@@ -102,16 +107,37 @@ const breadcrumb = {
   </section>
 
   <section>
-    <h2>Nota de desempenho da ANS (IDSS)</h2>
+    <h2>Nota de desempenho da ANS</h2>
     <Frase frase={fraseIdss(op.idss, op.modalidade)} />
   </section>
 
   {ressarcimento && (
     <section>
-      <h2>Ressarcimento ao SUS</h2>
+      <h2>Pagamentos ao SUS</h2>
       <Frase frase={ressarcimento} />
     </section>
   )}
+
+  <Quadro tipo="ajuda" titulo="Teve problema com este plano?">
+    <ol>
+      <li>Reclame primeiro na operadora e anote o número do protocolo.</li>
+      <li>
+        Se não resolver, reclame na ANS: pelo Disque ANS, {DISQUE_ANS} (ligação gratuita, de segunda a sexta, das 8h às
+        20h; para pessoas surdas, {DISQUE_ANS_SURDOS}), ou pelos <a href={ANS_CANAIS_URL}>canais da ANS na internet</a>.
+        Informe o protocolo da operadora.
+      </li>
+      <li>
+        A ANS cobra uma resposta da operadora: até 5 dias úteis quando o problema é de cobertura (exame, consulta,
+        cirurgia) e até 10 nos outros casos.
+      </li>
+    </ol>
+    {op.situacao === "cancelada" && (
+      <p>
+        Como a operadora foi fechada, pergunte também à ANS como fica o seu atendimento e se há portabilidade para outro
+        plano.
+      </p>
+    )}
+  </Quadro>
 
   {op.eventos.length > 0 && (
     <section>
@@ -129,7 +155,7 @@ const breadcrumb = {
   <section class="fontes">
     <h2>Fontes</h2>
     <p>
-      Dados abertos da ANS, coletados em {fmtDate(dia)}. Registro completo desta operadora:{" "}
+      Dados da ANS coletados em {fmtDate(dia)}. Todos os números desta página, num arquivo só:{" "}
       <a href={`${DADOS_URL}/operadora/${op.registro}.json`}>JSON</a>.
     </p>
     <ul>
@@ -141,7 +167,16 @@ const breadcrumb = {
           </li>
         ))}
     </ul>
-    {op.fora.length > 0 && <p class="muted">Fora desta página porque a ANS parou de atualizar: {op.fora.join(" ")}</p>}
+    {op.fora.length > 0 && (
+      <>
+        <p class="muted">Ficaram de fora porque a ANS parou de atualizar:</p>
+        <ul class="muted">
+          {op.fora.map((f) => (
+            <li>{f}</li>
+          ))}
+        </ul>
+      </>
+    )}
   </section>
 </Base>
 
@@ -163,23 +198,6 @@ const breadcrumb = {
     gap: 4px 16px;
     color: var(--muted);
     font-size: 0.95rem;
-  }
-  .faixa {
-    border-radius: 10px;
-    padding: 14px 18px;
-    margin: 1.25rem 0;
-    font-weight: 600;
-  }
-  .faixa p {
-    margin: 0.25rem 0;
-  }
-  .cancelada {
-    background: var(--alert-soft);
-    border: 1px solid var(--alert);
-  }
-  .portabilidade {
-    background: var(--accent-soft);
-    border: 1px solid var(--accent);
   }
   .eventos {
     list-style: none;

@@ -8,6 +8,7 @@ import {
   fraseReclamacoes,
   fraseRessarcimento,
   modalidadePlural,
+  motivoCancelamento,
   trimestre,
   trimestreCurto,
 } from "../src/lib/frases";
@@ -34,34 +35,35 @@ describe("quarters", () => {
   it("long and short labels", () => {
     expect(trimestre("3T2026")).toBe("3º trimestre de 2026 (jul a set)");
     expect(trimestre("1T2025")).toBe("1º trimestre de 2025 (jan a mar)");
-    expect(trimestreCurto("4T2024")).toBe("4º tri/24");
+    expect(trimestreCurto("4T2024")).toBe("out-dez/24");
   });
 });
 
 describe("complaints", () => {
   it("each band, with the base in the detail", () => {
     expect(fraseReclamacoes(recl(83.58, 37.55))).toMatchObject({
-      titulo: "Recebe 2,2 vezes as reclamações de um plano típico de porte grande.",
+      titulo: "Recebe 2,2 vezes as reclamações de uma operadora típica do mesmo porte.",
       tom: "desfavoravel",
     });
     expect(fraseReclamacoes(recl(55, 37.55)).titulo).toBe(
-      "Recebe mais reclamações que um plano típico de porte grande.",
+      "Recebe mais reclamações que uma operadora típica do mesmo porte.",
     );
     expect(fraseReclamacoes(recl(40, 37.55))).toMatchObject({ tom: "neutro" });
     expect(fraseReclamacoes(recl(25, 37.55)).titulo).toMatch(/^Recebe menos reclamações/);
     expect(fraseReclamacoes(recl(10, 37.55))).toMatchObject({ tom: "favoravel" });
     expect(fraseReclamacoes(recl(10, 37.55)).titulo).toMatch(/^Recebe bem menos/);
-    const { detalhe } = fraseReclamacoes(recl(83.58, 37.55, 8484));
-    expect(detalhe).toContain("8.484 reclamações na ANS no 3º trimestre de 2026 (jul a set)");
-    expect(detalhe).toContain("250 mil beneficiários");
-    expect(detalhe).toContain("mediana entre 94 operadoras médico-hospitalares de porte grande");
-    expect(detalhe).toContain("37,6");
-    expect(detalhe).toContain("83,6");
+    const { detalhe, comparacao } = fraseReclamacoes(recl(83.58, 37.55, 8484));
+    expect(detalhe).toContain("8.484 reclamações na ANS de julho a setembro de 2026, para 250 mil clientes em média.");
+    expect(detalhe).toContain("a do meio entre as 94 de plano médico-hospitalar de porte grande");
+    expect(detalhe).toContain("metade recebe mais reclamações que ela, metade recebe menos");
+    expect(comparacao).toMatchObject({ esta: 83.58, tipica: 37.55, max: 83.58, casas: 1 });
+    expect(comparacao?.rotuloTipica).toBe("típica entre as 94 de porte grande");
   });
 
   it("small base and missing data are never compared", () => {
     expect(fraseReclamacoes(recl(120, 20, 3))).toMatchObject({ tom: "sem-base" });
     expect(fraseReclamacoes(recl(120, 20, 3)).titulo).toMatch(/Poucas reclamações/);
+    expect(fraseReclamacoes(recl(120, 20, 3)).comparacao).toBeUndefined();
     expect(fraseReclamacoes(recl(null, 20))).toMatchObject({ tom: "sem-base" });
     expect(fraseReclamacoes(recl(5, 0))).toMatchObject({ tom: "sem-base" });
   });
@@ -72,7 +74,11 @@ describe("complaints", () => {
       { trimestre: "2T2026", indice: 40, reclamacoes: 120 },
       { trimestre: "3T2026", indice: 39.03, reclamacoes: 115 },
     ];
-    expect(fraseAnoAnterior(serie)).toBe("No mesmo trimestre do ano anterior: 42,9 (126 reclamações).");
+    expect(fraseAnoAnterior(serie)).toBe("Parecido com um ano antes: eram 42,9 de julho a setembro de 2025.");
+    const subiu = [{ ...serie[0]!, indice: 20 }, serie[2]!];
+    expect(fraseAnoAnterior(subiu)).toBe("Subiu em um ano: eram 20,0 de julho a setembro de 2025.");
+    const caiu = [{ ...serie[0]!, indice: 80 }, serie[2]!];
+    expect(fraseAnoAnterior(caiu)).toMatch(/^Caiu em um ano: eram 80,0/);
     expect(fraseAnoAnterior(serie.slice(1))).toBeNull();
   });
 });
@@ -89,14 +95,15 @@ describe("IDSS", () => {
   });
   it("against the typical score of the same modality", () => {
     expect(fraseIdss(idss(0.8112, 0.8), "Seguradora Especializada em Saúde")).toMatchObject({
-      titulo: "Nota 0,81 no índice de desempenho da ANS, no nível das seguradoras.",
+      titulo: "Nota 0,81 de 1, no nível das seguradoras.",
       tom: "neutro",
     });
+    expect(fraseIdss(idss(0.8112, 0.8), "Medicina de Grupo").comparacao).toMatchObject({ max: 1, casas: 2 });
     expect(fraseIdss(idss(0.9, 0.8), "Medicina de Grupo").tom).toBe("favoravel");
-    expect(fraseIdss(idss(0.6, 0.8), "Medicina de Grupo").titulo).toContain("abaixo da nota típica");
-    expect(fraseIdss(idss(0.9, 0.8), "Seguradora Especializada em Saúde").detalhe).toContain(
-      "mediana entre 7 seguradoras",
-    );
+    expect(fraseIdss(idss(0.6, 0.8), "Medicina de Grupo").titulo).toContain("abaixo da típica");
+    const { detalhe } = fraseIdss(idss(0.9, 0.8), "Seguradora Especializada em Saúde");
+    expect(detalhe).toContain("a do meio entre 7 seguradoras");
+    expect(detalhe).toContain("nota de 2025, sobre o ano de 2024");
   });
   it("no score: says why", () => {
     expect(fraseIdss(idss(null, 0.65), "Medicina de Grupo").titulo).toContain("não divulgado pela ANS");
@@ -112,20 +119,41 @@ describe("real operators", () => {
   it("Bradesco: complaints above peers, IDSS at the level, SUS paid in full", () => {
     const b = op("005711");
     expect(fraseReclamacoes(b.reclamacoes[0]!).titulo).toBe(
-      "Recebe 2,2 vezes as reclamações de um plano típico de porte grande.",
+      "Recebe 2,2 vezes as reclamações de uma operadora típica do mesmo porte.",
     );
     expect(fraseIdss(b.idss, b.modalidade).tom).toBe("neutro");
-    expect(fraseRessarcimento(b.ressarcimento)?.titulo).toBe(
-      "Pagou 100% do que o SUS cobrou por atender clientes desta operadora.",
-    );
+    expect(fraseRessarcimento(b.ressarcimento)?.titulo).toBe("Pagou 100% do que devia ao SUS.");
+    expect(fraseRessarcimento(b.ressarcimento)?.detalhe).toMatch(/até [a-zç]+ de \d{4}: R\$ /);
     expect(fraseCancelamento(b)).toBeNull();
     expect(frasePortabilidade(b)).toBeNull();
   });
 
   it("Univida: cancelled, special portability, no IDSS", () => {
     const u = op("422134");
-    expect(fraseCancelamento(u)).toBe("Registro cancelado pela ANS em 22/09/2026. Motivo: Liquidação Extrajudicial.");
-    expect(frasePortabilidade(u)).toMatch(/^A ANS liberou a portabilidade especial em \d{2}\/\d{2}\/\d{4}/);
+    expect(fraseCancelamento(u)).toBe(
+      "Registro cancelado em 22/09/2026: a ANS mandou fechar a operadora por problemas financeiros (liquidação extrajudicial). Motivo registrado na ANS: “Liquidação Extrajudicial”.",
+    );
+    expect(frasePortabilidade(u)).toMatch(/a ANS liberou a portabilidade especial em \d{2}\/\d{2}\/\d{4}/);
     expect(fraseIdss(u.idss, u.modalidade).tom).toBe("sem-base");
+  });
+});
+
+describe("cancellation reasons", () => {
+  it("every reason the ANS uses today, in plain words; unknown ones as written", () => {
+    expect(motivoCancelamento("Pedido de cancelamento")).toBe("a própria operadora pediu para sair do mercado");
+    expect(motivoCancelamento("Alternat. à Liquidação - Deliberação de Diretoria Colegiada")).toMatch(
+      /diretoria da ANS/,
+    );
+    expect(motivoCancelamento("INEXISTÊNCIA DE PRODUTO ATIVO POR MAIS DE 180 DIAS")).toMatch(
+      /180 dias sem nenhum plano/,
+    );
+    expect(motivoCancelamento("BAIXA DE INSCRIÇÃO NO CNPJ")).toBe("o CNPJ da operadora foi encerrado");
+    expect(motivoCancelamento("DESCUMPRIMENTO DA RN Nº 543/2022")).toBe(
+      "a operadora descumpriu uma norma da ANS (RN nº 543/2022)",
+    );
+    expect(motivoCancelamento("Motivo novo")).toBe("Motivo novo");
+    expect(fraseCancelamento({ cancelamento: { data: "2026-01-02", motivo: "Motivo novo" } })).toBe(
+      "Registro cancelado em 02/01/2026: Motivo novo.",
+    );
   });
 });

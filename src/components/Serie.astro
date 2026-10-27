@@ -1,6 +1,7 @@
 ---
-// Quarterly complaint index as small SVG bars, with the peers' median as a dashed line. The aria-label reads
-// the values out, so the chart says the same to a screen reader.
+// Quarterly complaint index as small SVG bars, with the typical operator as a dashed line labelled at its end.
+// The latest quarter and the highest one carry their value. The aria-label reads every value out, so the
+// chart says the same to a screen reader.
 import { fmtDec } from "../lib/format";
 import { trimestreCurto } from "../lib/frases";
 import type { PontoSerie } from "../lib/operadoras";
@@ -12,16 +13,24 @@ interface Props {
 const { serie, mediana } = Astro.props;
 const valores = serie.map((p) => p.indice ?? 0);
 const max = Math.max(...valores, mediana ?? 0, 1);
-const W = 320;
-const H = 120;
-const base = H - 22;
-const passo = W / Math.max(serie.length, 1);
-const barra = Math.min(28, passo * 0.6);
-const y = (v: number) => base - (v / max) * (base - 8);
+const W = 340;
+const H = 150;
+const topo = 18;
+const base = H - 30;
+const rotuloLinha = 58; // room on the right for the dashed line's label
+const passo = (W - rotuloLinha) / Math.max(serie.length, 1);
+const barra = Math.min(26, passo * 0.62);
+const y = (v: number) => base - (v / max) * (base - topo);
+const ultimo = serie.length - 1;
+const maior = valores.indexOf(Math.max(...valores));
+const partes = (t: string) => {
+  const [meses, ano] = trimestreCurto(t).split("/");
+  return { meses: meses ?? t, ano: ano ? `20${ano}` : "" };
+};
 const rotulo = serie
   .map((p) => `${trimestreCurto(p.trimestre)}: ${p.indice === null ? "sem dado" : fmtDec(p.indice, 1)}`)
   .join("; ");
-const aria = `Reclamações por 100 mil beneficiários por mês, por trimestre. ${rotulo}.${mediana === null ? "" : ` Plano típico do mesmo porte: ${fmtDec(mediana, 1)}.`}`;
+const aria = `Reclamações por mês a cada 100 mil clientes, por trimestre. ${rotulo}.${mediana === null ? "" : ` Operadora típica do mesmo porte: ${fmtDec(mediana, 1)}.`}`;
 ---
 
 {serie.length > 1 && (
@@ -30,6 +39,8 @@ const aria = `Reclamações por 100 mil beneficiários por mês, por trimestre. 
       {serie.map((p, i) => {
         const x = i * passo + (passo - barra) / 2;
         const v = p.indice ?? 0;
+        const { meses, ano } = partes(p.trimestre);
+        const mostrarAno = i === 0 || partes(serie[i - 1]!.trimestre).ano !== ano;
         return (
           <>
             <rect
@@ -38,26 +49,44 @@ const aria = `Reclamações por 100 mil beneficiários por mês, por trimestre. 
               width={barra}
               height={Math.max(base - y(v), 1)}
               rx="3"
-              class={i === serie.length - 1 ? "atual" : ""}
+              class={i === ultimo ? "atual" : ""}
             />
-            <text x={x + barra / 2} y={H - 6} text-anchor="middle">
-              {trimestreCurto(p.trimestre)}
+            {p.indice !== null && (i === ultimo || i === maior) && (
+              <text x={x + barra / 2} y={y(v) - 5} text-anchor="middle" class="valor">
+                {fmtDec(p.indice, 1)}
+              </text>
+            )}
+            <text x={x + barra / 2} y={H - 16} text-anchor="middle">
+              {meses}
             </text>
+            {mostrarAno && (
+              <text x={x + barra / 2} y={H - 4} text-anchor="middle" class="ano">
+                {ano}
+              </text>
+            )}
           </>
         );
       })}
-      {mediana !== null && <line x1="0" x2={W} y1={y(mediana)} y2={y(mediana)} class="mediana" />}
+      {mediana !== null && (
+        <>
+          <line x1="0" x2={W - rotuloLinha + 4} y1={y(mediana)} y2={y(mediana)} class="mediana" />
+          <text x={W - rotuloLinha + 8} y={y(mediana) + 4} class="rotulo-mediana">
+            típica {fmtDec(mediana, 1)}
+          </text>
+        </>
+      )}
     </svg>
     <figcaption>
-      Reclamações por 100 mil beneficiários por mês. {mediana !== null && "Tracejado: plano típico do mesmo porte."}
+      Reclamações por mês a cada 100 mil clientes, nos últimos {serie.length} trimestres.
+      {mediana !== null && " A linha tracejada é a operadora típica do mesmo porte, no trimestre mais recente."}
     </figcaption>
   </figure>
 )}
 
 <style>
   .serie {
-    margin: 0.5rem 0 0;
-    max-width: 26rem;
+    margin: 0.75rem 0 0;
+    max-width: 28rem;
   }
   svg {
     width: 100%;
@@ -74,11 +103,23 @@ const aria = `Reclamações por 100 mil beneficiários por mês, por trimestre. 
     font-size: 9px;
     fill: var(--muted);
   }
+  .ano {
+    font-weight: 600;
+  }
+  .valor {
+    font-size: 10px;
+    font-weight: 700;
+    fill: var(--fg);
+  }
   .mediana {
     stroke: var(--fg);
     stroke-width: 1;
     stroke-dasharray: 4 3;
     opacity: 0.6;
+  }
+  .rotulo-mediana {
+    fill: var(--fg);
+    font-size: 9.5px;
   }
   figcaption {
     color: var(--muted);

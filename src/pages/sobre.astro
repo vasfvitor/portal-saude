@@ -2,32 +2,36 @@
 // About: method, sources and what is left out. The FAQ is one array rendered both as text and as FAQPage
 // JSON-LD, so the two never disagree.
 import Base from "../layouts/Base.astro";
-import { ANS_FEEDS_URL, DADOS_URL, REPOS } from "../lib/config";
+import { ANS_FEEDS_URL, CMED_DADOS_URL, DADOS_URL, REPOS } from "../lib/config";
 
 const faq: { q: string; a: string }[] = [
   {
-    q: "De onde vêm os dados?",
-    a: "Dos dados abertos da ANS (Agência Nacional de Saúde Suplementar): cadastro das operadoras, reclamações, índice de desempenho (IDSS), ressarcimento ao SUS e a página de portabilidade especial. Eles são coletados todo dia e guardados com a data de cada coleta.",
+    q: "De onde vêm os números?",
+    a: "Os de planos de saúde vêm da ANS (Agência Nacional de Saúde Suplementar): cadastro das operadoras, reclamações, nota de desempenho, pagamentos ao SUS e a lista de portabilidade especial. Os de remédios vêm da lista de preços máximos da CMED, publicada pela ANVISA todo mês. Os dados da ANS são baixados todo dia; cada página diz a data.",
   },
   {
     q: "O site dá nota para as operadoras?",
-    a: "Não. Ele mostra fatos comparados: por exemplo, quantas reclamações a operadora recebe em relação às de mesmo porte. Cada número vem com a base e a fonte, para você tirar a conclusão.",
+    a: "Não. Ele mostra o número da operadora ao lado do número de uma operadora típica do mesmo porte, com a quantidade de reclamações e de clientes por trás. A conclusão fica com você.",
   },
   {
-    q: "Por que a comparação é com operadoras do mesmo porte?",
-    a: "Porque comparar uma operadora de milhões de clientes com uma de poucos milhares engana nos dois sentidos. O porte (pequeno, médio, grande) vem da própria ANS.",
+    q: "O que é a operadora típica?",
+    a: "É a do meio quando todas as operadoras do mesmo porte são postas em ordem: metade fica acima dela, metade abaixo. O porte (pequeno, médio ou grande) é o que a própria ANS usa.",
   },
   {
-    q: "O que é portabilidade especial?",
-    a: "Quando a ANS decide que os clientes de uma operadora podem trocar de plano sem cumprir carência de novo, em geral porque a operadora está com problemas graves ou saindo do mercado.",
+    q: "Por que comparar com operadoras do mesmo porte?",
+    a: "Porque uma operadora com milhões de clientes e outra com poucos milhares funcionam de jeitos muito diferentes. Comparar as duas diretamente engana nos dois sentidos.",
   },
   {
-    q: "Os dados estão sempre em dia?",
-    a: "Tão em dia quanto a ANS publica. Algumas informações chegam com semanas de atraso, e algumas séries a ANS parou de atualizar; quando é o caso, a página diz.",
+    q: "O preço do remédio é o que eu vou pagar?",
+    a: "Não necessariamente. É o máximo que a farmácia pode cobrar no seu estado. Ela pode cobrar menos, e muitas cobram.",
   },
   {
-    q: "Tem ligação com a ANS ou com alguma operadora?",
-    a: "Não. É um projeto independente e gratuito, de código aberto. Os dados oficiais estão no site da ANS.",
+    q: "Os dados podem estar atrasados?",
+    a: "Podem. A ANS publica algumas informações semanas depois, e parou de atualizar algumas séries. Quando isso acontece, a página avisa.",
+  },
+  {
+    q: "O site tem ligação com o governo ou com alguma empresa?",
+    a: "Não. É um projeto independente e gratuito. Os dados oficiais estão nos sites da ANS e da ANVISA.",
   },
 ];
 const faqLd = {
@@ -38,24 +42,27 @@ const faqLd = {
 
 <Base
   title="Sobre"
-  description="Como o site funciona: de onde vêm os dados, como as comparações são feitas e o que fica de fora."
+  description="De onde vêm os números, como as comparações são feitas e o que fica de fora."
   structured={[faqLd]}
 >
   <h1>Sobre</h1>
   <p class="lead">
-    Um serviço público gratuito: respostas diretas a partir de dados abertos do governo, com a fonte de cada número.
+    Este site junta números que a ANS e a ANVISA já publicam e mostra cada um com uma comparação que ajuda a entender. É
+    gratuito e não tem ligação com as agências nem com empresas do setor.
   </p>
 
   <section>
     <h2>Como funciona</h2>
     <p>
-      Todo dia, um robô baixa os dados abertos da ANS e guarda o que mudou (<a href={REPOS.ansFeeds}>ans-feeds</a>).
-      Este site lê esses dados e escreve, para cada operadora, frases curtas com a comparação e a base. Nenhum número é
-      digitado à mão.
+      Todo dia, um programa baixa os dados da ANS e guarda o que mudou (<a href={REPOS.ansFeeds}>código aberto</a>).
+      Todo mês, outro baixa a lista de preços da CMED. Este site lê esses dados e monta uma página por operadora e por
+      remédio. Nenhum número é digitado à mão. A única tabela feita à mão é a do ICMS de cada estado, com a lei de
+      origem em cada linha.
     </p>
     <p>
-      Os dados prontos ficam em <a href={`${DADOS_URL}/schema.md`}>{DADOS_URL.replace("https://", "")}</a>, e os eventos
-      (cancelamentos, novos registros, direção técnica, portabilidade) também saem como feeds em
+      Os dados prontos estão em <a href={`${DADOS_URL}/schema.md`}>{DADOS_URL.replace("https://", "")}</a> e em{" "}
+      <a href={`${CMED_DADOS_URL}/schema.md`}>{CMED_DADOS_URL.replace("https://", "")}</a>. Cancelamentos, novos
+      registros e portabilidades também saem como avisos em feed, em{" "}
       <a href={ANS_FEEDS_URL}>{ANS_FEEDS_URL.replace("https://", "").replace(/\/$/, "")}</a>.
     </p>
   </section>
@@ -64,15 +71,15 @@ const faqLd = {
     <h2>O que fica de fora, e por quê</h2>
     <ul>
       <li>
-        <strong>Classificação prudencial (S1 a S4)</strong>: é um segmento por porte e perfil, usado pela ANS para
-        regras de capital. Não é nota de saúde financeira, então não aparece como se fosse.
+        <strong>Classificação prudencial (S1 a S4)</strong>: separa as operadoras por tamanho para regras de reserva
+        financeira. Não diz se a operadora vai bem ou mal, então não aparece aqui.
       </li>
       <li>
-        <strong>Taxa de resolutividade, garantia de atendimento e penalidades</strong>: a ANS parou de atualizar essas
-        séries. A página da operadora avisa.
+        <strong>Taxa de resolutividade, garantia de atendimento e penalidades</strong>: a ANS parou de atualizar. A
+        página da operadora avisa.
       </li>
       <li>
-        <strong>Contatos</strong> do cadastro (e-mail, telefone, representante): não são publicados aqui.
+        <strong>Telefone, e-mail e representante</strong> do cadastro das operadoras: não são publicados aqui.
       </li>
     </ul>
   </section>

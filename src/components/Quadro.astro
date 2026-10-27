@@ -1,0 +1,49 @@
+---
+// A boxed note: `alerta` for what went wrong (a cancelled operator, a medicine off the market), `destaque` for
+// good news to act on (portability, a cheaper generic), `ajuda` for what the person can do next.
+interface Props {
+  tipo: "alerta" | "destaque" | "ajuda";
+  titulo?: string;
+}
+const { tipo, titulo } = Astro.props;
+---
+
+<aside class={`quadro ${tipo}`}>
+  {titulo && <p class="titulo">{titulo}</p>}
+  <slot />
+</aside>
+
+<style>
+  .quadro {
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin: 1.25rem 0;
+    border: 1px solid var(--line);
+    background: var(--card);
+  }
+  .quadro :global(p) {
+    margin: 0.35rem 0;
+  }
+  .quadro :global(ol),
+  .quadro :global(ul) {
+    margin: 0.35rem 0;
+    padding-left: 1.25rem;
+  }
+  .quadro :global(li) {
+    margin: 0.3rem 0;
+  }
+  .titulo {
+    font-weight: 700;
+  }
+  .alerta {
+    background: var(--alert-soft);
+    border-color: var(--alert);
+  }
+  .destaque {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
+  .ajuda {
+    border-left: 4px solid var(--accent);
+  }
+</style>
