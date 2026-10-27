@@ -1,7 +1,7 @@
 // The site in plain text for assistants and agents: what it answers, the pages, where the data comes from.
 import type { APIRoute } from "astro";
 import { DESCRIPTION, NAME, TITLE } from "../lib/brand";
-import { DADOS_URL, META_URL, REPOS } from "../lib/config";
+import { CMED_DADOS_URL, DADOS_URL, META_URL, REPOS } from "../lib/config";
 import { fmtDate, fmtInt } from "../lib/format";
 import { indiceForBuild, metaForBuild } from "../lib/operadoras";
 
@@ -27,12 +27,13 @@ Dados de ${fmtDate(meta.date)}: ${fmtInt(ativas)} operadoras de planos de saúde
 
 - Só fatos comparados, com a base e a fonte; o site não dá nota nem rótulo de risco.
 - "Plano típico" é a mediana das operadoras do mesmo porte (reclamações) ou da mesma modalidade (IDSS).
-- Sem vínculo com a ANS.
+- Sem vínculo com a ANS nem com a ANVISA.
 
 ## Dados
 
 - JSON por operadora: ${DADOS_URL}/operadora/<registro>.json (contrato em ${DADOS_URL}/schema.md)
-- Código: ${REPOS.portal} e ${REPOS.ansFeeds}
+- Preço máximo por remédio: ${CMED_DADOS_URL}/produto/<registro>.json (contrato em ${CMED_DADOS_URL}/schema.md)
+- Código dos dados das operadoras: ${REPOS.ansFeeds}
 `;
   return new Response(body, { headers: { "Content-Type": "text/plain; charset=utf-8" } });
 };

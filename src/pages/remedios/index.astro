@@ -23,7 +23,8 @@ const substancias = new Set(produtos.map((p) => p.substancia)).size;
   </p>
   <Busca
     indice="/remedios/busca.json"
-    rotulo="Nome do remédio, substância ou laboratório"
+    rotulo="Procure pelo nome do remédio, pela substância ou pelo laboratório"
+    exemplo="ex.: dipirona, Neosaldina, EMS"
     nomes={["remédio", "remédios"]}
     todas={{ href: "/remedios/substancias/", texto: "Ver todas as substâncias, de A a Z" }}
   />

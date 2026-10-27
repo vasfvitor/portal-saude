@@ -4,7 +4,7 @@
 // own scoped styles. Astro drops a line break between text and a tag: keep inline links on the same line.
 import Logo from "../components/Logo.astro";
 import { AUTHOR, DESCRIPTION, DISCLAIMER, NAME, pageTitle } from "../lib/brand";
-import { ANS_URL, ANVISA_HUB_URL, HOME_URL, REPOS } from "../lib/config";
+import { ANS_FEEDS_URL, ANS_URL, ANVISA_HUB_URL, ANVISA_URL } from "../lib/config";
 
 interface Props {
   title: string;
@@ -76,7 +76,7 @@ const graph = {
     <meta property="og:image" content={ogImage} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content={`Seu plano de saúde, em dados abertos. ${NAME}`} />
+    <meta property="og:image:alt" content={`Plano de saúde e preço de remédios. ${NAME}`} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={fullTitle} />
     <meta name="twitter:description" content={description} />
@@ -109,16 +109,14 @@ const graph = {
     </main>
     <footer class="site">
       <p class="aviso">
-        {DISCLAIMER} <a href={ANS_URL}>gov.br/ans</a>
+        {DISCLAIMER} <a href={ANS_URL}>gov.br/ans</a> e <a href={ANVISA_URL}>gov.br/anvisa</a>.
       </p>
-      <nav aria-label="Projetos e código">
-        <a href={REPOS.portal}>portal-saude</a>
-        <a href={REPOS.ansFeeds}>ans-feeds</a>
-        <a href={ANVISA_HUB_URL}>ANVISA em dados abertos</a>
-        <a href={HOME_URL}>abelhaninja.de</a>
+      <nav aria-label="Outros projetos">
+        <a href={ANS_FEEDS_URL}>Avisos da ANS por feed</a>
+        <a href={ANVISA_HUB_URL}>Projetos com dados da ANVISA</a>
       </nav>
       <p class="licenca">
-        Código MIT. Dados da ANS, sem alteração. <a href={AUTHOR.url}>{AUTHOR.name}</a>.
+        Feito por <a href={AUTHOR.url}>{AUTHOR.name}</a>. Os números são os publicados pela ANS e pela ANVISA.
       </p>
     </footer>
   </body>

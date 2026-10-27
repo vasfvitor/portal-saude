@@ -10,9 +10,9 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" v
     <path d="M27 16h10v11h11v10H37v11H27V37H16V27h11z" fill="#f0fdfa"/>
   </g>
   <g font-family="Noto Sans, DejaVu Sans, sans-serif" fill="#e4ecea">
-    <text x="440" y="265" font-size="68" font-weight="700">Seu plano de saúde,</text>
-    <text x="440" y="345" font-size="68" font-weight="700">em dados abertos</text>
-    <text x="440" y="425" font-size="24" fill="#93a3a0">reclamações · nota da ANS · cancelamentos · portabilidade</text>
+    <text x="440" y="265" font-size="68" font-weight="700">Plano de saúde</text>
+    <text x="440" y="345" font-size="68" font-weight="700">e preço de remédios</text>
+    <text x="440" y="425" font-size="24" fill="#93a3a0">reclamações · nota da ANS · preço máximo no seu estado</text>
     <text x="440" y="515" font-size="34" fill="#2dd4bf">saude.abelhaninja.de</text>
   </g>
 </svg>`;

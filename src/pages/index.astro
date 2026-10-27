@@ -1,34 +1,40 @@
 ---
-// Home: the subjects, each a section of its own.
+// Home: the two subjects, each a question with the way in, and the day of the data behind each one.
 import Base from "../layouts/Base.astro";
 import { TITLE } from "../lib/brand";
-import { ANVISA_HUB_URL, CONTEM_URL } from "../lib/config";
+import { ANVISA_HUB_URL, CMED_DADOS_URL, CONTEM_URL, META_URL } from "../lib/config";
+import { fmtDate } from "../lib/format";
+import { metaForBuild } from "../lib/operadoras";
+import { indiceProdutosForBuild } from "../lib/remedios";
+
+const [meta, { stamp }] = await Promise.all([metaForBuild(META_URL), indiceProdutosForBuild(CMED_DADOS_URL)]);
+const listaCmed = fmtDate(`${stamp.slice(0, 4)}-${stamp.slice(4, 6)}-${stamp.slice(6, 8)}`);
 ---
 
 <Base title={TITLE}>
   <h1>{TITLE}</h1>
   <p class="lead">
-    Respostas diretas a partir dos dados públicos do governo, com a fonte de cada número. Sem cadastro, sem anúncio.
+    Veja se a sua operadora recebe mais reclamações que as do mesmo tamanho e quanto a farmácia pode cobrar por um
+    remédio no seu estado. Os números vêm da ANS e da ANVISA, e cada página diz de onde.
   </p>
 
   <section class="assuntos" aria-label="Assuntos">
     <a class="assunto" href="/plano/">
       <h2>Plano de saúde</h2>
-      <p>
-        A sua operadora recebe muitas reclamações? Tem nota boa na ANS? Foi cancelada ou liberou a troca de plano sem
-        carência?
-      </p>
+      <p>A operadora recebe muitas reclamações? Tem nota boa na ANS? Foi fechada? Dá para trocar sem carência?</p>
       <span class="ir">Procurar a operadora →</span>
+      <small>Dados da ANS de {fmtDate(meta.date)}</small>
     </a>
     <a class="assunto" href="/remedios/">
       <h2>Remédios</h2>
-      <p>Quanto a farmácia pode cobrar por um remédio no seu estado? Tem genérico mais barato?</p>
+      <p>Quanto a farmácia pode cobrar no seu estado? Existe genérico mais barato com a mesma dose?</p>
       <span class="ir">Procurar o remédio →</span>
+      <small>Lista de preços de {listaCmed}</small>
     </a>
   </section>
   <p class="muted">
-    Para saber se um produto está regularizado na ANVISA: <a href={CONTEM_URL}>contém</a>. Dados abertos da ANVISA:
-    <a href={ANVISA_HUB_URL}>anvisa.abelhaninja.de</a>.
+    Para saber se um produto está liberado pela ANVISA, use o <a href={CONTEM_URL}>contém</a>. Outros projetos com dados
+    da ANVISA: <a href={ANVISA_HUB_URL}>anvisa.abelhaninja.de</a>.
   </p>
 </Base>
 
@@ -40,7 +46,8 @@ import { ANVISA_HUB_URL, CONTEM_URL } from "../lib/config";
     margin: 1rem 0 2rem;
   }
   .assunto {
-    display: block;
+    display: flex;
+    flex-direction: column;
     background: var(--card);
     border: 1px solid var(--line);
     border-radius: 14px;
@@ -54,20 +61,16 @@ import { ANVISA_HUB_URL, CONTEM_URL } from "../lib/config";
   .assunto h2 {
     margin: 0 0 0.5rem;
   }
-  .assunto h2 small {
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: var(--muted);
-    margin-left: 6px;
+  .assunto p {
+    flex: 1;
   }
   .ir {
-    display: inline-block;
-    margin-top: 0.5rem;
+    margin-top: 0.75rem;
     font-weight: 600;
     color: var(--accent-ink);
   }
-  .em-breve {
-    box-shadow: none;
-    background: transparent;
+  .assunto small {
+    margin-top: 0.5rem;
+    color: var(--muted);
   }
 </style>

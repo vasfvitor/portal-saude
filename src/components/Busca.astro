@@ -6,19 +6,20 @@
 interface Props {
   /** path of the JSON index, e.g. /plano/busca.json */
   indice: string;
+  /** visible label above the box */
   rotulo: string;
+  /** short placeholder that fits a phone: "ex.: Unimed, Amil" */
+  exemplo: string;
   /** singular and plural noun for the count line: ["operadora", "operadoras"] */
   nomes: [string, string];
   todas: { href: string; texto: string };
 }
-const { indice, rotulo, nomes, todas } = Astro.props;
+const { indice, rotulo, exemplo, nomes, todas } = Astro.props;
 ---
 
 <div class="busca" data-indice={indice} data-um={nomes[0]} data-varios={nomes[1]}>
-  <label for="q" class="sr-only">
-    {rotulo}
-  </label>
-  <input id="q" type="search" autocomplete="off" placeholder={rotulo} />
+  <label for="q">{rotulo}</label>
+  <input id="q" type="search" autocomplete="off" enterkeyhint="search" placeholder={exemplo} />
   <p class="estado" aria-live="polite"></p>
   <ul class="resultados"></ul>
   <p class="todas">
@@ -100,6 +101,11 @@ const { indice, rotulo, nomes, todas } = Astro.props;
     max-width: 40rem;
     margin: 0 0 1.5rem;
   }
+  label {
+    display: block;
+    font-weight: 600;
+    margin: 0 0 6px;
+  }
   input {
     width: 100%;
     font: inherit;
@@ -108,7 +114,6 @@ const { indice, rotulo, nomes, todas } = Astro.props;
     border-radius: 10px;
     background: var(--card);
     color: var(--fg);
-    box-shadow: var(--shadow);
   }
   input:focus {
     outline: 2px solid var(--accent);

@@ -30,7 +30,8 @@ const ativas = ops.filter((o) => o.situacao === "ativa").length;
   </p>
   <Busca
     indice="/plano/busca.json"
-    rotulo="Nome da operadora, cidade ou registro na ANS"
+    rotulo="Procure pelo nome da operadora, pela cidade ou pelo número de registro na ANS"
+    exemplo="ex.: Unimed, Amil, 326305"
     nomes={["operadora", "operadoras"]}
     todas={{ href: "/plano/todas/", texto: "Ver todas as operadoras, por estado" }}
   />

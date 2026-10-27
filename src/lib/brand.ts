@@ -2,12 +2,13 @@
 // The name is provisional: change it here when the final name and domain are chosen.
 export const NAME = "saude.abelhaninja.de";
 
-export const TITLE = "Seu plano de saúde, em dados abertos";
+export const TITLE = "Plano de saúde e preço de remédios";
 
 export const DESCRIPTION =
-  "Reclamações comparadas com planos do mesmo porte, nota de qualidade da ANS, cancelamentos e portabilidade de carências. Dados públicos da ANS, com a fonte de cada número.";
+  "Compare a sua operadora de plano de saúde com as do mesmo porte e veja quanto a farmácia pode cobrar por cada remédio no seu estado. Números da ANS e da ANVISA, com a fonte de cada um.";
 
-export const DISCLAIMER = "Sem vínculo com a ANS. Os dados oficiais estão no site da agência.";
+/** followed by the links to both agencies in the footer */
+export const DISCLAIMER = "Sem vínculo com a ANS nem com a ANVISA. Os dados oficiais estão nos sites delas:";
 
 export const AUTHOR = { name: "Virtuaires", url: "https://virtuaires.com.br" };
 
