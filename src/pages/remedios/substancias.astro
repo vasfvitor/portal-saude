@@ -44,6 +44,26 @@ const letras = [...new Set(nomes.map(inicial))];
 
 <style>
   .letras {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--bg);
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  section {
+    scroll-margin-top: 3.5rem;
+  }
+  @media (min-width: 48rem) {
+    section ul {
+      columns: 2;
+      column-gap: 2.5rem;
+    }
+    section li {
+      break-inside: avoid;
+    }
+  }
+  .letras {
     display: flex;
     flex-wrap: wrap;
     gap: 6px 12px;

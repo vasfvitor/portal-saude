@@ -244,6 +244,7 @@ const graph = {
   h2 {
     font-size: 1.25rem;
     margin: 2.25rem 0 0.75rem;
+    line-height: 1.25;
   }
   h3 {
     font-size: 1.05rem;
@@ -253,10 +254,23 @@ const graph = {
     margin: 0.5rem 0;
     max-width: 44rem;
   }
+  /* breadcrumb above the h1 of a detail page */
+  .trilha {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin: 1.25rem 0 0;
+  }
+  .trilha a {
+    color: var(--muted);
+  }
+  .trilha + h1 {
+    margin-top: 0.5rem;
+  }
   .lead {
     color: var(--muted);
     font-size: 1.15rem;
     margin: 0 0 1.5rem;
+    max-width: 40rem;
   }
   .muted {
     color: var(--muted);

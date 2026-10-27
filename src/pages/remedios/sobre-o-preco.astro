@@ -24,10 +24,10 @@ const faqLd = {
 
 <Base
   title="Preço máximo dos remédios e o ICMS de cada estado"
-  description="O que é o preço máximo ao consumidor da CMED, por que ele muda com o ICMS de cada estado e qual alíquota cada estado usa."
+  description="O que é o preço máximo ao consumidor da CMED, por que ele muda com o ICMS de cada estado e qual ICMS cada estado cobra."
   structured={[faqLd]}
 >
-  <h1>Por que o preço muda de estado para estado</h1>
+  <h1>Preço máximo e o ICMS de cada estado</h1>
   {faq.map(({ q, a }) => (
     <>
       <h2>{q}</h2>
@@ -108,6 +108,36 @@ const faqLd = {
   .n {
     text-align: right;
     white-space: nowrap;
+  }
+  @media (max-width: 40rem) {
+    /* one block per state on a phone: name and rate on one line, note and source below */
+    thead {
+      display: none;
+    }
+    tr {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+    tr:last-child {
+      border-bottom: 0;
+    }
+    th,
+    td {
+      display: block;
+      padding: 2px 0;
+      border: 0;
+    }
+    td:nth-child(3),
+    td:nth-child(4) {
+      grid-column: 1 / -1;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    td:nth-child(3):empty {
+      display: none;
+    }
   }
   .duvida {
     display: block;

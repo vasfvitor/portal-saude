@@ -1,5 +1,6 @@
 ---
 // Every operator, A to Z by state: the way in without JavaScript, and a page search engines can follow.
+import Selo from "../../components/Selo.astro";
 import Base from "../../layouts/Base.astro";
 import { DADOS_URL } from "../../lib/config";
 import { fmtInt } from "../../lib/format";
@@ -24,8 +25,8 @@ const ativas = indice.filter((o) => o.situacao === "ativa").length;
   <h1>Todas as operadoras</h1>
   <p class="lead">
     {fmtInt(ativas)} operadoras ativas e {fmtInt(indice.length - ativas)}{" "}
-    {indice.length - ativas === 1 ? "cancelada" : "canceladas"} nos últimos 5 anos, pelo estado da sede. A sede nem
-    sempre é onde o plano atende.
+    {indice.length - ativas === 1 ? "fechada" : "fechadas"} nos últimos 5 anos, pelo estado da sede. A sede nem sempre é
+    onde o plano atende.
   </p>
   <nav class="ufs" aria-label="Estados">
     {ufs.map((uf) => (
@@ -40,7 +41,7 @@ const ativas = indice.filter((o) => o.situacao === "ativa").length;
           <li>
             <a href={paginaOperadora(o)}>{nome(o)}</a>
             <span class="muted"> · {o.modalidade}</span>
-            {o.situacao === "cancelada" && <span class="tag">cancelada</span>}
+            {o.situacao === "cancelada" && <Selo tom="alerta">fechada</Selo>}
           </li>
         ))}
       </ul>
@@ -49,6 +50,26 @@ const ativas = indice.filter((o) => o.situacao === "ativa").length;
 </Base>
 
 <style>
+  .ufs {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--bg);
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  section {
+    scroll-margin-top: 3.5rem;
+  }
+  @media (min-width: 48rem) {
+    section ul {
+      columns: 2;
+      column-gap: 2.5rem;
+    }
+    section li {
+      break-inside: avoid;
+    }
+  }
   .ufs {
     display: flex;
     flex-wrap: wrap;
@@ -60,13 +81,5 @@ const ativas = indice.filter((o) => o.situacao === "ativa").length;
   }
   li {
     margin: 4px 0;
-  }
-  .tag {
-    font-size: 0.75rem;
-    border: 1px solid var(--alert);
-    color: var(--alert);
-    border-radius: 999px;
-    padding: 0 8px;
-    margin-left: 8px;
   }
 </style>

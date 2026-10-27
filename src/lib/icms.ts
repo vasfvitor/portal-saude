@@ -76,7 +76,7 @@ export const ESTADOS: EstadoIcms[] = [
     confirmado: true,
     conferido_em: C,
     observacao:
-      "Alguns remédios da cesta básica (como dipirona e AAS) têm redução de imposto que a lista da CMED não mostra; o preço pode ficar abaixo da coluna de 20%.",
+      "Alguns remédios da cesta básica (como dipirona e AAS) têm redução de imposto que a lista da CMED não mostra; o preço máximo pode ficar abaixo do valor com ICMS de 20%.",
   },
   {
     uf: "DF",
@@ -85,7 +85,7 @@ export const ESTADOS: EstadoIcms[] = [
     fonte: "https://www.sinj.df.gov.br/sinj/Norma/49208/Lei_1254_08_11_1996.html",
     confirmado: true,
     conferido_em: C,
-    observacao: "Remédios têm alíquota própria de 17%, menor que a geral do DF.",
+    observacao: "Remédios pagam ICMS próprio de 17%, menor que o ICMS geral do DF.",
   },
   {
     uf: "ES",
@@ -189,7 +189,7 @@ export const ESTADOS: EstadoIcms[] = [
     confirmado: true,
     conferido_em: C,
     observacao:
-      "20% mais 2% do fundo de combate à pobreza. Não foi possível descartar uma alíquota própria para algum remédio.",
+      "20% mais 2% do fundo de combate à pobreza. Pode haver remédio com ICMS diferente que não achamos na lei.",
   },
   {
     uf: "RN",
