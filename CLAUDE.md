@@ -19,6 +19,9 @@ the sources and the rebuild schedule; a git-ignored `NOTES.local.md` holds pendi
   in one build made GitHub Pages answer 429. Each bundle is checked against its index, field by field.
 - `src/lib/icms.ts` is the only hand-curated table: the default ICMS rate of each state for medicines, each
   row with a primary source and the day it was checked. Any change needs a source; the user reviews it.
+  Review it every 6 months from the last `conferido_em` (2026-10-23, so by 2027-04), or as soon as a CMED
+  list brings a rate column the table does not use (`colunas()` in `icms.ts`). Start with the states still
+  `confirmado: false` (PI, RN, RR); state laws change rates, as AL did to 20.5% in April 2026.
 - Facts compared with peers, with their base and source; never a score, grade or risk label of our own. The
   wording rules live in `src/lib/frases.ts` and are tested.
 - Left out on purpose, and explained on `/sobre/`: the prudential class S1-S4 (a size segment for capital
