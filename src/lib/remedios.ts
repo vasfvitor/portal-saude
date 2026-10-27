@@ -1,7 +1,7 @@
 // CMED maximum consumer prices from anvisa-feeds (`/cmed/dados/`, contract in its `schema.md`), read at
 // build time. Same rules as the operator data: every source is required and validated, so a contract change
 // upstream fails the build instead of publishing a wrong price. Prices are in centavos, per ICMS rate.
-import { getJson, once, pool } from "./fetch";
+import { getJson, once } from "./fetch";
 import { slug } from "./slug";
 import { bool, list, num, obj, str, strOrNull, type Obj } from "./validar";
 
@@ -118,19 +118,28 @@ export function parseProduto(raw: unknown): Produto {
   };
 }
 
-// ~7,600 files from GitHub Pages: a modest pace keeps it under the rate limit
-const CONCURRENCY = 8;
+/** Every product in one file (todos.json), checked against the index: the same list month and the same products
+ * in the same order, so a half-deployed upstream fails the build instead of mixing two lists. */
+export function parseTodos(raw: unknown, indice: IndiceProdutos): Produto[] {
+  const o = obj(raw, "todos.json");
+  const stamp = str(o, "stamp", "todos.json");
+  if (stamp !== indice.stamp) throw new Error(`todos.json: list ${stamp}, but produtos.json is ${indice.stamp}`);
+  const produtos = list(o.produtos, "todos.json produtos").map((x) => parseProduto(x));
+  const registros = (xs: { registro_produto: string }[]): string => xs.map((x) => x.registro_produto).join(",");
+  if (registros(produtos) !== registros(indice.produtos))
+    throw new Error("todos.json: products differ from produtos.json");
+  return produtos;
+}
 
 export function indiceProdutosForBuild(dadosUrl: string): Promise<IndiceProdutos> {
   return once(`produtos ${dadosUrl}`, async () => parseIndiceProdutos(await getJson(`${dadosUrl}/produtos.json`)));
 }
 
+// one request for ~7,600 products: one file each made GitHub Pages answer 429 mid-build
 export function produtosForBuild(dadosUrl: string): Promise<Produto[]> {
   return once(`produto ${dadosUrl}`, async () => {
-    const { produtos } = await indiceProdutosForBuild(dadosUrl);
-    return pool(produtos, CONCURRENCY, async ({ registro_produto }) =>
-      parseProduto(await getJson(`${dadosUrl}/produto/${registro_produto}.json`)),
-    );
+    const [indice, todos] = await Promise.all([indiceProdutosForBuild(dadosUrl), getJson(`${dadosUrl}/todos.json`)]);
+    return parseTodos(todos, indice);
   });
 }
 

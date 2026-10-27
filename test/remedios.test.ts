@@ -6,6 +6,7 @@ import {
   paginaProduto,
   parseIndiceProdutos,
   parseProduto,
+  parseTodos,
   produtosForBuild,
   slugsSubstancias,
 } from "../src/lib/remedios";
@@ -65,7 +66,17 @@ describe("fetching", () => {
       (await indiceProdutosForBuild(url)).produtos.map((p) => p.registro_produto),
     );
     await produtosForBuild(url);
-    expect(fetchMock).toHaveBeenCalledTimes(1 + produtos.length);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("todos.json holds the product files, and must match the index", () => {
+    const indice = parseIndiceProdutos(fixture("produtos.json"));
+    const todos = fixture("todos.json") as { stamp: string; produtos: unknown[] };
+    expect(parseTodos(todos, indice)).toEqual(
+      indice.produtos.map((p) => parseProduto(fixture(`produto/${p.registro_produto}.json`))),
+    );
+    expect(() => parseTodos({ ...todos, stamp: "20261109" }, indice)).toThrow(/20261109.*20261009/);
+    expect(() => parseTodos({ ...todos, produtos: todos.produtos.slice(1) }, indice)).toThrow(/differ/);
   });
 });
 
