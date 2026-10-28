@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  SINAIS_CONTEXTO,
+  sinaisDeDificuldade,
   fraseMetaRn623,
   fraseAnoAnterior,
   fraseCancelamento,
@@ -219,5 +221,46 @@ describe("RN 623 target", () => {
     const dentro = fraseMetaRn623({ ...base, atingiu: true, listas: ["https://x.test/l.pdf"] });
     expect(dentro).toContain("ficou dentro da meta");
     expect(dentro).toContain("já publicou a lista oficial");
+  });
+});
+
+describe("signs of difficulty", () => {
+  const base = {
+    situacao: "ativa" as const,
+    beneficiarios: 8000,
+    beneficiarios_em: "2026-09",
+    beneficiarios_ano_antes: 10000,
+    eventos: [],
+    portabilidade_vigente: [],
+  };
+  it("count a loss of 20% from 1,000 clients, naming both months", () => {
+    expect(sinaisDeDificuldade(base, "2026-10-26")).toEqual([
+      "Perdeu 20% dos clientes em 12 meses: eram 10 mil clientes em setembro de 2025 e são 8.000 clientes em setembro de 2026.",
+    ]);
+    expect(sinaisDeDificuldade({ ...base, beneficiarios: 8100 }, "2026-10-26")).toEqual([]);
+    expect(sinaisDeDificuldade({ ...base, beneficiarios_ano_antes: 999, beneficiarios: 10 }, "2026-10-26")).toEqual([]);
+    expect(sinaisDeDificuldade({ ...base, beneficiarios_ano_antes: null }, "2026-10-26")).toEqual([]);
+  });
+  it("list technical direction of the last three years and portability in force", () => {
+    const dt = (data: string) => ({ tipo: "direcao-tecnica", id: `direcao-tecnica/${data}`, data, titulo: "" });
+    const s = sinaisDeDificuldade(
+      {
+        ...base,
+        beneficiarios: 9000,
+        eventos: [dt("2025-06-04"), dt("2024-03-01"), dt("2022-12-15")],
+        portabilidade_vigente: [{ ro: "3094", data: "2026-02-24", link: null }],
+      },
+      "2026-10-26",
+    );
+    expect(s).toEqual([
+      "A ANS pôs a operadora sob direção técnica em 04/06/2025 e em 01/03/2024.",
+      "A ANS liberou a troca de plano sem carência para os clientes (quadro acima).",
+    ]);
+  });
+  it("say nothing about an operator that already closed", () => {
+    expect(sinaisDeDificuldade({ ...base, situacao: "cancelada" }, "2026-10-26")).toEqual([]);
+  });
+  it("never forecast", () => {
+    expect(SINAIS_CONTEXTO).toMatch(/^Nenhum destes sinais quer dizer que a operadora vai fechar\./);
   });
 });

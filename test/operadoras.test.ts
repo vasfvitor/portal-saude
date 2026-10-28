@@ -72,6 +72,8 @@ describe("feed", () => {
     const novo = parseOperadora({ ...base, meta_rn623: meta, beneficiarios_em: "2026-09" });
     expect(novo.meta_rn623?.meta["médico-hospitalar"]).toBe(2.4);
     expect(novo.beneficiarios_em).toBe("2026-09");
+    expect(antigo.beneficiarios_ano_antes).toBeNull();
+    expect(parseOperadora({ ...base, beneficiarios_ano_antes: 3146777 }).beneficiarios_ano_antes).toBe(3146777);
     expect(() => parseOperadora({ ...base, meta_rn623: { ...meta, atingiu: "não" } })).toThrow(/atingiu/);
   });
 

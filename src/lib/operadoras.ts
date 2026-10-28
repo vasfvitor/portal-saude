@@ -103,6 +103,8 @@ export interface Operadora extends ItemIndice {
   feed: string | null;
   /** month of `beneficiarios` ("2026-09"); null on an older build of the data */
   beneficiarios_em: string | null;
+  /** clients 12 months before `beneficiarios_em`; null without a row then, or on an older build of the data */
+  beneficiarios_ano_antes: number | null;
   meta_rn623: MetaRn623 | null;
 }
 
@@ -227,6 +229,7 @@ export function parseOperadora(raw: unknown): Operadora {
     fora: list(o.fora, `${where} fora`).filter((x): x is string => typeof x === "string"),
     feed: feedOrNull(o, "feed", where),
     beneficiarios_em: strOrAbsent(o, "beneficiarios_em", where),
+    beneficiarios_ano_antes: numOrAbsent(o, "beneficiarios_ano_antes", where),
     meta_rn623: parseMeta623(o.meta_rn623, `${where} meta_rn623`),
   };
 }

@@ -309,6 +309,56 @@ export function fraseCancelamento(o: Pick<Operadora, "cancelamento">): string | 
   return `Registro cancelado em ${fmtDate(data)}: ${simples}.${original}`;
 }
 
+// "Sinais de dificuldade": facts that come before an operator closes, never a forecast. A loss of 20% of the
+// clients in a year, counted from 1,000 clients: of the operators that went into liquidation (or its
+// alternative) since 2020 with that many clients, 10 of 15 had lost that much in the year before; of all
+// operators of that size in 2026-09, 35 of 792 had (measured on 2026-10-28 with the IGR and the CADOP).
+const PERDA_DE_CLIENTES = 0.2;
+const CLIENTES_PARA_COMPARAR = 1000;
+const ANOS_DE_DIRECAO_TECNICA = 3;
+
+const mesAntes = (anoMes: string, meses: number): string => {
+  const [ano, mes] = anoMes.split("-").map(Number) as [number, number];
+  const n = ano * 12 + mes - 1 - meses;
+  return `${Math.floor(n / 12)}-${String((n % 12) + 1).padStart(2, "0")}`;
+};
+
+/** One short fact per sign, for an active operator; empty when there is none. `dia` is the data's date. */
+export function sinaisDeDificuldade(
+  op: Pick<
+    Operadora,
+    "situacao" | "beneficiarios" | "beneficiarios_em" | "beneficiarios_ano_antes" | "eventos" | "portabilidade_vigente"
+  >,
+  dia: string,
+): string[] {
+  if (op.situacao !== "ativa") return [];
+  const sinais: string[] = [];
+  const { beneficiarios: agora, beneficiarios_ano_antes: antes, beneficiarios_em: em } = op;
+  if (agora !== null && antes !== null && em && antes >= CLIENTES_PARA_COMPARAR) {
+    // compared as counts: 1 - 8000/10000 is 0.19999… in floating point
+    if (agora <= antes * (1 - PERDA_DE_CLIENTES)) {
+      sinais.push(
+        `Perdeu ${Math.round((1 - agora / antes) * 100)}% dos clientes em 12 meses: eram ${fmtClientes(antes)} em ${fmtMes(mesAntes(em, 12))} e são ${fmtClientes(agora)} em ${fmtMes(em)}.`,
+      );
+    }
+  }
+  const desde = `${Number(dia.slice(0, 4)) - ANOS_DE_DIRECAO_TECNICA}${dia.slice(4)}`;
+  const direcao = op.eventos.filter((e) => e.tipo === "direcao-tecnica" && e.data >= desde).map((e) => fmtDate(e.data));
+  if (direcao.length > 0) {
+    sinais.push(`A ANS pôs a operadora sob direção técnica em ${direcao.join(" e em ")}.`);
+  }
+  if (op.portabilidade_vigente.length > 0) {
+    sinais.push("A ANS liberou a troca de plano sem carência para os clientes (quadro acima).");
+  }
+  return sinais;
+}
+
+export const SINAIS_CONTEXTO =
+  "Nenhum destes sinais quer dizer que a operadora vai fechar. Quem decide uma intervenção, como direção fiscal ou liquidação, é a ANS, e ela publica cada decisão.";
+
+export const SINAIS_O_QUE_FAZER =
+  "Se você tem plano com ela, guarde os comprovantes de pagamento. Se a ANS liberar a troca sem carência, você tem um prazo para pedir.";
+
 export function frasePortabilidade(o: Pick<Operadora, "portabilidade_vigente">): string | null {
   const p = o.portabilidade_vigente[0];
   if (!p) return null;
