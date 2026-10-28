@@ -26,8 +26,9 @@ export const DISQUE_ANS_SURDOS = "0800 021 2105";
 export const ANS_PORTABILIDADE_URL =
   "https://www.gov.br/ans/pt-br/assuntos/contratacao-e-troca-de-plano/operadoras-em-fase-de-portabilidade-especial-e-portabilidade-extraordinaria";
 
-// public repositories only: the portal repository is private, so it is not linked
+// public repositories only
 export const REPOS = {
+  portal: "https://github.com/vasfvitor/portal-saude",
   ansFeeds: "https://github.com/vasfvitor/ans-feeds",
   anvisaFeeds: "https://github.com/vasfvitor/anvisa-feeds",
 } as const;

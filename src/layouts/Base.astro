@@ -4,7 +4,7 @@
 // own scoped styles. Astro drops a line break between text and a tag: keep inline links on the same line.
 import Logo from "../components/Logo.astro";
 import { AUTHOR, DESCRIPTION, DISCLAIMER, NAME, pageTitle } from "../lib/brand";
-import { ANS_FEEDS_URL, ANS_URL, ANVISA_HUB_URL, ANVISA_URL } from "../lib/config";
+import { ANS_FEEDS_URL, ANS_URL, ANVISA_HUB_URL, ANVISA_URL, REPOS } from "../lib/config";
 
 interface Props {
   title: string;
@@ -119,7 +119,7 @@ const graph = {
         <a href={ANVISA_HUB_URL}>Projetos com dados da ANVISA</a>
       </nav>
       <p class="licenca">
-        Feito por <a href={AUTHOR.url}>{AUTHOR.name}</a>.
+        Feito por <a href={AUTHOR.url}>{AUTHOR.name}</a>. <a href={REPOS.portal}>Código do site</a>, com licença MIT.
       </p>
     </footer>
   </body>

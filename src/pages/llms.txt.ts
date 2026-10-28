@@ -33,7 +33,9 @@ Dados de ${fmtDate(meta.date)}: ${fmtInt(ativas)} operadoras de planos de saúde
 
 - JSON por operadora: ${DADOS_URL}/operadora/<registro>.json (contrato em ${DADOS_URL}/schema.md)
 - Preço máximo por remédio: ${CMED_DADOS_URL}/produto/<registro>.json (contrato em ${CMED_DADOS_URL}/schema.md)
+- Código deste site: ${REPOS.portal}
 - Código dos dados das operadoras: ${REPOS.ansFeeds}
+- Código dos dados dos remédios: ${REPOS.anvisaFeeds}
 `;
   return new Response(body, { headers: { "Content-Type": "text/plain; charset=utf-8" } });
 };
