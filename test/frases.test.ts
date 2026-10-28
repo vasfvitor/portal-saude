@@ -54,7 +54,10 @@ describe("complaints", () => {
       /^Na prática, de julho a setembro de 2026, houve 1 reclamação para cada 400 clientes nesta operadora; na típica, 1 para cada 890 clientes\./,
     );
     expect(detalhe).toContain("No total, foram 8.484 reclamações para 250 mil clientes em média.");
-    expect(detalhe).toContain("a do meio entre as 94 operadoras de plano médico-hospitalar de tamanho grande");
+    expect(detalhe).not.toContain("a do meio");
+    expect(fraseReclamacoes(recl(83.58, 37.55, 8484)).explica?.texto).toContain(
+      "a do meio entre as 94 operadoras de plano médico-hospitalar de tamanho grande",
+    );
     expect(comparacao).toMatchObject({ esta: 83.58, tipica: 37.55, max: 83.58, casas: 1 });
     expect(comparacao?.rotuloTipica).toBe("Típica entre as 94 do mesmo tamanho");
   });
@@ -114,9 +117,9 @@ describe("IDSS", () => {
     expect(fraseIdss(idss(0.6, 0.8), "Medicina de Grupo").titulo).toBe(
       "Nota 0,60, abaixo da típica das operadoras de medicina de grupo.",
     );
-    const { detalhe } = fraseIdss(idss(0.9, 0.8), "Seguradora Especializada em Saúde");
-    expect(detalhe).toContain("a do meio entre 7 seguradoras");
-    expect(detalhe).toContain("gestão. Esta é a nota de 2025, referente a 2024.");
+    const { detalhe, explica } = fraseIdss(idss(0.9, 0.8), "Seguradora Especializada em Saúde");
+    expect(detalhe).toBe("Esta é a nota de 2025, referente a 2024.");
+    expect(explica?.texto).toContain("gestão. A típica é a do meio entre 7 seguradoras");
     expect(comparativoIdss(idss(0.9, 0.8)).texto).toBe("0,90, acima da típica");
   });
   it("no score: says why", () => {
@@ -137,7 +140,8 @@ describe("real operators", () => {
     );
     expect(fraseIdss(b.idss, b.modalidade).tom).toBe("neutro");
     expect(fraseRessarcimento(b.ressarcimento)?.titulo).toBe("Pagou ou parcelou tudo o que o SUS cobrou.");
-    expect(fraseRessarcimento(b.ressarcimento)?.detalhe).toMatch(/O SUS cobrou R\$ .* até [a-zç]+ de \d{4}\.$/);
+    expect(fraseRessarcimento(b.ressarcimento)?.detalhe).toMatch(/^O SUS cobrou R\$ .* até [a-zç]+ de \d{4}\.$/);
+    expect(fraseRessarcimento(b.ressarcimento)?.explica?.texto).toMatch(/^Quando um cliente de plano/);
     expect(fraseCancelamento(b)).toBeNull();
     expect(frasePortabilidade(b)).toBeNull();
   });

@@ -1,6 +1,6 @@
 // Numbers into plain pt-BR sentences. Facts compared with peers, always with their base; never a score or
 // a risk label of our own. "Típica" in the text is the operator in the middle of its peers (the median), and
-// each `detalhe` says so in words. `tom` only drives styling and is never shown as words.
+// each `explica` says so in words. `tom` only drives styling and is never shown as words.
 import { contar, fmtClientes, fmtDate, fmtDec, fmtInt, fmtMes, fmtPct, fmtReais, fmtTrimestre } from "./format";
 import type { Idss, MetaRn623, Operadora, PontoSerie, Reclamacoes, Ressarcimento } from "./operadoras";
 
@@ -22,8 +22,10 @@ export interface Comparacao {
 export interface Frase {
   /** the sentence in bold: the comparison */
   titulo: string;
-  /** the base: the numbers behind it, and what "típica" means */
+  /** this operator's numbers behind it; empty when there are none */
   detalhe: string;
+  /** what the measure is and what "típica" means: the same on every page, so the page shows it closed */
+  explica?: { pergunta: string; texto: string };
   tom: Tom;
   comparacao?: Comparacao;
 }
@@ -121,7 +123,8 @@ export function fraseReclamacoes(r: Reclamacoes): Frase {
     `Recebe ${texto.replace(" da típica", "")} das reclamações de uma operadora típica do mesmo tamanho.`;
   return {
     titulo,
-    detalhe: `${pratica} ${total} ${tipica}`,
+    detalhe: `${pratica} ${total}`,
+    explica: { pergunta: "O que é a operadora típica?", texto: tipica },
     tom,
     comparacao: {
       esta: r.indice,
@@ -179,6 +182,7 @@ export const ACOMPANHAR_OPERADORA =
 
 const SOBRE_IDSS =
   "A ANS avalia cada operadora todo ano: qualidade do atendimento, acesso a médicos e exames, saúde financeira e gestão.";
+const explicaIdss = (texto = SOBRE_IDSS) => ({ pergunta: "Como a ANS dá a nota?", texto });
 
 /** The ANS score as the ANS publishes it, 0 to 1: 0.8112 → "0,81". */
 export const nota = (valor: number): string => fmtDec(valor);
@@ -198,7 +202,8 @@ export function fraseIdss(i: Idss | null, modalidade: string): Frase {
   if (!i) {
     return {
       titulo: "A ANS não publicou nota de desempenho para esta operadora.",
-      detalhe: SOBRE_IDSS,
+      detalhe: "",
+      explica: explicaIdss(),
       tom: "sem-base",
     };
   }
@@ -206,14 +211,15 @@ export function fraseIdss(i: Idss | null, modalidade: string): Frase {
   if (i.valor === null) {
     return {
       titulo: `Sem nota de desempenho em ${i.ano}: ${i.motivo ?? "a ANS não divulgou"}.`,
-      detalhe: `${SOBRE_IDSS} A nota não sai em alguns casos, como quando a operadora está sob intervenção da ANS ou foi fechada.`,
+      detalhe: "A nota não sai em alguns casos, como quando a operadora está sob intervenção da ANS ou foi fechada.",
+      explica: explicaIdss(),
       tom: "sem-base",
     };
   }
   const titNota = `Nota ${nota(i.valor)}`;
   const mediana = i.mediana_mesma_modalidade;
   const { tom } = comparativoIdss(i);
-  if (mediana === null) return { titulo: `${titNota}.`, detalhe: `${SOBRE_IDSS} ${ano}`, tom };
+  if (mediana === null) return { titulo: `${titNota}.`, detalhe: ano, explica: explicaIdss(), tom };
   const grupo = modalidadePlural(modalidade);
   const titulo =
     tom === "favoravel"
@@ -223,7 +229,10 @@ export function fraseIdss(i: Idss | null, modalidade: string): Frase {
         : `${titNota}, no nível das ${grupo}.`;
   return {
     titulo,
-    detalhe: `${SOBRE_IDSS} ${ano} A típica é a do meio entre ${fmtInt(i.operadoras_mesma_modalidade)} ${grupo}.`,
+    detalhe: ano,
+    explica: explicaIdss(
+      `${SOBRE_IDSS} A típica é a do meio entre ${fmtInt(i.operadoras_mesma_modalidade)} ${grupo}: metade tem nota maior, metade menor.`,
+    ),
     tom,
     comparacao: {
       esta: i.valor,
@@ -238,12 +247,16 @@ export function fraseIdss(i: Idss | null, modalidade: string): Frase {
 
 export function fraseRessarcimento(r: Ressarcimento | null): Frase | null {
   if (!r) return null;
-  const sobre =
-    "Quando um cliente de plano é atendido pelo SUS, a operadora tem de devolver ao SUS o custo do atendimento. Mostra se a operadora paga o que deve; não afeta o atendimento de quem tem o plano.";
+  const explica = {
+    pergunta: "O que são os pagamentos ao SUS?",
+    texto:
+      "Quando um cliente de plano é atendido pelo SUS, a operadora tem de devolver ao SUS o custo do atendimento. Mostra se a operadora paga o que deve; não afeta o atendimento de quem tem o plano.",
+  };
   if (r.indice_pagamento === null || !r.valor_cobrado) {
     return {
       titulo: "O SUS não cobrou nada desta operadora.",
-      detalhe: `${sobre} Situação em ${fmtMes(r.competencia)}.`,
+      detalhe: `Situação em ${fmtMes(r.competencia)}.`,
+      explica,
       tom: "sem-base",
     };
   }
@@ -260,7 +273,8 @@ export function fraseRessarcimento(r: Ressarcimento | null): Frase | null {
       pago >= 100
         ? "Pagou ou parcelou tudo o que o SUS cobrou."
         : `Pagou ou parcelou ${fmtPct(pago)} do que o SUS cobrou.`,
-    detalhe: `${sobre} O SUS cobrou ${fmtReais(r.valor_cobrado)} desta operadora até ${fmtMes(r.competencia)}.${parcelado}${falta}`,
+    detalhe: `O SUS cobrou ${fmtReais(r.valor_cobrado)} desta operadora até ${fmtMes(r.competencia)}.${parcelado}${falta}`,
+    explica,
     tom: pago >= 100 ? "favoravel" : pago >= 90 ? "neutro" : "desfavoravel",
   };
 }

@@ -1,6 +1,7 @@
 ---
-// One comparison: the sentence in bold, the two numbers as bars when there is a comparison, the base below.
-// The tone only colours the left border and this operator's bar.
+// One comparison: the sentence in bold, the two numbers as bars when there is a comparison, this operator's
+// numbers below, and what the measure means behind a closed question. The tone only colours the left border and
+// this operator's bar.
 import type { Frase } from "../lib/frases";
 import Comparacao from "./Comparacao.astro";
 
@@ -15,6 +16,12 @@ const { frase } = Astro.props;
   {frase.comparacao && <Comparacao c={frase.comparacao} tom={frase.tom} />}
   {frase.detalhe && <p class="detalhe">{frase.detalhe}</p>}
   <slot />
+  {frase.explica && (
+    <details class="explica">
+      <summary>{frase.explica.pergunta}</summary>
+      <p>{frase.explica.texto}</p>
+    </details>
+  )}
 </div>
 
 <style>
@@ -43,5 +50,22 @@ const { frase } = Astro.props;
     color: var(--muted);
     font-size: 0.95rem;
     margin: 0.4rem 0 0;
+  }
+  .explica {
+    margin-top: 0.5rem;
+    border-top: 1px dashed var(--line);
+  }
+  .explica summary {
+    cursor: pointer;
+    padding: 8px 0 0;
+    min-height: 32px;
+    color: var(--accent-ink);
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .explica p {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin: 0.3rem 0 0;
   }
 </style>

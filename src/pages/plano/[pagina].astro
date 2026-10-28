@@ -1,9 +1,11 @@
 ---
-// One page per operator: what happened to it, then each comparison as a sentence with its base, then the
-// sources. Every number comes from the ans-feeds record; nothing is typed here.
+// One page per operator: what happened to it (closed, portability), then the summary as the page itself: one
+// block per subject, each opening onto its comparison with the base, and what to do after a problem. History, the
+// feed and the sources sit in closed sections. Every number comes from the ans-feeds record; nothing is typed here.
 import Acompanhar from "../../components/Acompanhar.astro";
 import Frase from "../../components/Frase.astro";
 import Quadro from "../../components/Quadro.astro";
+import Secao from "../../components/Secao.astro";
 import Serie from "../../components/Serie.astro";
 import Base from "../../layouts/Base.astro";
 import { ANS_CANAIS_URL, DADOS_URL, DISQUE_ANS, DISQUE_ANS_SURDOS, META_URL } from "../../lib/config";
@@ -20,8 +22,16 @@ import {
   fraseReclamacoes,
   fraseRessarcimento,
   resumo,
+  type ItemResumo,
 } from "../../lib/frases";
-import { metaForBuild, nomeExibido, operadorasForBuild, paginaOperadora, type Operadora } from "../../lib/operadoras";
+import {
+  metaForBuild,
+  nomeExibido,
+  operadorasForBuild,
+  paginaOperadora,
+  type Operadora,
+  type Reclamacoes,
+} from "../../lib/operadoras";
 
 export async function getStaticPaths() {
   const [ops, meta] = await Promise.all([operadorasForBuild(DADOS_URL, META_URL), metaForBuild(META_URL)]);
@@ -55,6 +65,26 @@ const NOMES_FONTE: Record<string, string> = {
   idss: "Índice de desempenho (IDSS)",
   ressarcimento: "Ressarcimento ao SUS",
 };
+// One block per summary line. The complaint lines come first, one per coverage, in the order of op.reclamacoes;
+// with no complaint data at all the block still says so.
+interface Bloco {
+  item: ItemResumo;
+  id: string;
+  reclamacoes?: Reclamacoes;
+}
+const itens = resumo(op);
+const blocos: Bloco[] = itens.map((item, k) =>
+  item.ancora === "reclamacoes"
+    ? { item, id: k === 0 ? "reclamacoes" : `reclamacoes-${k + 1}`, reclamacoes: op.reclamacoes[k]! }
+    : { item, id: item.ancora },
+);
+if (op.reclamacoes.length === 0) {
+  blocos.unshift({
+    item: { assunto: "Reclamações", texto: "sem dado", tom: "sem-base", ancora: "reclamacoes" },
+    id: "reclamacoes",
+  });
+}
+const ultimaReclamacao = blocos.findLastIndex((b) => b.item.ancora === "reclamacoes");
 const breadcrumb = {
   "@type": "BreadcrumbList",
   itemListElement: [
@@ -75,8 +105,6 @@ const breadcrumb = {
   </p>
   <h1>{titulo}</h1>
   <p class="ficha">
-    {titulo !== op.nome && <span>{op.nome}</span>}
-    <span>Registro ANS {op.registro}</span>
     <span>{op.modalidade}</span>
     {local && <span>{local}</span>}
     {op.beneficiarios !== null && (
@@ -113,191 +141,213 @@ const breadcrumb = {
     </Quadro>
   )}
 
-  <section class="resumo" aria-labelledby="em-resumo">
-    <h2 id="em-resumo" class="sr-only">
-      Em resumo
-    </h2>
-    <ul>
-      {resumo(op).map((r) => (
-        <li class={r.tom}>
-          <a href={`#${r.ancora}`}>
-            <span class="assunto">{r.assunto}</span>
-            <span class="texto">{r.texto}</span>
-          </a>
-        </li>
-      ))}
-      <li class="ajuda">
-        <a href="#problema">
-          <span class="assunto">Teve problema?</span>
-          <span class="texto">o que fazer</span>
-        </a>
-      </li>
-    </ul>
-  </section>
-
-  <section id="reclamacoes">
-    <h2>Reclamações na ANS</h2>
-    {op.reclamacoes.length === 0 && <p class="muted">Sem dado de reclamações para esta operadora.</p>}
-    {op.reclamacoes.map((r) => (
-      <>
-        {op.reclamacoes.length > 1 && <h3>{cobertura(r.cobertura)}</h3>}
-        <Frase frase={fraseReclamacoes(r)}>
-          {fraseAnoAnterior(r.serie) && <p class="detalhe">{fraseAnoAnterior(r.serie)}</p>}
-          <Serie serie={r.serie} mediana={r.mediana_mesmo_porte} tom={fraseReclamacoes(r).tom} />
-        </Frase>
-      </>
+  <h2 class="sr-only">Em resumo</h2>
+  <div class="blocos">
+    {blocos.map(({ item, id, reclamacoes }, k) => (
+      <details class={`bloco ${item.tom}`} id={id}>
+        <summary>
+          <span class="assunto">{item.assunto}</span>
+          <span class="texto">{item.texto}</span>
+        </summary>
+        <div class="dentro">
+          {item.ancora === "reclamacoes" &&
+            (reclamacoes ? (
+              <>
+                {op.reclamacoes.length > 1 && <h3>{cobertura(reclamacoes.cobertura)}</h3>}
+                <Frase frase={fraseReclamacoes(reclamacoes)}>
+                  {fraseAnoAnterior(reclamacoes.serie) && <p class="detalhe">{fraseAnoAnterior(reclamacoes.serie)}</p>}
+                  <Serie
+                    serie={reclamacoes.serie}
+                    mediana={reclamacoes.mediana_mesmo_porte}
+                    tom={fraseReclamacoes(reclamacoes).tom}
+                  />
+                </Frase>
+              </>
+            ) : (
+              <p class="muted">Sem dado de reclamações para esta operadora.</p>
+            ))}
+          {k === ultimaReclamacao && op.meta_rn623 && (
+            <p>
+              {fraseMetaRn623(op.meta_rn623)}
+              {op.meta_rn623.listas.map((url, i) => (
+                <>
+                  {" "}
+                  <a href={url}>
+                    {`Lista oficial${op.meta_rn623!.listas.length > 1 ? ` ${i + 1}` : ""} da ANS deste trimestre (PDF)`}
+                  </a>
+                </>
+              ))}
+            </p>
+          )}
+          {item.ancora === "nota" && <Frase frase={fraseIdss(op.idss, op.modalidade)} />}
+          {item.ancora === "sus" && ressarcimento && <Frase frase={ressarcimento} />}
+        </div>
+      </details>
     ))}
-    {op.meta_rn623 && (
-      <p>
-        {fraseMetaRn623(op.meta_rn623)}
-        {op.meta_rn623.listas.map((url, i) => (
-          <>
-            {" "}
-            <a href={url}>
-              {`Lista oficial${op.meta_rn623!.listas.length > 1 ? ` ${i + 1}` : ""} da ANS deste trimestre (PDF)`}
-            </a>
-          </>
-        ))}
-      </p>
-    )}
-  </section>
 
-  <section id="nota">
-    <h2>Nota de desempenho da ANS</h2>
-    <Frase frase={fraseIdss(op.idss, op.modalidade)} />
-  </section>
-
-  {ressarcimento && (
-    <section id="sus">
-      <h2>Pagamentos ao SUS</h2>
-      <Frase frase={ressarcimento} />
-    </section>
-  )}
-
-  <Quadro tipo="ajuda" titulo="Teve problema com este plano?" id="problema">
-    <ol>
-      <li>Reclame primeiro na operadora e anote o número do protocolo.</li>
-      <li>
-        Se não resolver, reclame na ANS: pelo Disque ANS, {DISQUE_ANS} (ligação gratuita, de segunda a sexta, das 8h às
-        20h; para pessoas surdas, {DISQUE_ANS_SURDOS}), ou pelos <a href={ANS_CANAIS_URL}>canais da ANS na internet</a>.
-        Informe o protocolo da operadora.
-      </li>
-      <li>
-        A ANS cobra uma resposta da operadora: até 5 dias úteis quando o problema é de cobertura (exame, consulta,
-        cirurgia) e até 10 nos outros casos.
-      </li>
-    </ol>
-    {op.situacao === "cancelada" && (
-      <p>
-        Como a operadora foi fechada, pergunte também à ANS como fica o seu atendimento e se há portabilidade para outro
-        plano.
-      </p>
-    )}
-  </Quadro>
-
-  {op.eventos.length > 0 && (
-    <section>
-      <h2>Histórico</h2>
-      <ul class="eventos">
-        {op.eventos.map((e) => (
+    <details class="bloco ajuda" id="problema">
+      <summary>
+        <span class="assunto">Teve problema?</span>
+        <span class="texto">o que fazer</span>
+      </summary>
+      <div class="dentro">
+        <ol>
+          <li>Reclame primeiro na operadora e anote o número do protocolo.</li>
           <li>
-            <span class="quando">{fmtDate(e.data)}</span> {e.titulo}
+            Se não resolver, reclame na ANS: pelo Disque ANS, {DISQUE_ANS} (ligação gratuita, de segunda a sexta, das 8h
+            às 20h; para pessoas surdas, {DISQUE_ANS_SURDOS}), ou pelos{" "}
+            <a href={ANS_CANAIS_URL}>canais da ANS na internet</a>. Informe o protocolo da operadora.
           </li>
-        ))}
-      </ul>
-    </section>
-  )}
-
-  {op.feed && (
-    <Acompanhar
-      titulo="Acompanhar esta operadora"
-      avisa={ACOMPANHAR_OPERADORA}
-      href={op.feed}
-      rotulo="Endereço do feed desta operadora"
-    />
-  )}
-
-  <section class="fontes">
-    <h2>Fontes</h2>
-    <p>
-      Dados da ANS coletados em {fmtDate(dia)}. {ATUALIZACAO_ANS} Todos os números desta página, num arquivo só:{" "}
-      <a href={`${DADOS_URL}/operadora/${op.registro}.json`}>JSON</a>.
-    </p>
-    <ul>
-      {Object.entries(op.fontes)
-        .filter(([, url]) => url)
-        .map(([k, url]) => (
           <li>
-            <a href={url}>{NOMES_FONTE[k] ?? k}</a>
+            A ANS cobra uma resposta da operadora: até 5 dias úteis quando o problema é de cobertura (exame, consulta,
+            cirurgia) e até 10 nos outros casos.
           </li>
-        ))}
-    </ul>
-    {op.fora.length > 0 && (
-      <>
-        <p class="muted">Ficaram de fora porque a ANS parou de atualizar:</p>
-        <ul class="muted">
-          {op.fora.map((f) => (
-            <li>{f}</li>
+        </ol>
+        {op.situacao === "cancelada" && (
+          <p>
+            Como a operadora foi fechada, pergunte também à ANS como fica o seu atendimento e se há portabilidade para
+            outro plano.
+          </p>
+        )}
+      </div>
+    </details>
+  </div>
+
+  <div class="secoes">
+    {op.eventos.length > 0 && (
+      <Secao titulo="Histórico" extra={String(op.eventos.length)} id="historico">
+        <ul class="eventos">
+          {op.eventos.map((e) => (
+            <li>
+              <span class="quando">{fmtDate(e.data)}</span> {e.titulo}
+            </li>
           ))}
         </ul>
-      </>
+      </Secao>
     )}
-  </section>
+
+    {op.feed && (
+      <Acompanhar
+        titulo="Receber aviso quando a ANS publicar algo"
+        avisa={ACOMPANHAR_OPERADORA}
+        href={op.feed}
+        rotulo="Endereço do feed desta operadora"
+      />
+    )}
+
+    <Secao titulo="Fontes" id="fontes">
+      <p>
+        {titulo !== op.nome && `Razão social: ${op.nome}. `}Registro ANS {op.registro}. Dados da ANS coletados em{" "}
+        {fmtDate(dia)}. {ATUALIZACAO_ANS} Todos os números desta página, num arquivo só:{" "}
+        <a href={`${DADOS_URL}/operadora/${op.registro}.json`}>JSON</a>.
+      </p>
+      <ul>
+        {Object.entries(op.fontes)
+          .filter(([, url]) => url)
+          .map(([k, url]) => (
+            <li>
+              <a href={url}>{NOMES_FONTE[k] ?? k}</a>
+            </li>
+          ))}
+      </ul>
+      {op.fora.length > 0 && (
+        <>
+          <p class="muted">Ficaram de fora porque a ANS parou de atualizar:</p>
+          <ul class="muted">
+            {op.fora.map((f) => (
+              <li>{f}</li>
+            ))}
+          </ul>
+        </>
+      )}
+    </Secao>
+  </div>
 </Base>
 
 <style>
-  .resumo ul {
-    list-style: none;
-    padding: 0;
-    margin: 1.25rem 0 0;
-    display: grid;
-    /* two per row on a phone, up to five on a wide screen */
-    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
-    gap: 8px;
-  }
-  .resumo a {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    padding: 10px 12px;
-    border-radius: 10px;
-    border: 1px solid var(--line);
-    border-left: 4px solid var(--line);
-    background: var(--card);
-    text-decoration: none;
-    color: var(--fg);
-  }
-  .resumo a:hover {
-    border-color: var(--accent);
-  }
-  .favoravel a {
-    border-left-color: var(--good);
-  }
-  .desfavoravel a {
-    border-left-color: var(--alert);
-  }
-  .neutro a {
-    border-left-color: var(--neutral);
-  }
-  .ajuda a {
-    border-left-color: var(--accent);
-  }
-  .assunto {
-    font-size: 0.8rem;
-    color: var(--muted);
-  }
-  .texto {
-    font-weight: 600;
-  }
-  section[id] {
-    scroll-margin-top: 1rem;
-  }
   .ficha {
     display: flex;
     flex-wrap: wrap;
     gap: 4px 16px;
     color: var(--muted);
     font-size: 0.95rem;
+  }
+  .blocos {
+    margin: 1.25rem 0 0;
+  }
+  .bloco {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--line);
+    border-radius: 10px;
+    margin: 8px 0;
+    padding: 0 14px;
+    scroll-margin-top: 1rem;
+  }
+  .bloco.favoravel {
+    border-left-color: var(--good);
+  }
+  .bloco.desfavoravel {
+    border-left-color: var(--alert);
+  }
+  .bloco.neutro {
+    border-left-color: var(--neutral);
+  }
+  .bloco.ajuda {
+    border-left-color: var(--accent);
+  }
+  summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 12px;
+    min-height: 56px;
+    padding: 10px 28px 10px 0;
+    cursor: pointer;
+    list-style: none;
+    position: relative;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  /* a chevron that points down when closed and up when open */
+  summary::after {
+    content: "";
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    margin-top: -6px;
+    border-right: 2px solid var(--accent-ink);
+    border-bottom: 2px solid var(--accent-ink);
+    transform: rotate(45deg);
+  }
+  .bloco[open] summary::after {
+    margin-top: -2px;
+    transform: rotate(-135deg);
+  }
+  .assunto {
+    font-size: 0.85rem;
+    color: var(--muted);
+    flex-basis: 100%;
+  }
+  .texto {
+    font-weight: 600;
+  }
+  .dentro {
+    border-top: 1px solid var(--line);
+    padding: 4px 0 12px;
+  }
+  .dentro :global(.frase) {
+    border: 0;
+    padding: 0;
+    margin: 0.5rem 0 0;
+  }
+  .detalhe {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin: 0.4rem 0 0;
   }
   .eventos {
     list-style: none;
@@ -311,8 +361,5 @@ const breadcrumb = {
   .quando {
     color: var(--muted);
     margin-right: 6px;
-  }
-  .fontes {
-    font-size: 0.95rem;
   }
 </style>
