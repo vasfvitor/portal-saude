@@ -63,6 +63,10 @@ export const PRECO_MAXIMO =
 export const TROCA_NA_FARMACIA =
   "Pela lei, o farmacêutico pode trocar o remédio de referência pelo genérico com a mesma substância e dose, se o médico não tiver proibido na receita. Para qualquer outra troca, pergunte ao farmacêutico ou ao médico.";
 
+/** Next to the list date on the medicine pages: when the prices change next. */
+export const ATUALIZACAO_CMED =
+  "A CMED publica uma lista nova quando muda algum preço, em geral uma vez por mês; o site é refeito todo dia e mostra a nova no máximo um dia depois.";
+
 /** A presentation exempt from ICMS: one ceiling for the whole country, so no line per state. */
 export const isentoDeIcms = (preco: string): string =>
   `Isento de ICMS: o teto é o mesmo em todos os estados, até ${preco}.`;

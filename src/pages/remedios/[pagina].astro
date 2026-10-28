@@ -23,6 +23,7 @@ import { fmtStamp } from "../../lib/format";
 import {
   acompanharSubstancia,
   aliquotaRotulo,
+  ATUALIZACAO_CMED,
   avisoComercializacao,
   classeSemCodigo,
   faixaPreco,
@@ -258,9 +259,9 @@ const breadcrumb = {
   <section class="fontes">
     <h2>Fontes</h2>
     <p>
-      Lista de preços da CMED (ANVISA), publicada em {publicado}. O ICMS de cada estado e a lei de origem estão em{" "}
-      <a href="/remedios/sobre-o-preco/">por que o preço muda de estado para estado</a>. Todos os números deste remédio,
-      num arquivo só: <a href={`${CMED_DADOS_URL}/produto/${p.registro_produto}.json`}>JSON</a>.
+      Lista de preços da CMED (ANVISA), publicada em {publicado}. {ATUALIZACAO_CMED} O ICMS de cada estado e a lei de
+      origem estão em <a href="/remedios/sobre-o-preco/">por que o preço muda de estado para estado</a>. Todos os
+      números deste remédio, num arquivo só: <a href={`${CMED_DADOS_URL}/produto/${p.registro_produto}.json`}>JSON</a>.
     </p>
   </section>
 </Base>

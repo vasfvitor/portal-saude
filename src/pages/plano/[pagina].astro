@@ -10,6 +10,7 @@ import { ANS_CANAIS_URL, DADOS_URL, DISQUE_ANS, DISQUE_ANS_SURDOS, META_URL } fr
 import { fmtClientes, fmtDate } from "../../lib/format";
 import {
   ACOMPANHAR_OPERADORA,
+  ATUALIZACAO_ANS,
   cobertura,
   fraseAnoAnterior,
   fraseCancelamento,
@@ -83,6 +84,11 @@ const breadcrumb = {
   {cancelamento && (
     <Quadro tipo="alerta" titulo="Esta operadora foi fechada">
       <p>{cancelamento}</p>
+      {!portabilidade && (
+        <p>
+          <a href="/plano/portabilidade/">Quando dá para trocar de plano sem carência</a>
+        </p>
+      )}
     </Quadro>
   )}
   {portabilidade && (
@@ -194,7 +200,7 @@ const breadcrumb = {
   <section class="fontes">
     <h2>Fontes</h2>
     <p>
-      Dados da ANS coletados em {fmtDate(dia)}. Todos os números desta página, num arquivo só:{" "}
+      Dados da ANS coletados em {fmtDate(dia)}. {ATUALIZACAO_ANS} Todos os números desta página, num arquivo só:{" "}
       <a href={`${DADOS_URL}/operadora/${op.registro}.json`}>JSON</a>.
     </p>
     <ul>

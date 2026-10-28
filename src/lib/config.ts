@@ -29,4 +29,5 @@ export const ANS_PORTABILIDADE_URL =
 // public repositories only: the portal repository is private, so it is not linked
 export const REPOS = {
   ansFeeds: "https://github.com/vasfvitor/ans-feeds",
+  anvisaFeeds: "https://github.com/vasfvitor/anvisa-feeds",
 } as const;

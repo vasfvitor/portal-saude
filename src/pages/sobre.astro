@@ -11,11 +11,15 @@ const faq: { q: string; a: string }[] = [
   },
   {
     q: "O site dá nota para as operadoras?",
-    a: "Não. Ele mostra o número da operadora ao lado do número de uma operadora típica do mesmo tamanho, com a quantidade de reclamações e de clientes por trás. A nota que aparece é a da própria ANS, de 0 a 1.",
+    a: "Não. Ele mostra o número da operadora ao lado do número de uma operadora típica, com a quantidade de reclamações e de clientes por trás. A nota que aparece é a da própria ANS, de 0 a 1.",
   },
   {
     q: "O que é a operadora típica?",
-    a: "É a do meio quando todas as operadoras do mesmo tamanho são postas em ordem: metade fica acima dela, metade abaixo. O tamanho (pequena, média ou grande, pelo número de clientes) é o que a própria ANS usa.",
+    a: "É a do meio quando as operadoras comparáveis são postas em ordem: metade fica acima dela, metade abaixo. Nas reclamações, comparáveis são as do mesmo tamanho e do mesmo tipo de plano (médico ou só odontológico). Na nota da ANS, são as do mesmo tipo de operadora (cooperativa médica, medicina de grupo, seguradora…), porque é assim que a ANS separa as notas.",
+  },
+  {
+    q: "Como a ANS define o tamanho da operadora?",
+    a: "Pelo número de clientes no mês mais recente: pequena tem menos de 20 mil, média de 20 mil a 100 mil, grande mais de 100 mil. É a classificação que a ANS publica junto com as reclamações.",
   },
   {
     q: "Por que comparar com operadoras do mesmo tamanho?",
@@ -55,9 +59,9 @@ const faqLd = {
     <h2>Como funciona</h2>
     <p>
       Todo dia, um programa baixa os dados da ANS e guarda o que mudou (<a href={REPOS.ansFeeds}>código aberto</a>).
-      Todo mês, outro baixa a lista de preços da CMED. Este site lê esses dados e monta uma página por operadora e por
-      remédio. Nenhum número é digitado à mão. A única tabela feita à mão é a do ICMS de cada estado, com a lei de
-      origem em cada linha.
+      Todo mês, outro baixa a lista de preços da CMED (<a href={REPOS.anvisaFeeds}>código aberto</a>). Este site lê
+      esses dados e monta uma página por operadora e por remédio. Nenhum número é digitado à mão. A única tabela feita à
+      mão é a do ICMS de cada estado, com a lei de origem em cada linha.
     </p>
     <p>
       Os dados prontos estão em <a href={`${DADOS_URL}/schema.md`}>{DADOS_URL.replace("https://", "")}</a> e em{" "}
@@ -80,6 +84,11 @@ const faqLd = {
       </li>
       <li>
         <strong>Telefone, e-mail e representante</strong> do cadastro das operadoras: não são publicados aqui.
+      </li>
+      <li>
+        <strong>Remédios de uso hospitalar</strong>: a lista da CMED não dá preço de farmácia para eles, então não têm
+        página. Os poucos que a lista marca como hospitalares e mesmo assim traz com preço aparecem com o aviso “uso
+        hospitalar”.
       </li>
     </ul>
   </section>

@@ -151,6 +151,9 @@ export function fraseAnoAnterior(serie: PontoSerie[]): string | null {
   return ultimo.indice > antes.indice ? `Piorou em um ano: ${era}.` : `Melhorou em um ano: ${era}.`;
 }
 
+/** Next to the collection date on the operator pages: when the numbers change next. */
+export const ATUALIZACAO_ANS = "A página é refeita todo dia com o que a ANS publicou.";
+
 /** "Acompanhar" boxes: what a feed reader is, said once, for people who never used one. */
 export const LEITOR_DE_FEED =
   "Um leitor de feed (Feedly, Inoreader, NetNewsWire, Thunderbird) junta as novidades de vários sites num lugar só. Para usar, copie o endereço do link abaixo e cole no leitor.";

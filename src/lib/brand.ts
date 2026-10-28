@@ -8,7 +8,8 @@ export const DESCRIPTION =
   "Compare a sua operadora de plano de saúde com as do mesmo porte e veja quanto a farmácia pode cobrar por cada remédio no seu estado. Números da ANS e da ANVISA, com a fonte de cada um.";
 
 /** followed by the links to both agencies in the footer */
-export const DISCLAIMER = "Sem vínculo com a ANS nem com a ANVISA. Os dados oficiais estão nos sites delas:";
+export const DISCLAIMER =
+  "Os números são os publicados pela ANS e pela CMED/ANVISA, e o site não tem vínculo com elas. Os dados oficiais estão em";
 
 export const AUTHOR = { name: "Virtuaires", url: "https://virtuaires.com.br" };
 

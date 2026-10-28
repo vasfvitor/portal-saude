@@ -3,18 +3,7 @@
 // upstream fails the build instead of publishing a wrong price. Prices are in centavos, per ICMS rate.
 import { getJson, once } from "./fetch";
 import { slug } from "./slug";
-import {
-  bool,
-  boolOrAbsent,
-  conferirComIndice,
-  feedOrNull,
-  list,
-  num,
-  obj,
-  str,
-  strOrNull,
-  type Obj,
-} from "./validar";
+import { bool, boolOrAbsent, conferirComIndice, feedOrNull, list, num, obj, str, strOrNull, type Obj } from "./validar";
 
 /** ICMS rates in the CMED list, as the JSON keys spell them. */
 export const ALIQUOTAS = ["0", "12", "17", "17.5", "18", "19", "19.5", "20", "20.5", "21", "22", "22.5", "23"] as const;
