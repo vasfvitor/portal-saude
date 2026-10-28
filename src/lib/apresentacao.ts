@@ -123,7 +123,24 @@ export interface ApresentacaoLida {
   legivel: string;
   /** what makes two presentations comparable: dose, form and quantity */
   chave: string;
+  /** what the box holds more than one of, for a price per unit: 30 comprimidos, 50 ampolas. Absent for a single
+   * container (one bottle of syrup): a price per ml says nothing useful. */
+  unidade?: { n: number; nome: string };
+  /** a box bought by hospitals, clinics, governments or pharmacies that sell it by the unit (see `institucional`) */
+  institucional: boolean;
 }
+
+// CMED's own markers: hospital pack, pack for fractioned sale, multiple pack ("(EMB. HOSP", "(EMB MULT)"...)
+const MARCA_INSTITUCIONAL = /\(?\bEMB\.?\s*(HOSP|FRAC|MULT)[A-Z]*\)?/g;
+// Above these sizes no one buys the box for their own use: 25 ampoules or syringes, 10 bottles of syrup or
+// tubes of cream, 500 tablets. Below them the list mixes both (a month of pirfenidona is 270 capsules), so the
+// site does not guess. Measured on the 2026-10-09 list.
+const RECIPIENTES_INSTITUCIONAL = 25;
+const FRASCOS_INSTITUCIONAL = 10;
+const UNIDADES_INSTITUCIONAL = 500;
+
+/** Whether the code alone marks the box as institutional, for codes the reader cannot parse. */
+export const marcaInstitucional = (texto: string): boolean => new RegExp(MARCA_INSTITUCIONAL).test(texto.toUpperCase());
 
 const UNIDADE = /^(MG|G|MCG|UI|U|ML|L|%|MEQ|MMOL|KG)(\/(ML|G|L|DOSE|GOTA|KG|ACIONAMENTO|JATO))?$/;
 
@@ -175,11 +192,14 @@ function ler(texto: string): ApresentacaoLida | null {
   if (doseTokens.length > 0 && !doseTokens.some((x) => /\d/.test(x))) return null;
   const dose = lerDose(doseTokens);
   const resto = palavras.slice(inicio + partes.length).join(" ");
-  const semExtras = resto.replace(/\(EMB FRAC\)|\bEMB HOSP\b/g, "").trim();
+  const marcada = marcaInstitucional(texto);
+  const semExtras = resto.replace(MARCA_INSTITUCIONAL, "").replace(/\s+/g, " ").trim();
   // kits (tablets plus placebos, two different ampoules) are left to the original text
   if (/\+\s*\(|\+\s*[\d.,]+\s*(MG|MCG|G\b|UI|PLACEBOS?|COM|CAP|DRG)/.test(semExtras)) return null;
 
   let conteudo: string | null = null;
+  let unidade: ApresentacaoLida["unidade"];
+  let grande: boolean;
   if ("conta" in forma) {
     const m = /\bX\s*(\d+)\b(?!\s*(ML|G|L)\b)/.exec(semExtras);
     const caixas = /\b(?:CT|CX)\s+(\d+)\s+(BL|STR|FR|ENV)\b/.exec(semExtras);
@@ -189,6 +209,9 @@ function ler(texto: string): ApresentacaoLida | null {
     } else if (m) {
       conteudo = plural(m[1]!, forma.conta);
     }
+    const n = m ? (caixas ? Number(caixas[1]) : 1) * Number(m[1]) : 0;
+    if (n > 1) unidade = { n, nome: forma.conta[0] };
+    grande = n >= UNIDADES_INSTITUCIONAL;
   } else {
     // only the part before the first "+": what follows is an accessory or a diluent with its own volume
     const principal = semExtras.split(/\s\+\s/)[0]!;
@@ -199,6 +222,13 @@ function ler(texto: string): ApresentacaoLida | null {
     const quantoCabe = medida
       ? `${medida[1]} ${/^DOSES?$/.test(medida[2]!) ? (medida[1] === "1" ? "dose" : "doses") : medida[2]!.toLowerCase()}`
       : null;
+    const nRecip = recip ? Number(recip[1]) : soRecip ? Number(soRecip[1]) : 1;
+    const tipoRecip = recip?.[2] ?? soRecip?.[2];
+    if (nRecip > 1 && tipoRecip) unidade = { n: nRecip, nome: RECIPIENTES[tipoRecip]![0] };
+    // sachets come 20 or 30 to a consumer box; bottles and tubes of a ready product do not
+    grande =
+      nRecip >= RECIPIENTES_INSTITUCIONAL ||
+      (nRecip >= FRASCOS_INSTITUCIONAL && (tipoRecip === "FR" || tipoRecip === "BG") && !/INJ|INFUS/.test(resto));
     if (recip && quantoCabe && recip[1] !== "1") {
       conteudo = `${plural(recip[1]!, RECIPIENTES[recip[2]!]!)} de ${quantoCabe} de ${forma.medida}`;
     } else if (quantoCabe) {
@@ -214,5 +244,12 @@ function ler(texto: string): ApresentacaoLida | null {
   // the content already names the form, so CMED spellings of the same form ("CAP", "CAP DURA") compare as one
   // and how the box is split ("2 cartelas de 7") does not change what is bought: 14 tablets are 14 tablets
   const chave = `${chaveDose(dose)}|${conteudo.replace(/ \(.*\)$/, "")}`;
-  return { dose, conteudo, legivel: dose ? `${dose} · ${conteudo}` : conteudo, chave };
+  return {
+    dose,
+    conteudo,
+    legivel: dose ? `${dose} · ${conteudo}` : conteudo,
+    chave,
+    ...(unidade ? { unidade } : {}),
+    institucional: marcada || grande,
+  };
 }

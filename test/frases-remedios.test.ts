@@ -2,6 +2,9 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { fmtMoney } from "../src/lib/format";
 import {
+  embalagemInstitucional,
+  faixaPorUnidade,
+  precoPorUnidade,
   acompanharSubstancia,
   aliquotaRotulo,
   avisoComercializacao,
@@ -103,5 +106,28 @@ describe("registration and ANVISA measures", () => {
     expect(novo.situacao).toEqual({ ativo: false, vencimento: null });
     expect(novo.medidas[0]!.acoes).toEqual(["Recolhimento"]);
     expect(() => parseProduto({ ...base, situacao: { ativo: true, vencimento: "06/2028" } })).toThrow(/vencimento/);
+  });
+});
+
+describe("price per unit", () => {
+  it("divides the box price and names the unit plainly", () => {
+    expect(precoPorUnidade(8200, { n: 24, nome: "comprimido revestido" })).toBe("R$ 3,42 por comprimido");
+    expect(precoPorUnidade(100000, { n: 50, nome: "frasco-ampola" })).toBe("R$ 20,00 por frasco-ampola");
+    expect(precoPorUnidade(30, { n: 100, nome: "comprimido" })).toBe("menos de R$ 0,01 por comprimido");
+  });
+  it("gives the range over the rates, or one value", () => {
+    const a = { pmc: { "17": 7000, "18": 8200 } } as unknown as Parameters<typeof faixaPorUnidade>[0];
+    expect(faixaPorUnidade(a, ["17", "18"], { n: 20, nome: "comprimido" })).toBe(
+      "Por comprimido: de R$ 3,50 a R$ 4,10.",
+    );
+    expect(faixaPorUnidade(a, ["18"], { n: 20, nome: "comprimido" })).toBe("Por comprimido: R$ 4,10.");
+  });
+  it("treats hospital-only use as institutional even when the code says nothing", () => {
+    expect(
+      embalagemInstitucional({ apresentacao: "30 MG/ML SOL INJ CT 1 SER X 1 ML", restricao_hospitalar: true }),
+    ).toBe(true);
+    expect(
+      embalagemInstitucional({ apresentacao: "30 MG/ML SOL INJ CT 1 SER X 1 ML", restricao_hospitalar: null }),
+    ).toBe(false);
   });
 });

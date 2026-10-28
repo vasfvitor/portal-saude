@@ -10,7 +10,17 @@ import Base from "../../../layouts/Base.astro";
 import { ehGenerico, porChave, quantoMenos, REGIMES, type Opcao } from "../../../lib/comparar";
 import { CMED_DADOS_URL } from "../../../lib/config";
 import { contar, fmtMoney } from "../../../lib/format";
-import { acompanharSubstancia, aliquotaRotulo, precosPorAliquota, tipoExplicado } from "../../../lib/frases-remedios";
+import {
+  acompanharSubstancia,
+  aliquotaRotulo,
+  EMBALAGEM_INSTITUCIONAL,
+  embalagemInstitucional,
+  EMBALAGENS_INSTITUCIONAIS,
+  precoPorUnidade,
+  precosPorAliquota,
+  precosPorUnidade,
+  tipoExplicado,
+} from "../../../lib/frases-remedios";
 import { TABELA, type Regime } from "../../../lib/icms";
 import { paginaProduto, pmcAplicavel, produtosForBuild, slugsSubstancias, type Produto } from "../../../lib/remedios";
 
@@ -78,11 +88,20 @@ const grupos = [...porRegime.p.entries()]
     }
     return {
       legivel: opcoesP[0]!.lida.legivel,
+      unidade: opcoesP[0]!.lida.unidade,
+      // the same dose and quantity: a hospital marker on any of them speaks for the box size of all
+      inst: opcoesP.some((o) => embalagemInstitucional(o.apresentacao)),
       linhas: [...linhas.values()].sort((a, b) => a.ordem.p - b.ordem.p),
       alem: opcoesP.length - MAX_LINHAS,
     };
   })
-  .sort((a, b) => b.linhas.length - a.linhas.length || a.legivel.localeCompare(b.legivel, "pt-BR"));
+  .sort(
+    (a, b) =>
+      Number(a.inst) - Number(b.inst) ||
+      b.linhas.length - a.linhas.length ||
+      a.legivel.localeCompare(b.legivel, "pt-BR"),
+  );
+const primeiroInst = grupos.findIndex((g) => g.inst);
 
 const nome = (p: Produto) => (p.produto === p.substancia ? p.laboratorio : p.produto);
 const detalhe = (p: Produto) => (p.produto === p.substancia ? null : p.laboratorio);
@@ -130,39 +149,55 @@ const resumo = `${contar(lista.length, "produto tem", "produtos têm")} esta sub
           ? `O "% menos" é em relação ao ${referencias[0]}, o remédio de referência, no mesmo estado.`
           : 'O "% menos" é em relação ao remédio de referência (o "Novo"), no mesmo estado.'}
       </p>
-      {grupos.map(({ legivel, linhas, alem }) => (
-        <div class="cartao">
-          <h3>{legivel}</h3>
-          <ol class="linhas">
-            {linhas.map(({ o, ordem, menor, fora, menos }) => (
-              <li
-                style={`--ordem: ${ordem.p}; --ordem-g: ${ordem.g}`}
-                data-menor={menor.join(" ") || undefined}
-                data-fora={fora.join(" ") || undefined}
-                data-generico={ehGenerico(o.produto) ? "1" : "0"}
-              >
-                <span class="quem">
-                  <a href={paginaProduto(o.produto)}>{nome(o.produto)}</a>
-                  {detalhe(o.produto) && <span class="lab">{detalhe(o.produto)}</span>}
-                </span>
-                <span>{o.produto.tipo_produto && <Selo>{o.produto.tipo_produto}</Selo>}</span>
-                <span class="valor">
-                  <strong data-precos={precosPorAliquota(pmcAplicavel(o.apresentacao))}>
-                    {fmtMoney(pmcAplicavel(o.apresentacao)[ref] ?? o.preco)}
-                  </strong>
-                  {o.apresentacao.icms_0 && <small>isento de ICMS</small>}
-                  {menos.p === menos.g
-                    ? menosTexto(menos.p) && <small>{menosTexto(menos.p)}</small>
-                    : REGIMES.map(
-                        (r) => menosTexto(menos[r]) && <small data-so-regime={r}>{menosTexto(menos[r])}</small>,
+      {grupos.map(({ legivel, unidade, inst, linhas, alem }, k) => {
+        const Titulo = inst ? "h4" : "h3";
+        return (
+          <>
+            {k === primeiroInst && (
+              <>
+                <h3 class="grupo-inst">{EMBALAGENS_INSTITUCIONAIS}</h3>
+                <p class="muted">{EMBALAGEM_INSTITUCIONAL}</p>
+              </>
+            )}
+            <div class="cartao">
+              <Titulo>{legivel}</Titulo>
+              <ol class="linhas">
+                {linhas.map(({ o, ordem, menor, fora, menos }) => (
+                  <li
+                    style={`--ordem: ${ordem.p}; --ordem-g: ${ordem.g}`}
+                    data-menor={menor.join(" ") || undefined}
+                    data-fora={fora.join(" ") || undefined}
+                    data-generico={ehGenerico(o.produto) ? "1" : "0"}
+                  >
+                    <span class="quem">
+                      <a href={paginaProduto(o.produto)}>{nome(o.produto)}</a>
+                      {detalhe(o.produto) && <span class="lab">{detalhe(o.produto)}</span>}
+                    </span>
+                    <span>{o.produto.tipo_produto && <Selo>{o.produto.tipo_produto}</Selo>}</span>
+                    <span class="valor">
+                      <strong data-precos={precosPorAliquota(pmcAplicavel(o.apresentacao))}>
+                        {fmtMoney(pmcAplicavel(o.apresentacao)[ref] ?? o.preco)}
+                      </strong>
+                      {unidade && (
+                        <small class="unidade" data-precos={precosPorUnidade(pmcAplicavel(o.apresentacao), unidade)}>
+                          {precoPorUnidade(pmcAplicavel(o.apresentacao)[ref] ?? o.preco, unidade)}
+                        </small>
                       )}
-                </span>
-              </li>
-            ))}
-          </ol>
-          {alem > 0 && <p class="muted mais">E mais {alem}, mais caros. Estão na lista completa abaixo.</p>}
-        </div>
-      ))}
+                      {o.apresentacao.icms_0 && <small>isento de ICMS</small>}
+                      {menos.p === menos.g
+                        ? menosTexto(menos.p) && <small>{menosTexto(menos.p)}</small>
+                        : REGIMES.map(
+                            (r) => menosTexto(menos[r]) && <small data-so-regime={r}>{menosTexto(menos[r])}</small>,
+                          )}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+              {alem > 0 && <p class="muted mais">E mais {alem}, mais caros. Estão na lista completa abaixo.</p>}
+            </div>
+          </>
+        );
+      })}
     </section>
   )}
 
@@ -199,6 +234,12 @@ const resumo = `${contar(lista.length, "produto tem", "produtos têm")} esta sub
 </Base>
 
 <style>
+  .valor small.unidade {
+    color: var(--muted);
+  }
+  .grupo-inst {
+    margin-top: 2rem;
+  }
   .quem {
     display: flex;
     flex-direction: column;

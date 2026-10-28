@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lerApresentacao } from "../src/lib/apresentacao";
+import { lerApresentacao, marcaInstitucional } from "../src/lib/apresentacao";
 
 const leg = (s: string) => lerApresentacao(s)?.legivel ?? null;
 
@@ -66,5 +66,31 @@ describe("CMED presentation codes in plain words", () => {
     expect(lerApresentacao("500 MG COM REV CT BL AL AL X 14")!.chave).not.toBe(
       lerApresentacao("500 MG COM CT BL AL AL X 14")!.chave,
     );
+  });
+});
+
+describe("units and institutional boxes", () => {
+  const ler = (t: string) => lerApresentacao(t)!;
+  it("count what the box holds more than one of", () => {
+    expect(ler("500 MG COM REV CT BL AL PLAS PVC/PVDC OPC X 14").unidade).toEqual({
+      n: 14,
+      nome: "comprimido revestido",
+    });
+    expect(ler("20 MG COM CT 2 BL AL PLAS X 7").unidade).toEqual({ n: 14, nome: "comprimido" });
+    expect(ler("2 MG/ML SOL INJ IM/IV CX 100 AMP VD TRANS X 1 ML").unidade).toEqual({ n: 100, nome: "ampola" });
+    expect(ler("3 MG/ML XPE CT FR PLAS PET AMB X 100 ML + COP").unidade).toBeUndefined();
+  });
+  it("mark the list's own markers and the sizes no one buys for themselves", () => {
+    expect(ler("50 MG/ML SOL INJ CX 25 AMP VD AMB X 1 ML (EMB HOSP)").institucional).toBe(true);
+    expect(ler("2 MG/ML SOL INJ IM/IV CX 100 AMP VD TRANS X 1 ML").institucional).toBe(true);
+    expect(ler("850 MG COM REV CT BL AL PLAS TRANS X 500").institucional).toBe(true);
+    expect(ler("3 MG/ML XPE CX 60 FR PLAS PET AMB X 100 ML + 60 COP").institucional).toBe(true);
+    expect(ler("267 MG CAP DURA CT FR PLAS PEAD OPC X 270").institucional).toBe(false);
+    expect(ler("100 MG GRAN CT 16 ENV PAPEL AL POLIET X 5 G").institucional).toBe(false);
+    expect(ler("1G PÓ SOL INJ IV CX 10 FA VD TRANS X 50ML").institucional).toBe(false);
+  });
+  it("still read the content behind a marker", () => {
+    expect(ler("100 MG COM CT BL AL PLAS INC X 200 (EMB MULTIPLA)").conteudo).toBe("200 comprimidos");
+    expect(marcaInstitucional("40 MG COM CT BL AL X 30 (EMB. HOSP")).toBe(true);
   });
 });

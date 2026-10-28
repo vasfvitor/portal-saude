@@ -2,7 +2,10 @@
 // the pharmacy may charge less. Every price shown carries its ICMS rate next to it.
 import { fmtDate, fmtMes, fmtMoney } from "./format";
 import { TABELA } from "./icms";
+import { lerApresentacao, marcaInstitucional, type ApresentacaoLida } from "./apresentacao";
 import type { Aliquota, Apresentacao, Medida, Produto } from "./remedios";
+
+type Unidade = NonNullable<ApresentacaoLida["unidade"]>;
 
 const TIPOS: Record<string, string> = {
   Genérico: "Genérico: mesma substância, dose e forma do remédio de referência, vendido pelo nome da substância.",
@@ -111,3 +114,41 @@ export const SE_COBRAREM_MAIS =
 /** "Acompanhar" box on a product or substância page: the anvisa-feeds feed covers every product with the substância. */
 export const acompanharSubstancia = (substancia: string): string =>
   `O feed avisa quando a lista mensal da CMED muda o preço máximo de algum remédio com ${substancia}, inclui uma dose e embalagem nova ou retira uma.`;
+
+/** Hospital, clinic, government or fractioned-sale box: the list's own marker, hospital-only use, or a size no
+ * one buys for themselves (apresentacao.ts). Codes the parser cannot read are judged by the marker alone. */
+export function embalagemInstitucional(a: Pick<Apresentacao, "apresentacao" | "restricao_hospitalar">): boolean {
+  if (a.restricao_hospitalar) return true;
+  return lerApresentacao(a.apresentacao)?.institucional ?? marcaInstitucional(a.apresentacao);
+}
+
+export const EMBALAGENS_INSTITUCIONAIS = "Embalagens para hospital, clínica ou venda fracionada";
+
+export const EMBALAGEM_INSTITUCIONAL =
+  "São caixas grandes, com dezenas de frascos ou centenas de comprimidos, ou que a própria lista da CMED marca como embalagem hospitalar, fracionável ou múltipla. Quem compra é hospital, clínica, governo ou a farmácia que vende por unidade. O preço máximo é o da caixa inteira.";
+
+/** "comprimido revestido de liberação prolongada" → "comprimido": the unit is what is counted, not its kind. */
+const nomeUnidade = (u: Unidade): string => (u.nome.includes("-") ? u.nome : u.nome.split(" ")[0]!);
+
+/** "R$ 0,34 por comprimido", from the price of the whole box. */
+export function precoPorUnidade(centavos: number, u: Unidade): string {
+  const c = Math.round(centavos / u.n);
+  return c < 1 ? `menos de R$ 0,01 por ${nomeUnidade(u)}` : `${fmtMoney(c)} por ${nomeUnidade(u)}`;
+}
+
+/** The price per unit at every rate in use, for the state picker to swap like precosPorAliquota. */
+export const precosPorUnidade = (pmc: Apresentacao["pmc"], u: Unidade): string =>
+  JSON.stringify(
+    Object.fromEntries(TABELA.usadas.flatMap((k) => (pmc[k] === undefined ? [] : [[k, precoPorUnidade(pmc[k], u)]]))),
+  );
+
+/** "Por comprimido: de R$ 0,29 a R$ 0,34." over the same rates as faixaPreco. */
+export function faixaPorUnidade(a: Apresentacao, aliquotas: readonly Aliquota[], u: Unidade): string | null {
+  const precos = aliquotas.flatMap((k) => (a.pmc[k] === undefined ? [] : [a.pmc[k]]));
+  if (precos.length === 0) return null;
+  const [min, max] = [Math.min(...precos), Math.max(...precos)];
+  const de = precoPorUnidade(min, u).replace(/ por .*$/, "");
+  const ate = precoPorUnidade(max, u).replace(/ por .*$/, "");
+  const nome = nomeUnidade(u);
+  return `Por ${nome}: ${de === ate ? de : `de ${de} a ${ate}`}.`;
+}
