@@ -1,28 +1,27 @@
 ---
 // One page per substância: first the same dose and package side by side (every product that sells it, cheapest
-// first in the reader's ICMS regime), then every product grouped by type. Comparing ranges across doses misleads,
-// so prices only appear next to the same dose and package. Each row carries its rank in both regimes; CSS in
-// Base.astro reorders, highlights and cuts the list once the reader picks a state.
+// first in the reader's ICMS regime, ComparaDose.astro), then closed sections: the hospital and fractioned-sale
+// boxes, every product grouped by type, the feed. Comparing ranges across doses misleads, so prices only appear
+// next to the same dose and package.
 import Acompanhar from "../../../components/Acompanhar.astro";
+import ComparaDose, { type Linha } from "../../../components/ComparaDose.astro";
+import Secao from "../../../components/Secao.astro";
 import Selo from "../../../components/Selo.astro";
 import SeuEstado from "../../../components/SeuEstado.astro";
 import Base from "../../../layouts/Base.astro";
 import { ehGenerico, porChave, quantoMenos, REGIMES, type Opcao } from "../../../lib/comparar";
 import { CMED_DADOS_URL } from "../../../lib/config";
-import { contar, fmtMoney } from "../../../lib/format";
+import { contar } from "../../../lib/format";
 import {
   acompanharSubstancia,
   aliquotaRotulo,
   EMBALAGEM_INSTITUCIONAL,
   embalagemInstitucional,
   EMBALAGENS_INSTITUCIONAIS,
-  precoPorUnidade,
-  precosPorAliquota,
-  precosPorUnidade,
   tipoExplicado,
 } from "../../../lib/frases-remedios";
 import { TABELA, type Regime } from "../../../lib/icms";
-import { paginaProduto, pmcAplicavel, produtosForBuild, slugsSubstancias, type Produto } from "../../../lib/remedios";
+import { paginaProduto, produtosForBuild, slugsSubstancias, type Produto } from "../../../lib/remedios";
 
 export async function getStaticPaths() {
   const produtos = await produtosForBuild(CMED_DADOS_URL);
@@ -47,15 +46,6 @@ const { substancia, lista } = Astro.props;
 const ref = TABELA.ref;
 const ufsRef = TABELA.ufs.normal.get(ref) ?? [];
 const MAX_LINHAS = 8;
-
-interface Linha {
-  o: Opcao;
-  /** rank in each regime (99 when absent), whether it is the cheapest, past the cut, and % below the reference */
-  ordem: Record<Regime, number>;
-  menor: Regime[];
-  fora: Regime[];
-  menos: Partial<Record<Regime, number>>;
-}
 
 // the same dose and package sold by two or more products, the most offered first
 const porRegime = { p: porChave(lista, "p"), g: porChave(lista, "g") };
@@ -101,11 +91,12 @@ const grupos = [...porRegime.p.entries()]
       b.linhas.length - a.linhas.length ||
       a.legivel.localeCompare(b.legivel, "pt-BR"),
   );
-const primeiroInst = grupos.findIndex((g) => g.inst);
+// boxes for the reader on the page, the hospital and fractioned-sale ones in a closed section at the end
+const paraVoce = grupos.filter((g) => !g.inst);
+const institucionais = grupos.filter((g) => g.inst);
 
 const nome = (p: Produto) => (p.produto === p.substancia ? p.laboratorio : p.produto);
 const detalhe = (p: Produto) => (p.produto === p.substancia ? null : p.laboratorio);
-const menosTexto = (n: number | undefined) => (n !== undefined && n >= 1 ? `${n}% menos` : "");
 
 const ORDEM = ["Novo", "Genérico", "Similar", "Biológico", "Específico", "Fitoterápico"];
 const posicao = (t: string) => (ORDEM.includes(t) ? ORDEM.indexOf(t) : ORDEM.length);
@@ -149,139 +140,72 @@ const resumo = `${contar(lista.length, "produto tem", "produtos têm")} esta sub
           ? `O "% menos" é em relação ao ${referencias[0]}, o remédio de referência, no mesmo estado.`
           : 'O "% menos" é em relação ao remédio de referência (o "Novo"), no mesmo estado.'}
       </p>
-      {grupos.map(({ legivel, unidade, inst, linhas, alem }, k) => {
-        const Titulo = inst ? "h4" : "h3";
-        return (
-          <>
-            {k === primeiroInst && (
-              <>
-                <h3 class="grupo-inst">{EMBALAGENS_INSTITUCIONAIS}</h3>
-                <p class="muted">{EMBALAGEM_INSTITUCIONAL}</p>
-              </>
-            )}
-            <div class="cartao">
-              <Titulo>{legivel}</Titulo>
-              <ol class="linhas">
-                {linhas.map(({ o, ordem, menor, fora, menos }) => (
-                  <li
-                    style={`--ordem: ${ordem.p}; --ordem-g: ${ordem.g}`}
-                    data-menor={menor.join(" ") || undefined}
-                    data-fora={fora.join(" ") || undefined}
-                    data-generico={ehGenerico(o.produto) ? "1" : "0"}
-                  >
-                    <span class="quem">
-                      <a href={paginaProduto(o.produto)}>{nome(o.produto)}</a>
-                      {detalhe(o.produto) && <span class="lab">{detalhe(o.produto)}</span>}
-                    </span>
-                    <span>{o.produto.tipo_produto && <Selo>{o.produto.tipo_produto}</Selo>}</span>
-                    <span class="valor">
-                      <strong data-precos={precosPorAliquota(pmcAplicavel(o.apresentacao))}>
-                        {fmtMoney(pmcAplicavel(o.apresentacao)[ref] ?? o.preco)}
-                      </strong>
-                      {unidade && (
-                        <small class="unidade" data-precos={precosPorUnidade(pmcAplicavel(o.apresentacao), unidade)}>
-                          {precoPorUnidade(pmcAplicavel(o.apresentacao)[ref] ?? o.preco, unidade)}
-                        </small>
-                      )}
-                      {o.apresentacao.icms_0 && <small>isento de ICMS</small>}
-                      {menos.p === menos.g
-                        ? menosTexto(menos.p) && <small>{menosTexto(menos.p)}</small>
-                        : REGIMES.map(
-                            (r) => menosTexto(menos[r]) && <small data-so-regime={r}>{menosTexto(menos[r])}</small>,
-                          )}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-              {alem > 0 && <p class="muted mais">E mais {alem}, mais caros. Estão na lista completa abaixo.</p>}
-            </div>
-          </>
-        );
-      })}
+      {paraVoce.map((g) => (
+        <ComparaDose {...g} />
+      ))}
     </section>
   )}
 
-  <section>
-    <h2>Todos os produtos com esta substância</h2>
-    {tipos.map((t) => (
-      <>
-        <h3>{t}</h3>
-        {tipoExplicado(t) && <p class="muted">{tipoExplicado(t)}</p>}
-        <ul class="produtos">
-          {doTipo(t).map((p) => (
-            <li>
-              <a href={paginaProduto(p)}>{nome(p)}</a>
-              <span class="muted">
-                {detalhe(p) && ` · ${detalhe(p)}`} ·{" "}
-                {contar(p.apresentacoes.length, "dose e embalagem", "doses e embalagens")}
-              </span>
-              {!p.comercializado && <Selo tom="atencao">sem venda no último ano</Selo>}
-            </li>
-          ))}
-        </ul>
-      </>
-    ))}
-  </section>
+  <div class="secoes">
+    {institucionais.length > 0 && (
+      <Secao
+        titulo={EMBALAGENS_INSTITUCIONAIS}
+        extra={contar(institucionais.length, "dose e embalagem", "doses e embalagens")}
+        aberta={paraVoce.length === 0}
+        id="institucionais"
+      >
+        <p class="muted">{EMBALAGEM_INSTITUCIONAL}</p>
+        {institucionais.map((g) => (
+          <ComparaDose {...g} />
+        ))}
+      </Secao>
+    )}
 
-  {feed && (
-    <Acompanhar
-      titulo="Acompanhar os preços"
-      avisa={acompanharSubstancia(substancia)}
-      href={feed}
-      rotulo={`Endereço do feed de ${substancia}`}
-    />
-  )}
+    <Secao
+      titulo="Todos os produtos com esta substância"
+      extra={String(lista.length)}
+      aberta={grupos.length === 0}
+      id="todos"
+    >
+      {tipos.map((t) => (
+        <>
+          <h3>{t}</h3>
+          {tipoExplicado(t) && <p class="muted">{tipoExplicado(t)}</p>}
+          <ul class="produtos">
+            {doTipo(t).map((p) => (
+              <li>
+                <a href={paginaProduto(p)}>{nome(p)}</a>
+                <span class="muted">
+                  {detalhe(p) && ` · ${detalhe(p)}`} ·{" "}
+                  {contar(p.apresentacoes.length, "dose e embalagem", "doses e embalagens")}
+                </span>
+                {!p.comercializado && <Selo tom="atencao">sem venda no último ano</Selo>}
+              </li>
+            ))}
+          </ul>
+        </>
+      ))}
+    </Secao>
+
+    {feed && (
+      <Acompanhar
+        titulo="Receber aviso quando o preço mudar"
+        avisa={acompanharSubstancia(substancia)}
+        href={feed}
+        rotulo={`Endereço do feed de ${substancia}`}
+      />
+    )}
+  </div>
 </Base>
 
 <style>
-  .valor small.unidade {
-    color: var(--muted);
-  }
-  .grupo-inst {
-    margin-top: 2rem;
-  }
-  .quem {
-    display: flex;
-    flex-direction: column;
-  }
-  .quem a {
-    align-self: flex-start;
-  }
-  .lab {
-    font-size: 0.8rem;
-    color: var(--muted);
-  }
-  .valor {
-    text-align: right;
-    white-space: nowrap;
-    display: flex;
-    flex-direction: column;
-  }
-  .valor small {
-    color: var(--good);
-    font-size: 0.78rem;
-  }
-  .mais {
-    margin: 0.4rem 0 0;
-    font-size: 0.9rem;
-  }
   .produtos {
     padding-left: 1.1rem;
   }
   .produtos li {
     margin: 6px 0;
   }
-  @media (max-width: 30rem) {
-    .linhas > li {
-      grid-template-columns: 1fr auto;
-    }
-    .linhas > li > :nth-child(2) {
-      grid-column: 1;
-      grid-row: 2;
-    }
-    .valor {
-      grid-row: 1 / span 2;
-      grid-column: 2;
-    }
+  h3:first-child {
+    margin-top: 0;
   }
 </style>

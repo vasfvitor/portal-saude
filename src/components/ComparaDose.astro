@@ -1,0 +1,113 @@
+---
+// One dose and package on a substância page: every product that sells it, cheapest first in the reader's ICMS
+// regime. Each row carries its rank in both regimes; CSS in Base.astro reorders, highlights and cuts the list once
+// the reader picks a state.
+import Selo from "./Selo.astro";
+import { ehGenerico, REGIMES, type Opcao } from "../lib/comparar";
+import type { ApresentacaoLida } from "../lib/apresentacao";
+import { fmtMoney } from "../lib/format";
+import { precoPorUnidade, precosPorAliquota, precosPorUnidade } from "../lib/frases-remedios";
+import { TABELA, type Regime } from "../lib/icms";
+import { paginaProduto, pmcAplicavel, type Produto } from "../lib/remedios";
+
+export interface Linha {
+  o: Opcao;
+  /** rank in each regime (99 when absent), whether it is the cheapest, past the cut, and % below the reference */
+  ordem: Record<Regime, number>;
+  menor: Regime[];
+  fora: Regime[];
+  menos: Partial<Record<Regime, number>>;
+}
+
+interface Props {
+  legivel: string;
+  unidade?: ApresentacaoLida["unidade"];
+  linhas: Linha[];
+  /** products past the cut, listed under "Todos os produtos" */
+  alem: number;
+}
+const { legivel, unidade, linhas, alem } = Astro.props;
+const ref = TABELA.ref;
+const nome = (p: Produto) => (p.produto === p.substancia ? p.laboratorio : p.produto);
+const detalhe = (p: Produto) => (p.produto === p.substancia ? null : p.laboratorio);
+const menosTexto = (n: number | undefined) => (n !== undefined && n >= 1 ? `${n}% menos` : "");
+---
+
+<div class="cartao">
+  <h3>{legivel}</h3>
+  <ol class="linhas">
+    {linhas.map(({ o, ordem, menor, fora, menos }) => (
+      <li
+        style={`--ordem: ${ordem.p}; --ordem-g: ${ordem.g}`}
+        data-menor={menor.join(" ") || undefined}
+        data-fora={fora.join(" ") || undefined}
+        data-generico={ehGenerico(o.produto) ? "1" : "0"}
+      >
+        <span class="quem">
+          <a href={paginaProduto(o.produto)}>{nome(o.produto)}</a>
+          {detalhe(o.produto) && <span class="lab">{detalhe(o.produto)}</span>}
+        </span>
+        <span>{o.produto.tipo_produto && <Selo>{o.produto.tipo_produto}</Selo>}</span>
+        <span class="valor">
+          <strong data-precos={precosPorAliquota(pmcAplicavel(o.apresentacao))}>
+            {fmtMoney(pmcAplicavel(o.apresentacao)[ref] ?? o.preco)}
+          </strong>
+          {unidade && (
+            <small class="unidade" data-precos={precosPorUnidade(pmcAplicavel(o.apresentacao), unidade)}>
+              {precoPorUnidade(pmcAplicavel(o.apresentacao)[ref] ?? o.preco, unidade)}
+            </small>
+          )}
+          {o.apresentacao.icms_0 && <small>isento de ICMS</small>}
+          {menos.p === menos.g
+            ? menosTexto(menos.p) && <small>{menosTexto(menos.p)}</small>
+            : REGIMES.map((r) => menosTexto(menos[r]) && <small data-so-regime={r}>{menosTexto(menos[r])}</small>)}
+        </span>
+      </li>
+    ))}
+  </ol>
+  {alem > 0 && <p class="muted mais">E mais {alem}, mais caros. Estão em "Todos os produtos com esta substância".</p>}
+</div>
+
+<style>
+  .valor small.unidade {
+    color: var(--muted);
+  }
+  .quem {
+    display: flex;
+    flex-direction: column;
+  }
+  .quem a {
+    align-self: flex-start;
+  }
+  .lab {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .valor {
+    text-align: right;
+    white-space: nowrap;
+    display: flex;
+    flex-direction: column;
+  }
+  .valor small {
+    color: var(--good);
+    font-size: 0.78rem;
+  }
+  .mais {
+    margin: 0.4rem 0 0;
+    font-size: 0.9rem;
+  }
+  @media (max-width: 30rem) {
+    .linhas > li {
+      grid-template-columns: 1fr auto;
+    }
+    .linhas > li > :nth-child(2) {
+      grid-column: 1;
+      grid-row: 2;
+    }
+    .valor {
+      grid-row: 1 / span 2;
+      grid-column: 2;
+    }
+  }
+</style>
