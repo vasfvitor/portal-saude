@@ -110,6 +110,9 @@ export interface Operadora extends ItemIndice {
 
 export interface Meta {
   date: string;
+  /** sources the last ANS collection could not update (their numbers are older than `date`); empty when
+   * all were updated or when ans-feeds did not publish the list yet */
+  falhas: { dia: string; fonte: string; motivo: string }[];
 }
 
 // ---------------------------------------------------------------- validation
@@ -259,7 +262,18 @@ export function parseMeta(raw: unknown): Meta {
   const o = obj(raw, "meta.json");
   const date = str(o, "date", "meta.json");
   if (!DIA.test(date)) throw new Error(`meta.json: bad date ${date}`);
-  return { date };
+  const falhas =
+    o.falhas === undefined
+      ? []
+      : list(o.falhas, "meta.json falhas").map((x) => {
+          const f = obj(x, "meta.json falhas");
+          return {
+            dia: str(f, "dia", "meta.json falhas"),
+            fonte: str(f, "fonte", "meta.json falhas"),
+            motivo: str(f, "motivo", "meta.json falhas"),
+          };
+        });
+  return { date, falhas };
 }
 
 // ---------------------------------------------------------------- fetching

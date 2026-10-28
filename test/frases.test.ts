@@ -9,6 +9,7 @@ import {
   fraseIdss,
   frasePortabilidade,
   fraseReclamacoes,
+  fraseFalhas,
   fraseRessarcimento,
   modalidadePlural,
   motivoCancelamento,
@@ -262,5 +263,21 @@ describe("signs of difficulty", () => {
   });
   it("never forecast", () => {
     expect(SINAIS_CONTEXTO).toMatch(/^Nenhum destes sinais quer dizer que a operadora vai fechar\./);
+  });
+});
+
+describe("sources the last ANS collection could not update", () => {
+  it("names them by subject, once each, and says the numbers are the previous ones", () => {
+    expect(fraseFalhas([])).toBeNull();
+    expect(
+      fraseFalhas([
+        { dia: "2026-10-29", fonte: "pda-023-igr.csv" },
+        { dia: "2026-10-29", fonte: "índice de ressarcimento" },
+        { dia: "2026-10-29", fonte: "202609_Indice_de_Efetivo_Pagamento.csv" },
+        { dia: "2026-10-29", fonte: "outra_fonte.csv" },
+      ]),
+    ).toBe(
+      "Na coleta de 29/10/2026 não foi possível atualizar: reclamações, pagamentos ao SUS, outra_fonte.csv. Esses números são os da coleta anterior.",
+    );
   });
 });

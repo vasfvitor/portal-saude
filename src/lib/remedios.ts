@@ -52,6 +52,9 @@ export interface Produto extends Omit<ItemProduto, "apresentacoes"> {
   feed_substancia: string | null;
   /** the registration at ANVISA; null when the data does not say (source not read, or registro unknown) */
   situacao: { ativo: boolean; vencimento: string | null } | null;
+  /** whether anvisa-feeds could read the registration source for this list (`situacao_fonte`): false
+   * means not checked this time, so a missing `situacao` says nothing; null in data that predates the flag */
+  situacaoConferida: boolean | null;
   /** ANVISA measures citing the registro, newest first; empty when none or when the data does not say */
   medidas: Medida[];
 }
@@ -100,6 +103,8 @@ function parseMedidas(o: Obj, where: string): Medida[] {
 export interface IndiceProdutos {
   stamp: string;
   publicado_em: string;
+  /** the anvisa-api build behind situacao/medidas; null when not read or not published yet */
+  situacao_build: string | null;
   produtos: ItemProduto[];
 }
 
@@ -140,7 +145,14 @@ export function parseIndiceProdutos(raw: unknown): IndiceProdutos {
     return { ...parseItem(p, where), apresentacoes: num(p, "apresentacoes", where) };
   });
   if (produtos.length === 0) throw new Error("produtos.json: empty");
-  return { stamp, publicado_em: str(o, "publicado_em", "produtos.json"), produtos };
+  const fonte =
+    o.situacao_fonte === undefined || o.situacao_fonte === null ? null : obj(o.situacao_fonte, "produtos.json");
+  return {
+    stamp,
+    publicado_em: str(o, "publicado_em", "produtos.json"),
+    situacao_build: fonte ? strOrNull(fonte, "build_id", "produtos.json situacao_fonte") : null,
+    produtos,
+  };
 }
 
 // the pages turn the stamp into a date: a malformed one fails the build instead of printing a broken date
@@ -183,6 +195,7 @@ export function parseProduto(raw: unknown): Produto {
     feed_substancia: feedOrNull(o, "feed_substancia", where),
     situacao: parseSituacao(o, where),
     medidas: parseMedidas(o, where),
+    situacaoConferida: null, // a list-level flag: parseTodos sets it from todos.json
   };
 }
 
@@ -204,7 +217,12 @@ export function parseTodos(raw: unknown, indice: IndiceProdutos): Produto[] {
   const lista = { stamp: listaStamp(o, "todos.json"), publicado_em: str(o, "publicado_em", "todos.json") };
   for (const k of ["stamp", "publicado_em"] as const)
     if (lista[k] !== indice[k]) throw new Error(`todos.json: ${k} ${lista[k]}, but produtos.json has ${indice[k]}`);
-  const produtos = list(o.produtos, "todos.json produtos").map((x) => parseProduto(x));
+  // the whole list was or was not checked against the registration source; absent in older data
+  const conferida = o.situacao_fonte === undefined ? null : o.situacao_fonte !== null;
+  const produtos = list(o.produtos, "todos.json produtos").map((x) => ({
+    ...parseProduto(x),
+    situacaoConferida: conferida,
+  }));
   const nomes = {
     pacote: "todos.json",
     indice: "produtos.json",

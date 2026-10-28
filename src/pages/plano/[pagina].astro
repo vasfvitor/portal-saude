@@ -13,6 +13,7 @@ import { fmtClientes, fmtDate, fmtMes } from "../../lib/format";
 import {
   ACOMPANHAR_OPERADORA,
   ATUALIZACAO_ANS,
+  fraseFalhas,
   cobertura,
   fraseAnoAnterior,
   fraseCancelamento,
@@ -40,15 +41,17 @@ export async function getStaticPaths() {
   const [ops, meta] = await Promise.all([operadorasForBuild(DADOS_URL, META_URL), metaForBuild(META_URL)]);
   return ops.map((op) => ({
     params: { pagina: paginaOperadora(op).split("/")[2]! },
-    props: { op, dia: meta.date },
+    props: { op, dia: meta.date, falhas: fraseFalhas(meta.falhas) },
   }));
 }
 
 interface Props {
   op: Operadora;
   dia: string;
+  /** what the last ANS collection could not update, or null */
+  falhas: string | null;
 }
-const { op, dia } = Astro.props;
+const { op, dia, falhas } = Astro.props;
 const titulo = nomeExibido(op);
 const cancelamento = fraseCancelamento(op);
 const portabilidade = frasePortabilidade(op);
@@ -267,6 +270,7 @@ const breadcrumb = {
         {fmtDate(dia)}. {ATUALIZACAO_ANS} Todos os números desta página, num arquivo só:{" "}
         <a href={`${DADOS_URL}/operadora/${op.registro}.json`}>JSON</a>.
       </p>
+      {falhas && <p class="muted">{falhas}</p>}
       <ul>
         {Object.entries(op.fontes)
           .filter(([, url]) => url)

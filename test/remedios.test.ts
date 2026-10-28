@@ -84,6 +84,20 @@ describe("fetching", () => {
     );
   });
 
+  it("situacao_fonte: absent says nothing, null means not checked this time, an object means checked", () => {
+    const indice = parseIndiceProdutos(fixture("produtos.json"));
+    const todos = fixture("todos.json") as Record<string, unknown>;
+    expect(indice.situacao_build).toBeNull(); // the fixtures predate the field
+    expect(parseTodos(todos, indice).every((p) => p.situacaoConferida === null)).toBe(true);
+    expect(parseTodos({ ...todos, situacao_fonte: null }, indice).every((p) => p.situacaoConferida === false)).toBe(
+      true,
+    );
+    const fonte = { build_id: "20261028T000851Z", built_at: "2026-10-28T00:08:51Z" };
+    expect(parseTodos({ ...todos, situacao_fonte: fonte }, indice).every((p) => p.situacaoConferida)).toBe(true);
+    const comFonte = { ...(fixture("produtos.json") as Record<string, unknown>), situacao_fonte: fonte };
+    expect(parseIndiceProdutos(comFonte).situacao_build).toBe("20261028T000851Z");
+  });
+
   it("todos.json: each product must carry the list of the file and the index fields", () => {
     const indice = parseIndiceProdutos(fixture("produtos.json"));
     const todos = fixture("todos.json") as { produtos: Record<string, unknown>[] };

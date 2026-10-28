@@ -115,6 +115,10 @@ export const MEDIDAS_SEM_LOTE =
   "A ANVISA publica essas medidas sem o lote nos dados abertos: uma medida pode valer só para alguns lotes, não para o remédio todo. Se você tem uma caixa em casa, mostre o número do lote ao farmacêutico.";
 
 /** Next to the list date on the medicine pages: when the prices change next. */
+/** In "Sobre este remédio" when anvisa-feeds could not read the registration source for this list. */
+export const REGISTRO_NAO_CONFERIDO =
+  "Nesta atualização do site não foi possível conferir na ANVISA se o registro está ativo nem se há medidas sobre este remédio.";
+
 export const ATUALIZACAO_CMED =
   "A CMED publica uma lista nova quando muda algum preço, em geral uma vez por mês; o site é refeito todo dia e mostra a nova no máximo um dia depois.";
 

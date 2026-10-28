@@ -46,6 +46,9 @@ describe("parsers", () => {
     expect(() => parseOperadora({ ...base, feed: "https://x.test/a.json" })).toThrow(/feed/);
     expect(parseMeta(fixture("meta.json")).date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(() => parseMeta({ date: "23/10/2026" })).toThrow(/date/);
+    expect(parseMeta({ date: "2026-10-28" }).falhas).toEqual([]); // before ans-feeds published the list
+    const falha = { dia: "2026-10-29", fonte: "pda-023-igr.csv", motivo: "1354 bytes contra 6756" };
+    expect(parseMeta({ date: "2026-10-28", falhas: [falha] }).falhas).toEqual([falha]);
   });
 });
 

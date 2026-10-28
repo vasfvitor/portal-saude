@@ -35,6 +35,7 @@ import {
   EMBALAGENS_INSTITUCIONAIS,
   fraseMedida,
   fraseRegistro,
+  REGISTRO_NAO_CONFERIDO,
   ISENTO_DE_ICMS,
   MEDIDAS_SEM_LOTE,
   PRECO_MAXIMO,
@@ -288,6 +289,7 @@ const breadcrumb = {
         </li>
         {p.classe_terapeutica && <li>Grupo de remédios: {classeSemCodigo(p.classe_terapeutica)}</li>}
         <li>{fraseRegistro(p.registro_produto, p.situacao)}</li>
+        {p.situacaoConferida === false && <li class="muted">{REGISTRO_NAO_CONFERIDO}</li>}
       </ul>
     </Secao>
 

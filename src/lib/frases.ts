@@ -173,6 +173,26 @@ export function fraseAnoAnterior(serie: PontoSerie[]): string | null {
 /** Next to the collection date on the operator pages: when the numbers change next. */
 export const ATUALIZACAO_ANS = "A página é refeita todo dia com o que a ANS publicou.";
 
+// The ANS files and pages the snapshot reads, by what the reader knows them as; anything else is shown as named.
+const ASSUNTO_DA_FONTE: [RegExp, string][] = [
+  [/^Relatorio_cadop/, "cadastro das operadoras"],
+  [/^pda-023-igr/, "reclamações"],
+  [/idss/i, "nota da ANS"],
+  [/Indice_de_Efetivo_Pagamento|ressarcimento|^HC_/i, "pagamentos ao SUS"],
+  [/^portabilidade/, "portabilidade"],
+  [/RN 623|^Lista/i, "metas de reclamação"],
+  [/direcao_tecnica/, "direção técnica"],
+];
+
+/** In "Fontes" when the last ANS collection could not update some sources; null when all were updated. */
+export function fraseFalhas(falhas: { dia: string; fonte: string }[]): string | null {
+  if (falhas.length === 0) return null;
+  const assuntos = [
+    ...new Set(falhas.map(({ fonte }) => ASSUNTO_DA_FONTE.find(([re]) => re.test(fonte))?.[1] ?? fonte)),
+  ];
+  return `Na coleta de ${fmtDate(falhas[0]!.dia)} não foi possível atualizar: ${assuntos.join(", ")}. Esses números são os da coleta anterior.`;
+}
+
 /** "Acompanhar" boxes: what a feed reader is, said once, for people who never used one. */
 export const LEITOR_DE_FEED =
   "Um leitor de feed (Feedly, Inoreader, NetNewsWire, Thunderbird) junta as novidades de vários sites num lugar só. Para usar, copie o endereço do link abaixo e cole no leitor.";
