@@ -4,7 +4,7 @@
 
 import { getJson, once } from "./fetch";
 import { slug } from "./slug";
-import { conferirComIndice, feedOrNull, list, num, numOrNull, obj, str, strOrNull } from "./validar";
+import { conferirComIndice, feedOrNull, list, num, numOrAbsent, numOrNull, obj, str, strOrNull } from "./validar";
 
 export type Situacao = "ativa" | "cancelada";
 
@@ -53,6 +53,8 @@ export interface Ressarcimento {
   indice_pagamento_5anos: number | null;
   valor_cobrado: number | null;
   valor_pago: number | null;
+  /** counted as paid by the ANS index: (pago + parcelado) / cobrado; null before ans-feeds published it */
+  valor_parcelado: number | null;
 }
 
 export interface EventoCurto {
@@ -168,6 +170,7 @@ export function parseOperadora(raw: unknown): Operadora {
       indice_pagamento_5anos: numOrNull(r, "indice_pagamento_5anos", w),
       valor_cobrado: numOrNull(r, "valor_cobrado", w),
       valor_pago: numOrNull(r, "valor_pago", w),
+      valor_parcelado: numOrAbsent(r, "valor_parcelado", w),
     };
   }
   const eventos = list(o.eventos, `${where} eventos`).map((x) => {

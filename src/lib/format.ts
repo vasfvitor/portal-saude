@@ -20,8 +20,10 @@ export function fmtDec(n: number, digits = 2): string {
   return n.toLocaleString("pt-BR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
 
-/** 91.31 (already a percentage) → "91%"; values below 100 never round up to "100%". */
+/** 91.31 (already a percentage) → "91%"; values below 100 never round up to "100%", and values above 0
+ * never round down to "0%" (0.06 → "menos de 1%"). */
 export function fmtPct(value: number): string {
+  if (value > 0 && value < 1) return "menos de 1%";
   const shown = value < 100 ? Math.min(Math.round(value), 99) : Math.round(value);
   return `${int.format(shown)}%`;
 }

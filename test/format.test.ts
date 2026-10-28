@@ -38,6 +38,7 @@ describe("format", () => {
     expect(fmtPct(99.6)).toBe("99%");
     expect(fmtPct(100)).toBe("100%");
     expect(fmtPct(0)).toBe("0%");
+    expect(fmtPct(0.06)).toBe("menos de 1%");
   });
 
   it("money, decimals and dates", () => {

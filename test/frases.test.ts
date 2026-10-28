@@ -135,18 +135,35 @@ describe("real operators", () => {
       "Recebe mais que o dobro das reclamações de uma operadora típica do mesmo tamanho.",
     );
     expect(fraseIdss(b.idss, b.modalidade).tom).toBe("neutro");
-    expect(fraseRessarcimento(b.ressarcimento)?.titulo).toBe("Pagou ao SUS tudo o que devia.");
-    expect(fraseRessarcimento(b.ressarcimento)?.detalhe).toMatch(/O SUS cobrou R\$ .* até [a-zç]+ de \d{4}\./);
+    expect(fraseRessarcimento(b.ressarcimento)?.titulo).toBe("Pagou ou parcelou tudo o que o SUS cobrou.");
+    expect(fraseRessarcimento(b.ressarcimento)?.detalhe).toMatch(/O SUS cobrou R\$ .* até [a-zç]+ de \d{4}\.$/);
     expect(fraseCancelamento(b)).toBeNull();
     expect(frasePortabilidade(b)).toBeNull();
+  });
+
+  it("SUS: the ANS index counts the parcelado as paid, and the rest may be contested", () => {
+    // Univida: 0.06% of R$ 466 mil; the bundle predates valor_parcelado, which then reads as null
+    const u = op("422134").ressarcimento!;
+    expect(u.valor_parcelado).toBeNull();
+    const f = fraseRessarcimento(u)!;
+    expect(f.titulo).toBe("Pagou ou parcelou menos de 1% do que o SUS cobrou.");
+    expect(f.detalhe).toContain("parte pode estar em discussão na própria ANS ou na Justiça");
+    expect(f.detalhe).not.toContain("parcelados");
+    expect(f.tom).toBe("desfavoravel");
+    const comParcela = fraseRessarcimento({ ...u, indice_pagamento: 60, valor_parcelado: 100000 })!;
+    expect(comParcela.titulo).toBe("Pagou ou parcelou 60% do que o SUS cobrou.");
+    expect(comParcela.detalhe).toContain("Desse total, R$ 100 mil foram parcelados.");
   });
 
   it("summary lines agree with the full sentences", () => {
     expect(resumo(op("005711"))).toEqual([
       { assunto: "Reclamações", texto: "mais que o dobro da típica", tom: "desfavoravel", ancora: "reclamacoes" },
       { assunto: "Nota da ANS", texto: "0,81, no nível da típica", tom: "neutro", ancora: "nota" },
-      { assunto: "Pagamentos ao SUS", texto: "pagou tudo", tom: "favoravel", ancora: "sus" },
+      { assunto: "Pagamentos ao SUS", texto: "pagou ou parcelou tudo", tom: "favoravel", ancora: "sus" },
     ]);
+    expect(resumo(op("422134")).find((x) => x.ancora === "sus")?.texto).toBe(
+      "pagou ou parcelou menos de 1% do que foi cobrado",
+    );
     expect(resumo(op("422134")).find((x) => x.ancora === "nota")?.texto).toBe("sem nota");
     const boa = { ...op("005711"), idss: { ...op("005711").idss!, valor: 0.95 } };
     expect(resumo(boa).find((x) => x.ancora === "nota")?.texto).toBe("0,95, acima da típica");

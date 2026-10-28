@@ -228,10 +228,20 @@ export function fraseRessarcimento(r: Ressarcimento | null): Frase | null {
       tom: "sem-base",
     };
   }
+  // The ANS index counts an instalment agreement as paid: (pago + parcelado) / cobrado.
   const pago = r.indice_pagamento;
+  const parcelado = r.valor_parcelado ? ` Desse total, ${fmtReais(r.valor_parcelado)} foram parcelados.` : "";
+  // The ANS does not publish how much of the rest the operator is contesting.
+  const falta =
+    pago >= 100
+      ? ""
+      : " A ANS não informa quanto do que falta a operadora contesta: parte pode estar em discussão na própria ANS ou na Justiça.";
   return {
-    titulo: pago >= 100 ? "Pagou ao SUS tudo o que devia." : `Pagou ${fmtPct(pago)} do que devia ao SUS.`,
-    detalhe: `${sobre} O SUS cobrou ${fmtReais(r.valor_cobrado)} desta operadora até ${fmtMes(r.competencia)}.`,
+    titulo:
+      pago >= 100
+        ? "Pagou ou parcelou tudo o que o SUS cobrou."
+        : `Pagou ou parcelou ${fmtPct(pago)} do que o SUS cobrou.`,
+    detalhe: `${sobre} O SUS cobrou ${fmtReais(r.valor_cobrado)} desta operadora até ${fmtMes(r.competencia)}.${parcelado}${falta}`,
     tom: pago >= 100 ? "favoravel" : pago >= 90 ? "neutro" : "desfavoravel",
   };
 }
@@ -295,8 +305,8 @@ export function resumo(op: Pick<Operadora, "reclamacoes" | "idss" | "modalidade"
       pago == null || !op.ressarcimento?.valor_cobrado
         ? "nada cobrado"
         : pago >= 100
-          ? "pagou tudo"
-          : `pagou ${fmtPct(pago)} do que devia`;
+          ? "pagou ou parcelou tudo"
+          : `pagou ou parcelou ${fmtPct(pago)} do que foi cobrado`;
     out.push({ assunto: "Pagamentos ao SUS", texto, tom: sus.tom, ancora: "sus" });
   }
   return out;

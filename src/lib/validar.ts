@@ -33,6 +33,14 @@ export function numOrNull(o: Obj, k: string, where: string): number | null {
   if (typeof v !== "number" || !Number.isFinite(v)) throw new Error(`${where}: bad ${k}`);
   return v;
 }
+/** A field the upstream added later: absent (an older build of the data) reads as null, like a missing value. */
+export function numOrAbsent(o: Obj, k: string, where: string): number | null {
+  return o[k] === undefined ? null : numOrNull(o, k, where);
+}
+/** The same for a flag: absent reads as null, so the page can tell "not flagged" from "not published yet". */
+export function boolOrAbsent(o: Obj, k: string, where: string): boolean | null {
+  return o[k] === undefined ? null : bool(o, k, where);
+}
 /** An Atom feed URL the page links to. Absent or null means no feed: the upstream may not publish it yet,
  * and the page then leaves the "Acompanhar" block out instead of failing the build. */
 export function feedOrNull(o: Obj, k: string, where: string): string | null {
