@@ -117,7 +117,9 @@ const generico = ehGenerico(p);
 const marca = generico ? "1" : "0";
 const ufs = generico ? TABELA.ufs.generico : TABELA.ufs.normal;
 const cols = generico ? TABELA.colunas.generico : TABELA.colunas.normal;
-const aConfirmar = [...ufs.values()].flat().some((u) => u.endsWith("*"));
+// exempt from ICMS everywhere: no line per state, so neither the picker nor the "a confirmar" note has a job
+const porEstado = p.apresentacoes.some((a) => !a.icms_0);
+const aConfirmar = porEstado && [...ufs.values()].flat().some((u) => u.endsWith("*"));
 const ref = TABELA.ref;
 const tipo = tipoExplicado(p.tipo_produto);
 const tarja = tarjaExplicada(p.tarja);
@@ -165,7 +167,7 @@ const breadcrumb = {
   )}
 
   <p class="lead">{PRECO_MAXIMO}</p>
-  <SeuEstado />
+  {porEstado && <SeuEstado />}
 
   {p.apresentacoes.map((a, i) => {
     const lida = lerApresentacao(a.apresentacao);
