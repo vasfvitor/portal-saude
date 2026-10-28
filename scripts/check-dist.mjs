@@ -68,6 +68,6 @@ console.log(`dist ok: ${pages} pages, ${counts.operator} operators, ${counts.med
 
 // not a failure (the producers' runs go red for these), but said here so a local build shows it too
 const build = JSON.parse(readFileSync(join(DIST, "build.json"), "utf-8"));
-if (build.situacao_build === "none") {
+if (build.situacao_build === null) {
   console.warn("warning: built without the ANVISA registration data (cmed/dados situacao_fonte is null or absent)");
 }

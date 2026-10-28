@@ -41,7 +41,6 @@ jobs:
           # the same as META_URL / CMED_DADOS_URL in src/lib/config.ts and `site` in astro.config.mjs
           META: https://ans.feeds.abelhaninja.de/meta.json
           CMED_META: https://anvisa.feeds.abelhaninja.de/meta.json
-          CMED_PRODUTOS: https://anvisa.feeds.abelhaninja.de/cmed/dados/produtos.json
           PUBLISHED: https://saude.abelhaninja.de/build.json
         run: |
           if [ "$EVENT" != schedule ]; then
@@ -52,12 +51,13 @@ jobs:
           dados=$(curl -fsS "$META?t=$(date +%s)" | jq -er .date) || dados=""
           cmed=$(curl -fsS "$CMED_META?t=$(date +%s)" | jq -er .cmed.stamp) || cmed=""
           # the registration status and measures change daily, independently of the list stamp
-          situacao=$(curl -fsS "$CMED_PRODUTOS?t=$(date +%s)" | jq -er '.situacao_fonte.build_id // "none"') || situacao=""
+          # jq -r without -e: a missing build prints null on both sides and still compares
+          situacao=$(curl -fsS "$CMED_META?t=$(date +%s)" | jq -r .cmed.situacao_build) || situacao=""
           # plain http as a fallback while the Pages certificate is missing or being renewed
           site=$(curl -fsS "$PUBLISHED?t=$(date +%s)" || curl -fsS "${PUBLISHED/https:/http:}?t=$(date +%s)") || site=""
           site_dados=$(jq -er .dados_date <<<"$site" 2>/dev/null) || site_dados=""
           site_cmed=$(jq -er .cmed_stamp <<<"$site" 2>/dev/null) || site_cmed=""
-          site_situacao=$(jq -er '.situacao_build // "none"' <<<"$site" 2>/dev/null) || site_situacao=""
+          site_situacao=$(jq -r .situacao_build <<<"$site" 2>/dev/null) || site_situacao=""
           echo "dados: ${dados:-?} / ${site_dados:-?} · cmed: ${cmed:-?} / ${site_cmed:-?} · situação: ${situacao:-?} / ${site_situacao:-?}"
           if [ -n "$dados" ] && [ "$dados" = "$site_dados" ] && [ -n "$cmed" ] && [ "$cmed" = "$site_cmed" ] \
             && [ -n "$situacao" ] && [ "$situacao" = "$site_situacao" ]; then

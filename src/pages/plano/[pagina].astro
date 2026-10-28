@@ -14,6 +14,7 @@ import {
   ACOMPANHAR_OPERADORA,
   ATUALIZACAO_ANS,
   fraseFalhas,
+  NOMES_FONTE,
   cobertura,
   fraseAnoAnterior,
   fraseCancelamento,
@@ -39,9 +40,10 @@ import {
 
 export async function getStaticPaths() {
   const [ops, meta] = await Promise.all([operadorasForBuild(DADOS_URL, META_URL), metaForBuild(META_URL)]);
+  const falhas = fraseFalhas(meta.falhas); // the same for every operator
   return ops.map((op) => ({
     params: { pagina: paginaOperadora(op).split("/")[2]! },
-    props: { op, dia: meta.date, falhas: fraseFalhas(meta.falhas) },
+    props: { op, dia: meta.date, falhas },
   }));
 }
 
@@ -65,13 +67,6 @@ const descricao = [
 ]
   .filter(Boolean)
   .join(" ");
-const NOMES_FONTE: Record<string, string> = {
-  cadastro: "Cadastro de operadoras ativas",
-  cancelamentos: "Operadoras canceladas",
-  reclamacoes: "Índice de reclamações",
-  idss: "Índice de desempenho (IDSS)",
-  ressarcimento: "Ressarcimento ao SUS",
-};
 // One block per summary line. The complaint lines come first, one per coverage, in the order of op.reclamacoes;
 // with no complaint data at all the block still says so.
 interface Bloco {

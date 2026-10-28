@@ -48,7 +48,10 @@ describe("parsers", () => {
     expect(() => parseMeta({ date: "23/10/2026" })).toThrow(/date/);
     expect(parseMeta({ date: "2026-10-28" }).falhas).toEqual([]); // before ans-feeds published the list
     const falha = { dia: "2026-10-29", fonte: "pda-023-igr.csv", motivo: "1354 bytes contra 6756" };
-    expect(parseMeta({ date: "2026-10-28", falhas: [falha] }).falhas).toEqual([falha]);
+    // the subject comes from ans-feeds; the reason is for people reading meta.json, not the page
+    expect(parseMeta({ date: "2026-10-28", falhas: [{ ...falha, assunto: "reclamacoes" }] }).falhas).toEqual([
+      { dia: "2026-10-29", fonte: "pda-023-igr.csv", assunto: "reclamacoes" },
+    ]);
   });
 });
 

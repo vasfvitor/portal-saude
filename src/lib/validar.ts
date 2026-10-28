@@ -45,6 +45,15 @@ export function strOrAbsent(o: Obj, k: string, where: string): string | null {
 export function boolOrAbsent(o: Obj, k: string, where: string): boolean | null {
   return o[k] === undefined ? null : bool(o, k, where);
 }
+/** An object field the upstream added later: absent or null reads as null. */
+export function objOrAbsent(o: Obj, k: string, where: string): Obj | null {
+  const v = o[k];
+  return v === undefined || v === null ? null : obj(v, `${where} ${k}`);
+}
+/** A list field the upstream added later: absent reads as empty. */
+export function listOrEmpty(o: Obj, k: string, where: string): unknown[] {
+  return o[k] === undefined ? [] : list(o[k], `${where} ${k}`);
+}
 /** An Atom feed URL the page links to. Absent or null means no feed: the upstream may not publish it yet,
  * and the page then leaves the "Acompanhar" block out instead of failing the build. */
 export function feedOrNull(o: Obj, k: string, where: string): string | null {

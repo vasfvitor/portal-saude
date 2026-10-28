@@ -53,6 +53,7 @@ import { TABELA } from "../../lib/icms";
 import {
   paginaProduto,
   pmcAplicavel,
+  indiceProdutosForBuild,
   produtosForBuild,
   slugsSubstancias,
   type Apresentacao,
@@ -60,7 +61,10 @@ import {
 } from "../../lib/remedios";
 
 export async function getStaticPaths() {
-  const produtos = await produtosForBuild(CMED_DADOS_URL);
+  const [produtos, indice] = await Promise.all([
+    produtosForBuild(CMED_DADOS_URL),
+    indiceProdutosForBuild(CMED_DADOS_URL),
+  ]);
   const substancias = slugsSubstancias(produtos.map((p) => p.substancia));
   const grupos = { p: porChave(produtos, "p"), g: porChave(produtos, "g") };
   const baratos = (p: Produto, a: Apresentacao): Barato[] => {
@@ -99,7 +103,12 @@ export async function getStaticPaths() {
   };
   return produtos.map((p) => ({
     params: { pagina: paginaProduto(p).split("/")[2]! },
-    props: { p, substanciaSlug: substancias.get(p.substancia)!, baratos: p.apresentacoes.map((a) => baratos(p, a)) },
+    props: {
+      p,
+      substanciaSlug: substancias.get(p.substancia)!,
+      baratos: p.apresentacoes.map((a) => baratos(p, a)),
+      conferida: indice.situacao_conferida,
+    },
   }));
 }
 
@@ -107,8 +116,10 @@ interface Props {
   p: Produto;
   substanciaSlug: string;
   baratos: Barato[][];
+  /** the list-level registration check: false when not checked this time, null in older data */
+  conferida: boolean | null;
 }
-const { p, substanciaSlug, baratos } = Astro.props;
+const { p, substanciaSlug, baratos, conferida } = Astro.props;
 const generico = ehGenerico(p);
 const marca = generico ? "1" : "0";
 const ufs = generico ? TABELA.ufs.generico : TABELA.ufs.normal;
@@ -289,7 +300,7 @@ const breadcrumb = {
         </li>
         {p.classe_terapeutica && <li>Grupo de remédios: {classeSemCodigo(p.classe_terapeutica)}</li>}
         <li>{fraseRegistro(p.registro_produto, p.situacao)}</li>
-        {p.situacaoConferida === false && <li class="muted">{REGISTRO_NAO_CONFERIDO}</li>}
+        {conferida === false && <li class="muted">{REGISTRO_NAO_CONFERIDO}</li>}
       </ul>
     </Secao>
 

@@ -271,13 +271,13 @@ describe("sources the last ANS collection could not update", () => {
     expect(fraseFalhas([])).toBeNull();
     expect(
       fraseFalhas([
-        { dia: "2026-10-29", fonte: "pda-023-igr.csv" },
-        { dia: "2026-10-29", fonte: "índice de ressarcimento" },
-        { dia: "2026-10-29", fonte: "202609_Indice_de_Efetivo_Pagamento.csv" },
-        { dia: "2026-10-29", fonte: "outra_fonte.csv" },
+        { dia: "2026-10-29", fonte: "pda-023-igr.csv", assunto: "reclamacoes" },
+        { dia: "2026-10-29", fonte: "índice de ressarcimento", assunto: "ressarcimento" },
+        { dia: "2026-10-29", fonte: "202609_Indice_de_Efetivo_Pagamento.csv", assunto: "ressarcimento" },
+        { dia: "2026-10-29", fonte: "outra_fonte.csv", assunto: null },
       ]),
     ).toBe(
-      "Na coleta de 29/10/2026 não foi possível atualizar: reclamações, pagamentos ao SUS, outra_fonte.csv. Esses números são os da coleta anterior.",
+      "Na coleta de 29/10/2026 não foi possível atualizar: Índice de reclamações, Ressarcimento ao SUS, outra_fonte.csv. Esses números são os da coleta anterior.",
     );
   });
 });

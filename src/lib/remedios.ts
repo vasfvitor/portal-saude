@@ -3,7 +3,20 @@
 // upstream fails the build instead of publishing a wrong price. Prices are in centavos, per ICMS rate.
 import { getJson, once } from "./fetch";
 import { slug } from "./slug";
-import { bool, boolOrAbsent, conferirComIndice, feedOrNull, list, num, obj, str, strOrNull, type Obj } from "./validar";
+import {
+  bool,
+  boolOrAbsent,
+  conferirComIndice,
+  feedOrNull,
+  list,
+  listOrEmpty,
+  num,
+  obj,
+  objOrAbsent,
+  str,
+  strOrNull,
+  type Obj,
+} from "./validar";
 
 /** ICMS rates in the CMED list, as the JSON keys spell them. */
 export const ALIQUOTAS = ["0", "12", "17", "17.5", "18", "19", "19.5", "20", "20.5", "21", "22", "22.5", "23"] as const;
@@ -52,9 +65,6 @@ export interface Produto extends Omit<ItemProduto, "apresentacoes"> {
   feed_substancia: string | null;
   /** the registration at ANVISA; null when the data does not say (source not read, or registro unknown) */
   situacao: { ativo: boolean; vencimento: string | null } | null;
-  /** whether anvisa-feeds could read the registration source for this list (`situacao_fonte`): false
-   * means not checked this time, so a missing `situacao` says nothing; null in data that predates the flag */
-  situacaoConferida: boolean | null;
   /** ANVISA measures citing the registro, newest first; empty when none or when the data does not say */
   medidas: Medida[];
 }
@@ -78,16 +88,15 @@ const textos = (v: unknown, where: string): string[] =>
   });
 
 function parseSituacao(o: Obj, where: string): Produto["situacao"] {
-  if (o.situacao === undefined || o.situacao === null) return null;
-  const s = obj(o.situacao, `${where} situacao`);
+  const s = objOrAbsent(o, "situacao", where);
+  if (!s) return null;
   const vencimento = strOrNull(s, "vencimento", where);
   if (vencimento !== null && !MES.test(vencimento)) throw new Error(`${where}: bad vencimento ${vencimento}`);
   return { ativo: bool(s, "ativo", where), vencimento };
 }
 
 function parseMedidas(o: Obj, where: string): Medida[] {
-  if (o.medidas === undefined) return [];
-  return list(o.medidas, `${where} medidas`).map((x) => {
+  return listOrEmpty(o, "medidas", where).map((x) => {
     const m = obj(x, `${where} medidas`);
     const data = str(m, "data", where);
     if (!DIA.test(data)) throw new Error(`${where}: bad medida date ${data}`);
@@ -105,6 +114,9 @@ export interface IndiceProdutos {
   publicado_em: string;
   /** the anvisa-api build behind situacao/medidas; null when not read or not published yet */
   situacao_build: string | null;
+  /** whether anvisa-feeds could read the registration source for this list (`situacao_fonte`): false
+   * means not checked this time, so a missing `situacao` says nothing; null in data that predates the flag */
+  situacao_conferida: boolean | null;
   produtos: ItemProduto[];
 }
 
@@ -145,12 +157,12 @@ export function parseIndiceProdutos(raw: unknown): IndiceProdutos {
     return { ...parseItem(p, where), apresentacoes: num(p, "apresentacoes", where) };
   });
   if (produtos.length === 0) throw new Error("produtos.json: empty");
-  const fonte =
-    o.situacao_fonte === undefined || o.situacao_fonte === null ? null : obj(o.situacao_fonte, "produtos.json");
+  const fonte = objOrAbsent(o, "situacao_fonte", "produtos.json");
   return {
     stamp,
     publicado_em: str(o, "publicado_em", "produtos.json"),
     situacao_build: fonte ? strOrNull(fonte, "build_id", "produtos.json situacao_fonte") : null,
+    situacao_conferida: o.situacao_fonte === undefined ? null : fonte !== null,
     produtos,
   };
 }
@@ -195,7 +207,6 @@ export function parseProduto(raw: unknown): Produto {
     feed_substancia: feedOrNull(o, "feed_substancia", where),
     situacao: parseSituacao(o, where),
     medidas: parseMedidas(o, where),
-    situacaoConferida: null, // a list-level flag: parseTodos sets it from todos.json
   };
 }
 
@@ -217,12 +228,7 @@ export function parseTodos(raw: unknown, indice: IndiceProdutos): Produto[] {
   const lista = { stamp: listaStamp(o, "todos.json"), publicado_em: str(o, "publicado_em", "todos.json") };
   for (const k of ["stamp", "publicado_em"] as const)
     if (lista[k] !== indice[k]) throw new Error(`todos.json: ${k} ${lista[k]}, but produtos.json has ${indice[k]}`);
-  // the whole list was or was not checked against the registration source; absent in older data
-  const conferida = o.situacao_fonte === undefined ? null : o.situacao_fonte !== null;
-  const produtos = list(o.produtos, "todos.json produtos").map((x) => ({
-    ...parseProduto(x),
-    situacaoConferida: conferida,
-  }));
+  const produtos = list(o.produtos, "todos.json produtos").map((x) => parseProduto(x));
   const nomes = {
     pacote: "todos.json",
     indice: "produtos.json",

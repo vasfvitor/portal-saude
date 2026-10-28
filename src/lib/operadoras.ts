@@ -9,6 +9,7 @@ import {
   conferirComIndice,
   feedOrNull,
   list,
+  listOrEmpty,
   num,
   numOrAbsent,
   numOrNull,
@@ -112,7 +113,7 @@ export interface Meta {
   date: string;
   /** sources the last ANS collection could not update (their numbers are older than `date`); empty when
    * all were updated or when ans-feeds did not publish the list yet */
-  falhas: { dia: string; fonte: string; motivo: string }[];
+  falhas: { dia: string; fonte: string; assunto: string | null }[];
 }
 
 // ---------------------------------------------------------------- validation
@@ -262,17 +263,14 @@ export function parseMeta(raw: unknown): Meta {
   const o = obj(raw, "meta.json");
   const date = str(o, "date", "meta.json");
   if (!DIA.test(date)) throw new Error(`meta.json: bad date ${date}`);
-  const falhas =
-    o.falhas === undefined
-      ? []
-      : list(o.falhas, "meta.json falhas").map((x) => {
-          const f = obj(x, "meta.json falhas");
-          return {
-            dia: str(f, "dia", "meta.json falhas"),
-            fonte: str(f, "fonte", "meta.json falhas"),
-            motivo: str(f, "motivo", "meta.json falhas"),
-          };
-        });
+  const falhas = listOrEmpty(o, "falhas", "meta.json").map((x) => {
+    const f = obj(x, "meta.json falhas");
+    return {
+      dia: str(f, "dia", "meta.json falhas"),
+      fonte: str(f, "fonte", "meta.json falhas"),
+      assunto: strOrAbsent(f, "assunto", "meta.json falhas"),
+    };
+  });
   return { date, falhas };
 }
 
