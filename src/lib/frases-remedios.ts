@@ -65,3 +65,7 @@ export const TROCA_NA_FARMACIA =
 
 export const SE_COBRAREM_MAIS =
   "Se cobrarem acima do preço máximo do seu estado, guarde a nota fiscal e procure o Procon da sua cidade.";
+
+/** "Acompanhar" box on a product or substância page: the anvisa-feeds feed covers every product with the substância. */
+export const acompanharSubstancia = (substancia: string): string =>
+  `O feed avisa quando a lista mensal da CMED muda o preço máximo de algum remédio com ${substancia}, inclui uma dose e embalagem nova ou retira uma.`;

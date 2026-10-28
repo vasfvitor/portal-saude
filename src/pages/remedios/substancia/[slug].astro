@@ -3,13 +3,14 @@
 // first in the reader's ICMS regime), then every product grouped by type. Comparing ranges across doses misleads,
 // so prices only appear next to the same dose and package. Each row carries its rank in both regimes; CSS in
 // Base.astro reorders, highlights and cuts the list once the reader picks a state.
+import Acompanhar from "../../../components/Acompanhar.astro";
 import Selo from "../../../components/Selo.astro";
 import SeuEstado from "../../../components/SeuEstado.astro";
 import Base from "../../../layouts/Base.astro";
 import { ehGenerico, porChave, quantoMenos, REGIMES, type Opcao } from "../../../lib/comparar";
 import { CMED_DADOS_URL } from "../../../lib/config";
 import { contar, fmtMoney } from "../../../lib/format";
-import { aliquotaRotulo, precosPorAliquota, tipoExplicado } from "../../../lib/frases-remedios";
+import { acompanharSubstancia, aliquotaRotulo, precosPorAliquota, tipoExplicado } from "../../../lib/frases-remedios";
 import { TABELA, type Regime } from "../../../lib/icms";
 import { paginaProduto, produtosForBuild, slugsSubstancias, type Produto } from "../../../lib/remedios";
 
@@ -99,12 +100,15 @@ const doTipo = (t: string) =>
 const temGenerico = lista.some(ehGenerico);
 // the reference product(s) the "% menos" is measured against, named when there is only one
 const referencias = [...new Set(lista.filter((p) => p.tipo_produto === "Novo").map((p) => p.produto))];
+// every product with the substância carries the same feed address
+const feed = lista.find((p) => p.feed_substancia)?.feed_substancia ?? null;
 const resumo = `${contar(lista.length, "produto tem", "produtos têm")} esta substância${temGenerico ? ", entre marcas e genéricos" : ""}.`;
 ---
 
 <Base
   title={`${substancia}: marcas, genéricos e preço máximo`}
   description={`${contar(lista.length, "produto", "produtos")} com ${substancia} na lista da CMED, com o preço máximo de cada dose e embalagem lado a lado.`}
+  feed={feed ? { href: feed, title: `${substancia}: preços da CMED` } : undefined}
 >
   <p class="trilha">
     <a href="/remedios/">Remédios</a> › Substância
@@ -182,6 +186,15 @@ const resumo = `${contar(lista.length, "produto tem", "produtos têm")} esta sub
       </>
     ))}
   </section>
+
+  {feed && (
+    <Acompanhar
+      titulo="Acompanhar os preços"
+      avisa={acompanharSubstancia(substancia)}
+      href={feed}
+      rotulo={`Endereço do feed de ${substancia}`}
+    />
+  )}
 </Base>
 
 <style>

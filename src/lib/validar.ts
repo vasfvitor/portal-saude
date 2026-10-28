@@ -33,6 +33,14 @@ export function numOrNull(o: Obj, k: string, where: string): number | null {
   if (typeof v !== "number" || !Number.isFinite(v)) throw new Error(`${where}: bad ${k}`);
   return v;
 }
+/** An Atom feed URL the page links to. Absent or null means no feed: the upstream may not publish it yet,
+ * and the page then leaves the "Acompanhar" block out instead of failing the build. */
+export function feedOrNull(o: Obj, k: string, where: string): string | null {
+  const v = o[k];
+  if (v === undefined || v === null) return null;
+  if (typeof v !== "string" || !/^https:\/\/[^\s"<>]+\.xml$/.test(v)) throw new Error(`${where}: bad ${k}`);
+  return v;
+}
 export function bool(o: Obj, k: string, where: string): boolean {
   const v = o[k];
   if (typeof v !== "boolean") throw new Error(`${where}: no ${k}`);

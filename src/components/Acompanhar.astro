@@ -1,0 +1,26 @@
+---
+// A link to an Atom feed on ans-feeds or anvisa-feeds: what it sends, what a feed reader is, and the address.
+// Whoever opens the address in a browser gets the feed's own readable page (feed.xsl), which explains again.
+import { LEITOR_DE_FEED } from "../lib/frases";
+import Quadro from "./Quadro.astro";
+
+interface Props {
+  titulo: string;
+  /** what the feed sends, from frases.ts or frases-remedios.ts */
+  avisa: string;
+  href: string;
+  /** link text: says where it goes */
+  rotulo: string;
+}
+const { titulo, avisa, href, rotulo } = Astro.props;
+---
+
+<Quadro tipo="ajuda" titulo={titulo} id="acompanhar">
+  <p>{avisa}</p>
+  <p>{LEITOR_DE_FEED}</p>
+  <p>
+    <a href={href} type="application/atom+xml">
+      {rotulo}
+    </a>
+  </p>
+</Quadro>

@@ -3,6 +3,7 @@
 // (a line per ICMS rate, with the states that use it), the price in the reader's state once they pick it, and the
 // cheapest product with the same dose and package. Prices come from the CMED list as published; a price is never
 // shown without its rate or its state next to it.
+import Acompanhar from "../../components/Acompanhar.astro";
 import Quadro from "../../components/Quadro.astro";
 import Selo from "../../components/Selo.astro";
 import SeuEstado from "../../components/SeuEstado.astro";
@@ -20,6 +21,7 @@ import {
 import { CMED_DADOS_URL } from "../../lib/config";
 import { fmtStamp } from "../../lib/format";
 import {
+  acompanharSubstancia,
   aliquotaRotulo,
   avisoComercializacao,
   classeSemCodigo,
@@ -125,7 +127,12 @@ const breadcrumb = {
 };
 ---
 
-<Base title={`${p.produto}: preço máximo`} description={descricao} structured={[breadcrumb]}>
+<Base
+  title={`${p.produto}: preço máximo`}
+  description={descricao}
+  structured={[breadcrumb]}
+  feed={p.feed_substancia ? { href: p.feed_substancia, title: `${p.substancia}: preços da CMED` } : undefined}
+>
   <p class="trilha">
     <a href="/remedios/">Remédios</a> › <a href={`/remedios/substancia/${substanciaSlug}/`}>{p.substancia}</a>
   </p>
@@ -209,6 +216,15 @@ const breadcrumb = {
       <li>Registro na ANVISA: {p.registro_produto}</li>
     </ul>
   </section>
+
+  {p.feed_substancia && (
+    <Acompanhar
+      titulo="Acompanhar os preços"
+      avisa={acompanharSubstancia(p.substancia)}
+      href={p.feed_substancia}
+      rotulo={`Endereço do feed de ${p.substancia}`}
+    />
+  )}
 
   <section class="fontes">
     <h2>Fontes</h2>

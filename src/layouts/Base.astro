@@ -13,8 +13,10 @@ interface Props {
   noindex?: boolean;
   /** extra JSON-LD objects for the page, appended to the site's own */
   structured?: Record<string, unknown>[];
+  /** the page's Atom feed: a feed reader given the page address finds it here */
+  feed?: { href: string; title: string } | undefined;
 }
-const { title, description = DESCRIPTION, noindex = false, structured = [] } = Astro.props;
+const { title, description = DESCRIPTION, noindex = false, structured = [], feed } = Astro.props;
 const fullTitle = pageTitle(title);
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
 const ogImage = new URL("/og.png", Astro.site).href;
@@ -67,6 +69,7 @@ const graph = {
     )}
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="sitemap" href="/sitemap-index.xml" />
+    {feed && <link rel="alternate" type="application/atom+xml" title={feed.title} href={feed.href} />}
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content={NAME} />
     <meta property="og:locale" content="pt_BR" />

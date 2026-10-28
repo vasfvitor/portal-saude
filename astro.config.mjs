@@ -10,5 +10,6 @@ export default defineConfig({
   // CSS and scripts as shared files, cached once, instead of inlined in each of the ~10,700 pages
   build: { format: "directory", inlineStylesheets: "never" },
   vite: { build: { assetsInlineLimit: 0 } },
-  integrations: [sitemap({ filter: (page) => !page.endsWith("/404/") })],
+  // out of the sitemap: the error page and the /plano/<registro>/ shortcuts (redirects to the full page)
+  integrations: [sitemap({ filter: (page) => !page.endsWith("/404/") && !/\/plano\/\d{6}\/$/.test(page) })],
 });

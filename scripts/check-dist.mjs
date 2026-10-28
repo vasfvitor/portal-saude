@@ -1,6 +1,7 @@
 // Checks on the built site (run after `pnpm build`): the only client JavaScript is the search on /plano/ and
 // /remedios/ and the "seu estado" picker on the medicine and substância pages, no e-mail address is published,
-// every internal link resolves, and every operator and medicine in the search indexes has its page. Exits 1 with
+// every internal link resolves, and every operator and medicine in the search indexes has its page (and every
+// operator its /plano/<registro>/ shortcut). Exits 1 with
 // the list of problems.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -52,6 +53,9 @@ for (const [indice, kind] of [
   counts[kind] = items.length;
   for (const { h } of items) {
     if (!resolves(h)) problems.push(`${kind} page missing: ${h}`);
+    // ans-feeds links every entry of the operator's feed to this shortcut
+    const atalho = kind === "operator" && `/plano/${h.split("/")[2].slice(0, 6)}/`;
+    if (atalho && !resolves(atalho)) problems.push(`operator shortcut missing: ${atalho}`);
   }
 }
 

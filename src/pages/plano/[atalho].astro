@@ -1,0 +1,39 @@
+---
+// /plano/<registro>/: a short, stable address that sends the reader to the operator's page. Every entry of the
+// operator's feed on ans-feeds links here, so it must keep working whatever happens to the slug. A meta refresh
+// (no script, no server redirect on GitHub Pages); out of search engines and of the sitemap.
+import { DADOS_URL, META_URL } from "../../lib/config";
+import { atalhoOperadora, nomeExibido, operadorasForBuild, paginaOperadora } from "../../lib/operadoras";
+
+export async function getStaticPaths() {
+  const ops = await operadorasForBuild(DADOS_URL, META_URL);
+  return ops.map((op) => ({
+    params: { atalho: atalhoOperadora(op.registro).split("/")[2]! },
+    props: { destino: paginaOperadora(op), nome: nomeExibido(op) },
+  }));
+}
+
+interface Props {
+  destino: string;
+  nome: string;
+}
+const { destino, nome } = Astro.props;
+const url = new URL(destino, Astro.site).href;
+---
+
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{nome}</title>
+    <meta name="robots" content="noindex" />
+    <link rel="canonical" href={url} />
+    <meta http-equiv="refresh" content={`0; url=${destino}`} />
+  </head>
+  <body>
+    <p>
+      <a href={destino}>{nome}</a>
+    </p>
+  </body>
+</html>

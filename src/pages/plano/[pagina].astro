@@ -1,6 +1,7 @@
 ---
 // One page per operator: what happened to it, then each comparison as a sentence with its base, then the
 // sources. Every number comes from the ans-feeds record; nothing is typed here.
+import Acompanhar from "../../components/Acompanhar.astro";
 import Frase from "../../components/Frase.astro";
 import Quadro from "../../components/Quadro.astro";
 import Serie from "../../components/Serie.astro";
@@ -8,6 +9,7 @@ import Base from "../../layouts/Base.astro";
 import { ANS_CANAIS_URL, DADOS_URL, DISQUE_ANS, DISQUE_ANS_SURDOS, META_URL } from "../../lib/config";
 import { fmtClientes, fmtDate } from "../../lib/format";
 import {
+  ACOMPANHAR_OPERADORA,
   cobertura,
   fraseAnoAnterior,
   fraseCancelamento,
@@ -60,7 +62,12 @@ const breadcrumb = {
 };
 ---
 
-<Base title={titulo} description={descricao} structured={[breadcrumb]}>
+<Base
+  title={titulo}
+  description={descricao}
+  structured={[breadcrumb]}
+  feed={op.feed ? { href: op.feed, title: `${titulo}: avisos da ANS` } : undefined}
+>
   <p class="trilha">
     <a href="/plano/">Plano de saúde</a> › {titulo}
   </p>
@@ -173,6 +180,15 @@ const breadcrumb = {
         ))}
       </ul>
     </section>
+  )}
+
+  {op.feed && (
+    <Acompanhar
+      titulo="Acompanhar esta operadora"
+      avisa={ACOMPANHAR_OPERADORA}
+      href={op.feed}
+      rotulo="Endereço do feed desta operadora"
+    />
   )}
 
   <section class="fontes">

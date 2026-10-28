@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { backoff, getJson } from "../src/lib/fetch";
 import {
+  atalhoOperadora,
   indiceForBuild,
   operadorasForBuild,
   paginaOperadora,
@@ -41,8 +42,23 @@ describe("parsers", () => {
     expect(() => parseOperadora({ ...base, situacao: "cancelada", cancelamento: null })).toThrow(/cancelamento/);
     expect(() => parseOperadora({ ...base, reclamacoes: "x" })).toThrow(/reclamacoes/);
     expect(() => parseIndice([])).toThrow(/empty/);
+    expect(() => parseOperadora({ ...base, feed: "http://x.test/a.xml" })).toThrow(/feed/);
+    expect(() => parseOperadora({ ...base, feed: "https://x.test/a.json" })).toThrow(/feed/);
     expect(parseMeta(fixture("meta.json")).date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(() => parseMeta({ date: "23/10/2026" })).toThrow(/date/);
+  });
+});
+
+describe("feed", () => {
+  it("is optional, so the page only offers it once ans-feeds publishes it", () => {
+    const base = fixture("dados/operadora/005711.json") as Record<string, unknown>;
+    expect(parseOperadora({ ...base, feed: undefined }).feed).toBeNull();
+    const url = "https://ans.feeds.abelhaninja.de/operadora/005711.xml";
+    expect(parseOperadora({ ...base, feed: url }).feed).toBe(url);
+  });
+
+  it("entries link to a shortcut that does not depend on the slug", () => {
+    expect(atalhoOperadora("005711")).toBe("/plano/005711/");
   });
 });
 

@@ -17,6 +17,10 @@ the sources and the rebuild schedule; a git-ignored `NOTES.local.md` holds pendi
   page never states one price for a state on its own.
 - The build never reads the per-entity files (`operadora/<r>.json`, `produto/<r>.json`): thousands of requests
   in one build made GitHub Pages answer 429. Each bundle is checked against its index, field by field.
+- "Acompanhar": `feed` (operator) and `feed_substancia` (product) come from the bundles and are optional; without
+  them the box and the `<link rel="alternate">` are left out. The substância feed URL is read, never built: its
+  slug differs from ours. `/plano/<registro>/` (`src/pages/plano/[atalho].astro`) must keep working: every entry
+  of the ans-feeds operator feeds links there, and `check:dist` checks one exists per operator.
 - `src/lib/icms.ts` is the only hand-curated table: the default ICMS rate of each state for medicines, each
   row with a primary source and the day it was checked. Any change needs a source; the user reviews it.
   Review it every 6 months from the last `conferido_em` (2026-10-23, so by 2027-04), or as soon as a CMED

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { fmtMoney } from "../src/lib/format";
 import {
+  acompanharSubstancia,
   aliquotaRotulo,
   avisoComercializacao,
   classeSemCodigo,
@@ -48,5 +49,13 @@ describe("remedios sentences", () => {
     expect(classeSemCodigo("J1G1 - FLUORQUINOLONAS ORAIS")).toBe("FLUORQUINOLONAS ORAIS");
     expect(classeSemCodigo("ANALGÉSICOS")).toBe("ANALGÉSICOS");
     expect(avisoComercializacao(produto("151670007").comercializado)).toMatch(/em falta ou fora das farmácias/);
+  });
+});
+
+describe("acompanhar", () => {
+  it("names the substância the feed covers", () => {
+    expect(acompanharSubstancia("CLORIDRATO DE CIPROFLOXACINO")).toContain(
+      "algum remédio com CLORIDRATO DE CIPROFLOXACINO",
+    );
   });
 });

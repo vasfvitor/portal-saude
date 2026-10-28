@@ -151,6 +151,13 @@ export function fraseAnoAnterior(serie: PontoSerie[]): string | null {
   return ultimo.indice > antes.indice ? `Piorou em um ano: ${era}.` : `Melhorou em um ano: ${era}.`;
 }
 
+/** "Acompanhar" boxes: what a feed reader is, said once, for people who never used one. */
+export const LEITOR_DE_FEED =
+  "Um leitor de feed (Feedly, Inoreader, NetNewsWire, Thunderbird) junta as novidades de vários sites num lugar só. Para usar, copie o endereço do link abaixo e cole no leitor.";
+
+export const ACOMPANHAR_OPERADORA =
+  "O feed avisa quando a ANS publica algo novo sobre esta operadora: as reclamações de cada trimestre, a nota anual, um cancelamento, um regime especial ou uma portabilidade.";
+
 const SOBRE_IDSS =
   "A ANS avalia cada operadora todo ano: qualidade do atendimento, acesso a médicos e exames, saúde financeira e gestão.";
 

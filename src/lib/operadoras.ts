@@ -4,7 +4,7 @@
 
 import { getJson, once } from "./fetch";
 import { slug } from "./slug";
-import { conferirComIndice, list, num, numOrNull, obj, str, strOrNull } from "./validar";
+import { conferirComIndice, feedOrNull, list, num, numOrNull, obj, str, strOrNull } from "./validar";
 
 export type Situacao = "ativa" | "cancelada";
 
@@ -73,6 +73,8 @@ export interface Operadora extends ItemIndice {
   eventos: EventoCurto[];
   fontes: Record<string, string>;
   fora: string[];
+  /** the operator's Atom feed on ans-feeds; its entries link to /plano/<registro>/ */
+  feed: string | null;
 }
 
 export interface Meta {
@@ -193,6 +195,7 @@ export function parseOperadora(raw: unknown): Operadora {
       ),
     ),
     fora: list(o.fora, `${where} fora`).filter((x): x is string => typeof x === "string"),
+    feed: feedOrNull(o, "feed", where),
   };
 }
 
@@ -263,3 +266,7 @@ export function nomeExibido(o: { nome: string; fantasia: string | null }): strin
 
 export const paginaOperadora = (o: { registro: string; nome: string }): string =>
   `/plano/${o.registro}-${slug(o.nome)}/`;
+
+/** Short address that redirects to the operator's page. ans-feeds links every feed entry here, so it must
+ * keep working whatever happens to the slug. */
+export const atalhoOperadora = (registro: string): string => `/plano/${registro}/`;
