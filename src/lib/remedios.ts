@@ -50,6 +50,51 @@ export interface Produto extends Omit<ItemProduto, "apresentacoes"> {
   apresentacoes: Apresentacao[];
   /** the substância's Atom feed on anvisa-feeds (its slug differs from ours, so it is read, not built) */
   feed_substancia: string | null;
+  /** the registration at ANVISA; null when the data does not say (source not read, or registro unknown) */
+  situacao: { ativo: boolean; vencimento: string | null } | null;
+  /** ANVISA measures citing the registro, newest first; empty when none or when the data does not say */
+  medidas: Medida[];
+}
+
+export interface Medida {
+  /** AAAA-MM-DD, the latest publication */
+  data: string;
+  /** Suspensão, Recolhimento, Proibição… as ANVISA writes them */
+  acoes: string[];
+  /** Comercialização, Uso, Propaganda, Voluntário… */
+  atividades: string[];
+  processo: string | null;
+}
+
+const MES = /^\d{4}-\d{2}$/;
+const DIA = /^\d{4}-\d{2}-\d{2}$/;
+const textos = (v: unknown, where: string): string[] =>
+  list(v, where).map((x) => {
+    if (typeof x !== "string") throw new Error(`${where}: not a string`);
+    return x;
+  });
+
+function parseSituacao(o: Obj, where: string): Produto["situacao"] {
+  if (o.situacao === undefined || o.situacao === null) return null;
+  const s = obj(o.situacao, `${where} situacao`);
+  const vencimento = strOrNull(s, "vencimento", where);
+  if (vencimento !== null && !MES.test(vencimento)) throw new Error(`${where}: bad vencimento ${vencimento}`);
+  return { ativo: bool(s, "ativo", where), vencimento };
+}
+
+function parseMedidas(o: Obj, where: string): Medida[] {
+  if (o.medidas === undefined) return [];
+  return list(o.medidas, `${where} medidas`).map((x) => {
+    const m = obj(x, `${where} medidas`);
+    const data = str(m, "data", where);
+    if (!DIA.test(data)) throw new Error(`${where}: bad medida date ${data}`);
+    return {
+      data,
+      acoes: textos(m.acoes, `${where} acoes`),
+      atividades: textos(m.atividades, `${where} atividades`),
+      processo: strOrNull(m, "processo", where),
+    };
+  });
 }
 
 export interface IndiceProdutos {
@@ -136,6 +181,8 @@ export function parseProduto(raw: unknown): Produto {
     publicado_em: str(o, "publicado_em", where),
     apresentacoes,
     feed_substancia: feedOrNull(o, "feed_substancia", where),
+    situacao: parseSituacao(o, where),
+    medidas: parseMedidas(o, where),
   };
 }
 

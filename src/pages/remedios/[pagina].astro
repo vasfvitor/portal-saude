@@ -27,10 +27,14 @@ import {
   avisoComercializacao,
   classeSemCodigo,
   faixaPreco,
+  fraseMedida,
+  fraseRegistro,
   isentoDeIcms,
+  MEDIDAS_SEM_LOTE,
   PRECO_MAXIMO,
   precoMaximo,
   precosPorAliquota,
+  REGISTRO_INATIVO,
   SE_COBRAREM_MAIS,
   tarjaExplicada,
   TROCA_NA_FARMACIA,
@@ -157,6 +161,11 @@ const breadcrumb = {
     {p.tipo_produto && <Selo>{p.tipo_produto}</Selo>}
   </p>
 
+  {p.situacao && !p.situacao.ativo && (
+    <Quadro tipo="atencao">
+      <p>{REGISTRO_INATIVO}</p>
+    </Quadro>
+  )}
   {aviso && (
     <Quadro tipo="atencao">
       <p>{aviso}</p>
@@ -245,9 +254,24 @@ const breadcrumb = {
         genéricos
       </li>
       {p.classe_terapeutica && <li>Grupo de remédios: {classeSemCodigo(p.classe_terapeutica)}</li>}
-      <li>Registro na ANVISA: {p.registro_produto}</li>
+      <li>{fraseRegistro(p.registro_produto, p.situacao)}</li>
     </ul>
   </section>
+
+  {p.medidas.length > 0 && (
+    <section>
+      <h2>Medidas da ANVISA</h2>
+      <ul>
+        {p.medidas.map((m) => (
+          <li>
+            {fraseMedida(m)}
+            {m.processo && <span class="muted"> Processo {m.processo}.</span>}
+          </li>
+        ))}
+      </ul>
+      <p class="muted">{MEDIDAS_SEM_LOTE}</p>
+    </section>
+  )}
 
   {p.feed_substancia && (
     <Acompanhar

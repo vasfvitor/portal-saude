@@ -1,8 +1,8 @@
 // Plain pt-BR for the CMED prices. The price is a ceiling set by the government, never a price we quote:
 // the pharmacy may charge less. Every price shown carries its ICMS rate next to it.
-import { fmtMoney } from "./format";
+import { fmtDate, fmtMes, fmtMoney } from "./format";
 import { TABELA } from "./icms";
-import type { Aliquota, Apresentacao } from "./remedios";
+import type { Aliquota, Apresentacao, Medida, Produto } from "./remedios";
 
 const TIPOS: Record<string, string> = {
   Genérico: "Genérico: mesma substância, dose e forma do remédio de referência, vendido pelo nome da substância.",
@@ -62,6 +62,36 @@ export const PRECO_MAXIMO =
 /** When a page offers a cheaper product: what the law lets the pharmacist do (Lei 9.787/1999), and nothing more. */
 export const TROCA_NA_FARMACIA =
   "Pela lei, o farmacêutico pode trocar o remédio de referência pelo genérico com a mesma substância e dose, se o médico não tiver proibido na receita. Para qualquer outra troca, pergunte ao farmacêutico ou ao médico.";
+
+/** The registration line in "Sobre este remédio"; null when the data does not say. */
+export function fraseRegistro(registro: string, s: Produto["situacao"]): string {
+  if (!s) return `Registro na ANVISA: ${registro}`;
+  if (!s.ativo) return `Registro na ANVISA: ${registro}, inativo`;
+  return s.vencimento
+    ? `Registro na ANVISA: ${registro}, ativo, válido até ${fmtMes(s.vencimento)}`
+    : `Registro na ANVISA: ${registro}, ativo`;
+}
+
+/** The warning at the top of a product whose registration is inactive but which is still on the price list. */
+export const REGISTRO_INATIVO =
+  "O registro deste remédio está inativo na ANVISA, mas ele ainda aparece na lista de preços da CMED. Se você usa este remédio, pergunte ao farmacêutico ou ao médico se ele continua à venda.";
+
+const juntar = (xs: string[]): string =>
+  xs.length <= 1 ? (xs[0] ?? "") : `${xs.slice(0, -1).join(", ")} e ${xs[xs.length - 1]}`;
+
+/** "06/10/2026: recolhimento e suspensão de comercialização, distribuição e uso, a pedido da própria empresa."
+ * "Voluntário" is how ANVISA marks a recall the company started; it is said in words, not listed. */
+export function fraseMedida(m: Medida): string {
+  const acoes = juntar(m.acoes.map((a) => a.toLowerCase()));
+  const voluntario = m.atividades.includes("Voluntário");
+  const atividades = juntar(m.atividades.filter((a) => a !== "Voluntário").map((a) => a.toLowerCase()));
+  const sobre = atividades ? ` de ${atividades}` : "";
+  return `${fmtDate(m.data)}: ${acoes}${sobre}${voluntario ? ", a pedido da própria empresa" : ""}.`;
+}
+
+/** Below the list of measures: the source has no lot number. */
+export const MEDIDAS_SEM_LOTE =
+  "A ANVISA publica essas medidas sem o lote nos dados abertos: uma medida pode valer só para alguns lotes, não para o remédio todo. Se você tem uma caixa em casa, mostre o número do lote ao farmacêutico.";
 
 /** Next to the list date on the medicine pages: when the prices change next. */
 export const ATUALIZACAO_CMED =

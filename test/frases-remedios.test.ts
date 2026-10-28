@@ -7,6 +7,8 @@ import {
   avisoComercializacao,
   classeSemCodigo,
   faixaPreco,
+  fraseMedida,
+  fraseRegistro,
   precoMaximo,
   precosPorAliquota,
   tarjaExplicada,
@@ -57,5 +59,49 @@ describe("acompanhar", () => {
     expect(acompanharSubstancia("CLORIDRATO DE CIPROFLOXACINO")).toContain(
       "algum remédio com CLORIDRATO DE CIPROFLOXACINO",
     );
+  });
+});
+
+describe("registration and ANVISA measures", () => {
+  it("says the registration as the data gives it, and nothing when it does not", () => {
+    expect(fraseRegistro("116180267", { ativo: true, vencimento: "2028-06" })).toBe(
+      "Registro na ANVISA: 116180267, ativo, válido até junho de 2028",
+    );
+    expect(fraseRegistro("103110182", { ativo: false, vencimento: "2021-01" })).toBe(
+      "Registro na ANVISA: 103110182, inativo",
+    );
+    expect(fraseRegistro("1", null)).toBe("Registro na ANVISA: 1");
+  });
+
+  it("words a measure plainly, and a voluntary recall as the company's own", () => {
+    // LIZBI, 06/10/2026, in the anvisa-api medidas table
+    expect(
+      fraseMedida({
+        data: "2026-10-06",
+        acoes: ["Recolhimento", "Suspensão"],
+        atividades: ["Comercialização", "Distribuição", "Uso", "Voluntário"],
+        processo: "25351104206202604",
+      }),
+    ).toBe("06/10/2026: recolhimento e suspensão de comercialização, distribuição e uso, a pedido da própria empresa.");
+    expect(fraseMedida({ data: "2025-01-02", acoes: ["Proibição"], atividades: ["Propaganda"], processo: null })).toBe(
+      "02/01/2025: proibição de propaganda.",
+    );
+  });
+
+  it("reads the optional fields, and older data without them as unknown", () => {
+    const base = JSON.parse(
+      readFileSync(new URL("./fixtures/cmed/produto/170560103.json", import.meta.url), "utf-8"),
+    ) as Record<string, unknown>;
+    const antigo = parseProduto(base);
+    expect(antigo.situacao).toBeNull();
+    expect(antigo.medidas).toEqual([]);
+    const novo = parseProduto({
+      ...base,
+      situacao: { ativo: false, vencimento: null },
+      medidas: [{ data: "2023-06-07", acoes: ["Recolhimento"], atividades: ["Uso"], processo: "1" }],
+    });
+    expect(novo.situacao).toEqual({ ativo: false, vencimento: null });
+    expect(novo.medidas[0]!.acoes).toEqual(["Recolhimento"]);
+    expect(() => parseProduto({ ...base, situacao: { ativo: true, vencimento: "06/2028" } })).toThrow(/vencimento/);
   });
 });
