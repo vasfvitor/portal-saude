@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  fraseMetaRn623,
   fraseAnoAnterior,
   fraseCancelamento,
   fraseIdss,
@@ -196,5 +197,23 @@ describe("cancellation reasons", () => {
     expect(fraseCancelamento({ cancelamento: { data: "2026-01-02", motivo: "Motivo novo" } })).toBe(
       "Registro cancelado em 02/01/2026: Motivo novo.",
     );
+  });
+});
+
+describe("RN 623 target", () => {
+  const base = {
+    trimestre: "3T2026",
+    meta: { "médico-hospitalar": 2.4, odontológica: 0.6 },
+    ate_reclamacoes: { "médico-hospitalar": 3, odontológica: 2 },
+  };
+  it("says in or out, with both limits, and that the list comes later", () => {
+    const fora = fraseMetaRn623({ ...base, atingiu: false, listas: [] });
+    expect(fora).toContain("de julho a setembro de 2026, a operadora ficou fora da meta");
+    expect(fora).toContain("plano médico-hospitalar até 2,4 reclamações por mês para cada 100 mil clientes, ou até 3");
+    expect(fora).toContain("plano odontológico até 0,6");
+    expect(fora).toContain("algumas semanas depois");
+    const dentro = fraseMetaRn623({ ...base, atingiu: true, listas: ["https://x.test/l.pdf"] });
+    expect(dentro).toContain("ficou dentro da meta");
+    expect(dentro).toContain("já publicou a lista oficial");
   });
 });

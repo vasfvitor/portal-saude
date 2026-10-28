@@ -37,6 +37,10 @@ export function numOrNull(o: Obj, k: string, where: string): number | null {
 export function numOrAbsent(o: Obj, k: string, where: string): number | null {
   return o[k] === undefined ? null : numOrNull(o, k, where);
 }
+/** The same for a text field. */
+export function strOrAbsent(o: Obj, k: string, where: string): string | null {
+  return o[k] === undefined ? null : strOrNull(o, k, where);
+}
 /** The same for a flag: absent reads as null, so the page can tell "not flagged" from "not published yet". */
 export function boolOrAbsent(o: Obj, k: string, where: string): boolean | null {
   return o[k] === undefined ? null : bool(o, k, where);

@@ -2,7 +2,7 @@
 // a risk label of our own. "Típica" in the text is the operator in the middle of its peers (the median), and
 // each `detalhe` says so in words. `tom` only drives styling and is never shown as words.
 import { contar, fmtClientes, fmtDate, fmtDec, fmtInt, fmtMes, fmtPct, fmtReais, fmtTrimestre } from "./format";
-import type { Idss, Operadora, PontoSerie, Reclamacoes, Ressarcimento } from "./operadoras";
+import type { Idss, MetaRn623, Operadora, PontoSerie, Reclamacoes, Ressarcimento } from "./operadoras";
 
 export type Tom = "favoravel" | "neutro" | "desfavoravel" | "sem-base";
 
@@ -132,6 +132,22 @@ export function fraseReclamacoes(r: Reclamacoes): Frase {
       unidade: "Reclamações por mês a cada 100 mil clientes",
     },
   };
+}
+
+/** The RN 623 complaints target in the latest quarter, as one sentence with its limits and where the number
+ * comes from. The ANS list itself comes out weeks after the quarter; the page links it once it exists. */
+export function fraseMetaRn623(m: MetaRn623): string {
+  const limites = Object.keys(m.meta)
+    .map(
+      (c) =>
+        `${c === "odontológica" ? "plano odontológico" : "plano médico-hospitalar"} até ${fmtDec(m.meta[c]!, 1)} reclamações por mês para cada 100 mil clientes, ou até ${fmtInt(m.ate_reclamacoes[c]!)} no trimestre`,
+    )
+    .join("; ");
+  const resultado = m.atingiu ? "ficou dentro" : "ficou fora";
+  const lista = m.listas.length
+    ? "A ANS já publicou a lista oficial deste trimestre."
+    : "A ANS publica a lista oficial algumas semanas depois do fim do trimestre.";
+  return `Meta de reclamações da ANS (RN 623/2024): ${fmtTrimestre(m.trimestre)}, a operadora ${resultado} da meta (${limites}). A conta é deste site, com os números da ANS. ${lista}`;
 }
 
 /** The same quarter one year earlier, when the series has it: better, worse or about the same. */

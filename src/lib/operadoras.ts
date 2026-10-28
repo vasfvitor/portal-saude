@@ -4,7 +4,19 @@
 
 import { getJson, once } from "./fetch";
 import { slug } from "./slug";
-import { conferirComIndice, feedOrNull, list, num, numOrAbsent, numOrNull, obj, str, strOrNull } from "./validar";
+import {
+  bool,
+  conferirComIndice,
+  feedOrNull,
+  list,
+  num,
+  numOrAbsent,
+  numOrNull,
+  obj,
+  str,
+  strOrAbsent,
+  strOrNull,
+} from "./validar";
 
 export type Situacao = "ativa" | "cancelada";
 
@@ -35,6 +47,18 @@ export interface Reclamacoes {
   mediana_mesmo_porte: number | null;
   operadoras_mesmo_porte: number;
   serie: PontoSerie[];
+}
+
+/** The RN 623/2024 complaints target in the latest quarter, by ans-feeds' arithmetic on the IGR. */
+export interface MetaRn623 {
+  trimestre: string;
+  atingiu: boolean;
+  /** coverage -> the target, complaints per month per 100,000 clients */
+  meta: Record<string, number>;
+  /** coverage -> the most complaints in the quarter that still meet it */
+  ate_reclamacoes: Record<string, number>;
+  /** the official list PDFs of that quarter, once the ANS publishes them */
+  listas: string[];
 }
 
 export interface Idss {
@@ -77,6 +101,9 @@ export interface Operadora extends ItemIndice {
   fora: string[];
   /** the operator's Atom feed on ans-feeds; its entries link to /plano/<registro>/ */
   feed: string | null;
+  /** month of `beneficiarios` ("2026-09"); null on an older build of the data */
+  beneficiarios_em: string | null;
+  meta_rn623: MetaRn623 | null;
 }
 
 export interface Meta {
@@ -199,6 +226,29 @@ export function parseOperadora(raw: unknown): Operadora {
     ),
     fora: list(o.fora, `${where} fora`).filter((x): x is string => typeof x === "string"),
     feed: feedOrNull(o, "feed", where),
+    beneficiarios_em: strOrAbsent(o, "beneficiarios_em", where),
+    meta_rn623: parseMeta623(o.meta_rn623, `${where} meta_rn623`),
+  };
+}
+
+function parseMeta623(raw: unknown, where: string): MetaRn623 | null {
+  if (raw === undefined || raw === null) return null;
+  const m = obj(raw, where);
+  const numeros = (v: unknown, k: string): Record<string, number> =>
+    Object.fromEntries(
+      Object.entries(obj(v, `${where} ${k}`)).map(([c, x]) => {
+        if (typeof x !== "number" || !Number.isFinite(x)) throw new Error(`${where}: bad ${k} ${c}`);
+        return [c, x];
+      }),
+    );
+  return {
+    trimestre: str(m, "trimestre", where),
+    atingiu: bool(m, "atingiu", where),
+    meta: numeros(m.meta, "meta"),
+    ate_reclamacoes: numeros(m.ate_reclamacoes, "ate_reclamacoes"),
+    listas: list(m.listas, `${where} listas`).filter(
+      (x): x is string => typeof x === "string" && x.startsWith("https://"),
+    ),
   };
 }
 

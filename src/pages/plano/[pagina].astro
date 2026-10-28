@@ -7,7 +7,7 @@ import Quadro from "../../components/Quadro.astro";
 import Serie from "../../components/Serie.astro";
 import Base from "../../layouts/Base.astro";
 import { ANS_CANAIS_URL, DADOS_URL, DISQUE_ANS, DISQUE_ANS_SURDOS, META_URL } from "../../lib/config";
-import { fmtClientes, fmtDate } from "../../lib/format";
+import { fmtClientes, fmtDate, fmtMes } from "../../lib/format";
 import {
   ACOMPANHAR_OPERADORA,
   ATUALIZACAO_ANS,
@@ -15,6 +15,7 @@ import {
   fraseAnoAnterior,
   fraseCancelamento,
   fraseIdss,
+  fraseMetaRn623,
   frasePortabilidade,
   fraseReclamacoes,
   fraseRessarcimento,
@@ -78,7 +79,13 @@ const breadcrumb = {
     <span>Registro ANS {op.registro}</span>
     <span>{op.modalidade}</span>
     {local && <span>{local}</span>}
-    {op.beneficiarios !== null && <span>{fmtClientes(op.beneficiarios)}</span>}
+    {op.beneficiarios !== null && (
+      <span>
+        {op.beneficiarios_em
+          ? `${fmtClientes(op.beneficiarios)} em ${fmtMes(op.beneficiarios_em)}`
+          : fmtClientes(op.beneficiarios)}
+      </span>
+    )}
   </p>
 
   {cancelamento && (
@@ -140,6 +147,19 @@ const breadcrumb = {
         </Frase>
       </>
     ))}
+    {op.meta_rn623 && (
+      <p>
+        {fraseMetaRn623(op.meta_rn623)}
+        {op.meta_rn623.listas.map((url, i) => (
+          <>
+            {" "}
+            <a href={url}>
+              {`Lista oficial${op.meta_rn623!.listas.length > 1 ? ` ${i + 1}` : ""} da ANS deste trimestre (PDF)`}
+            </a>
+          </>
+        ))}
+      </p>
+    )}
   </section>
 
   <section id="nota">

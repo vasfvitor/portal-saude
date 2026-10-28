@@ -57,6 +57,24 @@ describe("feed", () => {
     expect(parseOperadora({ ...base, feed: url }).feed).toBe(url);
   });
 
+  it("reads the RN 623 target and the client month as optional fields", () => {
+    const base = fixture("dados/operadora/005711.json") as Record<string, unknown>;
+    const antigo = parseOperadora({ ...base, meta_rn623: undefined, beneficiarios_em: undefined });
+    expect(antigo.meta_rn623).toBeNull();
+    expect(antigo.beneficiarios_em).toBeNull();
+    const meta = {
+      trimestre: "3T2026",
+      atingiu: false,
+      meta: { "médico-hospitalar": 2.4 },
+      ate_reclamacoes: { "médico-hospitalar": 3 },
+      listas: [],
+    };
+    const novo = parseOperadora({ ...base, meta_rn623: meta, beneficiarios_em: "2026-09" });
+    expect(novo.meta_rn623?.meta["médico-hospitalar"]).toBe(2.4);
+    expect(novo.beneficiarios_em).toBe("2026-09");
+    expect(() => parseOperadora({ ...base, meta_rn623: { ...meta, atingiu: "não" } })).toThrow(/atingiu/);
+  });
+
   it("entries link to a shortcut that does not depend on the slug", () => {
     expect(atalhoOperadora("005711")).toBe("/plano/005711/");
   });
