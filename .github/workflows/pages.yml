@@ -2,15 +2,17 @@ name: Publish site
 
 # The pages are built from the operator data that ans-feeds publishes every day (its workflow runs at 10:30
 # UTC) and from the monthly CMED price list that anvisa-feeds publishes. The cron passes after the ans-feeds
-# run and twice more, and only publishes when the ans-feeds data date or the CMED list stamp moved against what
-# the site was built from (/build.json). Push and manual dispatch always publish.
+# run and twice more, and only publishes when the ans-feeds data date, the CMED list stamp or the ANVISA
+# registration build behind cmed/dados moved against what the site was built from (/build.json). Push and
+# manual dispatch always publish. The producers' scheduled runs start late (their bot commits land between
+# 13:00 and 16:00 UTC), so the passes sit after that window.
 on:
   push:
     branches: [main]
   schedule:
-    - cron: "15 11 * * *" # after the ans-feeds snapshot and build
-    - cron: "15 15 * * *" # a late ans-feeds run
-    - cron: "15 21 * * *" # a manual ans-feeds run during the day
+    - cron: "15 13 * * *" # an early ans-feeds and anvisa-feeds run
+    - cron: "45 17 * * *" # their usual commit window has passed
+    - cron: "15 21 * * *" # a manual or very late run during the day
   workflow_dispatch:
 
 # Least privilege: nothing by default; each job asks for the scope it uses.
@@ -39,6 +41,7 @@ jobs:
           # the same as META_URL / CMED_DADOS_URL in src/lib/config.ts and `site` in astro.config.mjs
           META: https://ans.feeds.abelhaninja.de/meta.json
           CMED_META: https://anvisa.feeds.abelhaninja.de/meta.json
+          CMED_PRODUTOS: https://anvisa.feeds.abelhaninja.de/cmed/dados/produtos.json
           PUBLISHED: https://saude.abelhaninja.de/build.json
         run: |
           if [ "$EVENT" != schedule ]; then
@@ -48,13 +51,17 @@ jobs:
           # ?t= gets past the 600 s Pages cache; any failed read counts as a change (publish)
           dados=$(curl -fsS "$META?t=$(date +%s)" | jq -er .date) || dados=""
           cmed=$(curl -fsS "$CMED_META?t=$(date +%s)" | jq -er .cmed.stamp) || cmed=""
+          # the registration status and measures change daily, independently of the list stamp
+          situacao=$(curl -fsS "$CMED_PRODUTOS?t=$(date +%s)" | jq -er '.situacao_fonte.build_id // "none"') || situacao=""
           # plain http as a fallback while the Pages certificate is missing or being renewed
           site=$(curl -fsS "$PUBLISHED?t=$(date +%s)" || curl -fsS "${PUBLISHED/https:/http:}?t=$(date +%s)") || site=""
           site_dados=$(jq -er .dados_date <<<"$site" 2>/dev/null) || site_dados=""
           site_cmed=$(jq -er .cmed_stamp <<<"$site" 2>/dev/null) || site_cmed=""
-          echo "dados: ${dados:-?} / ${site_dados:-?} · cmed: ${cmed:-?} / ${site_cmed:-?}"
-          if [ -n "$dados" ] && [ "$dados" = "$site_dados" ] && [ -n "$cmed" ] && [ "$cmed" = "$site_cmed" ]; then
-            echo "unchanged: built from the data of $dados and the CMED list $cmed"
+          site_situacao=$(jq -er '.situacao_build // "none"' <<<"$site" 2>/dev/null) || site_situacao=""
+          echo "dados: ${dados:-?} / ${site_dados:-?} · cmed: ${cmed:-?} / ${site_cmed:-?} · situação: ${situacao:-?} / ${site_situacao:-?}"
+          if [ -n "$dados" ] && [ "$dados" = "$site_dados" ] && [ -n "$cmed" ] && [ "$cmed" = "$site_cmed" ] \
+            && [ -n "$situacao" ] && [ "$situacao" = "$site_situacao" ]; then
+            echo "unchanged: built from the data of $dados, the CMED list $cmed and the registration build $situacao"
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
