@@ -3,7 +3,7 @@
 // per regime, never per state. Only presentations sold in the last year are offered as the cheaper option.
 import { lerApresentacao, type ApresentacaoLida } from "./apresentacao";
 import { TABELA, type Regime } from "./icms";
-import type { Apresentacao, Produto } from "./remedios";
+import { pmcAplicavel, type Apresentacao, type Produto } from "./remedios";
 
 export const REGIMES: readonly Regime[] = ["p", "g"];
 
@@ -21,9 +21,9 @@ export const ehGenerico = (p: Produto): boolean => p.tipo_produto === "Genérico
  * form and quantity. The substância keeps two medicines with the same dose and package apart. */
 export const chaveComparacao = (p: Produto, lida: ApresentacaoLida): string => `${p.substancia}|${lida.chave}`;
 
-/** The price of a presentation of `p` in a regime, in centavos. */
+/** The price of a presentation of `p` in a regime, in centavos; exempt from ICMS, the 0% price everywhere. */
 export const precoNoRegime = (p: Produto, a: Apresentacao, regime: Regime): number | undefined =>
-  a.pmc[TABELA.noRegime(regime, ehGenerico(p))];
+  pmcAplicavel(a)[TABELA.noRegime(regime, ehGenerico(p))];
 
 /** Presentations sold in the last year with a price in the regime, grouped by key, cheapest first. */
 export function porChave(produtos: Produto[], regime: Regime): Map<string, Opcao[]> {

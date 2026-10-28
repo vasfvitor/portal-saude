@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { lerApresentacao } from "../src/lib/apresentacao";
 import { maisBarato, porChave, precoNoRegime, quantoMenos } from "../src/lib/comparar";
 import { aliquotaPorUf } from "../src/lib/icms";
-import { parseProduto, type Produto } from "../src/lib/remedios";
+import { parseProduto, pmcAplicavel, type Produto } from "../src/lib/remedios";
 
 const produto = (r: string): Produto =>
   parseProduto(JSON.parse(readFileSync(new URL(`./fixtures/cmed/produto/${r}.json`, import.meta.url), "utf-8")));
@@ -52,6 +52,21 @@ describe("same dose and package across brands", () => {
     expect(precoNoRegime(eurofarma, a, "g")).toBe(a.pmc["12"]);
     expect(precoNoRegime(cipro, cipro.apresentacoes[0]!, "g")).toBe(cipro.apresentacoes[0]!.pmc["18"]);
     expect(precoNoRegime(eurofarma, a, "p")).toBe(a.pmc["17"]);
+  });
+
+  it("a presentation exempt from ICMS costs its 0% price in every regime and every state", () => {
+    const a = { ...cipro.apresentacoes[0]!, icms_0: true };
+    expect(a.pmc["0"]).toBeDefined();
+    for (const regime of ["p", "g"] as const) expect(precoNoRegime(cipro, a, regime)).toBe(a.pmc["0"]);
+    const aplicavel = pmcAplicavel(a);
+    expect(new Set(Object.values(aplicavel))).toEqual(new Set([a.pmc["0"]]));
+    expect(Object.keys(aplicavel)).toEqual(Object.keys(a.pmc));
+    expect(pmcAplicavel(cipro.apresentacoes[0]!)).toBe(cipro.apresentacoes[0]!.pmc); // not exempt: unchanged
+  });
+
+  it("a flag the upstream has not published yet reads as null", () => {
+    // the fixtures predate restricao_hospitalar
+    expect(cipro.apresentacoes[0]!.restricao_hospitalar).toBeNull();
   });
 
   it("generics pay 12% in SP and MG, everything else the state's default", () => {

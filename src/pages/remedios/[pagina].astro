@@ -26,6 +26,7 @@ import {
   avisoComercializacao,
   classeSemCodigo,
   faixaPreco,
+  isentoDeIcms,
   PRECO_MAXIMO,
   precoMaximo,
   precosPorAliquota,
@@ -33,9 +34,17 @@ import {
   tarjaExplicada,
   TROCA_NA_FARMACIA,
   tipoExplicado,
+  USO_HOSPITALAR,
 } from "../../lib/frases-remedios";
 import { TABELA, type Regime } from "../../lib/icms";
-import { paginaProduto, produtosForBuild, slugsSubstancias, type Apresentacao, type Produto } from "../../lib/remedios";
+import {
+  paginaProduto,
+  pmcAplicavel,
+  produtosForBuild,
+  slugsSubstancias,
+  type Apresentacao,
+  type Produto,
+} from "../../lib/remedios";
 
 /** The cheapest product with the same dose and package, in one ICMS regime or in both (`regime` undefined). */
 interface Barato {
@@ -49,6 +58,8 @@ interface Barato {
   menos: number;
   /** offered because this presentation is not on sale, not because it is cheaper */
   alternativa: boolean;
+  /** the cheaper one is exempt from ICMS: one price in every state, shown without a rate */
+  isento: boolean;
 }
 
 export async function getStaticPaths() {
@@ -78,9 +89,10 @@ export async function getStaticPaths() {
           laboratorio: produto.laboratorio,
           tipo: produto.tipo_produto,
           href: paginaProduto(produto),
-          pmc: o.apresentacao.pmc,
+          pmc: pmcAplicavel(o.apresentacao),
           menos: quantoMenos(preco, o.preco),
           alternativa: !a.comercializado,
+          isento: o.apresentacao.icms_0,
         },
       ];
     });
@@ -157,43 +169,60 @@ const breadcrumb = {
   {p.apresentacoes.map((a, i) => {
     const lida = lerApresentacao(a.apresentacao);
     const faixa = faixaPreco(a, cols);
+    // exempt from ICMS: one ceiling for the country, so no line per state and nothing for the picker to swap
+    const isento = a.icms_0 ? precoMaximo(a.pmc, "0") : null;
     return (
       <section class="cartao" data-apres data-generico={marca}>
         <h2>{lida?.legivel ?? a.apresentacao}</h2>
         <p class="codigo">
           {lida && <>Como está na lista oficial: {a.apresentacao}</>}
           {!a.comercializado && <Selo tom="atencao">sem venda no último ano</Selo>}
+          {a.restricao_hospitalar && <Selo tom="atencao">uso hospitalar</Selo>}
         </p>
-        <p class="no-estado" data-so-com-estado>
-          No seu estado (<span data-uf-rotulo />
-          ): até <strong data-preco-da-lista>{faixa}</strong>
-        </p>
-        {faixa && (
-          <p class="faixa" data-so-sem-estado>
-            {faixa}
-          </p>
+        {a.restricao_hospitalar && <p>{USO_HOSPITALAR}</p>}
+        {isento ? (
+          <p class="faixa">{isentoDeIcms(isento)}</p>
+        ) : (
+          <>
+            <p class="no-estado" data-so-com-estado>
+              No seu estado (<span data-uf-rotulo />
+              ): até <strong data-preco-da-lista>{faixa}</strong>
+            </p>
+            {faixa && (
+              <p class="faixa" data-so-sem-estado>
+                {faixa}
+              </p>
+            )}
+            <details data-recolher open>
+              <summary>Preço máximo em cada estado</summary>
+              <ul class="linhas">
+                {cols
+                  .filter((k) => a.pmc[k] !== undefined)
+                  .map((k) => (
+                    <li data-aliquota={k}>
+                      <span class="ufs">{ufs.get(k)?.join(", ") ?? "nenhum estado como padrão"}</span>
+                      <span class="icms">ICMS {aliquotaRotulo(k)}</span>
+                      <strong>{precoMaximo(a.pmc, k)}</strong>
+                    </li>
+                  ))}
+              </ul>
+            </details>
+          </>
         )}
-        <details data-recolher open>
-          <summary>Preço máximo em cada estado</summary>
-          <ul class="linhas">
-            {cols
-              .filter((k) => a.pmc[k] !== undefined)
-              .map((k) => (
-                <li data-aliquota={k}>
-                  <span class="ufs">{ufs.get(k)?.join(", ") ?? "nenhum estado como padrão"}</span>
-                  <span class="icms">ICMS {aliquotaRotulo(k)}</span>
-                  <strong>{precoMaximo(a.pmc, k)}</strong>
-                </li>
-              ))}
-          </ul>
-        </details>
         {baratos[i]!.map((b) => (
           <p class="barato" data-so-regime={b.regime} data-generico={b.tipo === "Genérico" ? "1" : "0"}>
             <strong>{b.alternativa ? "Com venda no último ano" : "Opção mais barata"}</strong>, com a mesma dose e
             embalagem: <a href={b.href}>{b.produto}</a>
             {b.tipo && ` (${b.tipo.toLowerCase()}, ${b.laboratorio})`}, até{" "}
-            <span data-precos={precosPorAliquota(b.pmc)}>{precoMaximo(b.pmc, ref)}</span> (
-            <span data-uf-rotulo>{`ICMS ${aliquotaRotulo(ref)}`}</span>){b.menos >= 1 ? `: ${b.menos}% a menos.` : "."}
+            {b.isento ? (
+              <>{precoMaximo(b.pmc, ref)} (isento de ICMS, o mesmo em todos os estados)</>
+            ) : (
+              <>
+                <span data-precos={precosPorAliquota(b.pmc)}>{precoMaximo(b.pmc, ref)}</span> (
+                <span data-uf-rotulo>{`ICMS ${aliquotaRotulo(ref)}`}</span>)
+              </>
+            )}
+            {b.menos >= 1 ? `: ${b.menos}% a menos.` : "."}
           </p>
         ))}
       </section>

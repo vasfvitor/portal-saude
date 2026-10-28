@@ -3,7 +3,18 @@
 // upstream fails the build instead of publishing a wrong price. Prices are in centavos, per ICMS rate.
 import { getJson, once } from "./fetch";
 import { slug } from "./slug";
-import { bool, conferirComIndice, feedOrNull, list, num, obj, str, strOrNull, type Obj } from "./validar";
+import {
+  bool,
+  boolOrAbsent,
+  conferirComIndice,
+  feedOrNull,
+  list,
+  num,
+  obj,
+  str,
+  strOrNull,
+  type Obj,
+} from "./validar";
 
 /** ICMS rates in the CMED list, as the JSON keys spell them. */
 export const ALIQUOTAS = ["0", "12", "17", "17.5", "18", "19", "19.5", "20", "20.5", "21", "22", "22.5", "23"] as const;
@@ -25,9 +36,20 @@ export interface Apresentacao {
   eans: string[];
   regime_preco: string;
   comercializado: boolean;
+  /** the list marks it hospital-only (not sold in pharmacies); null before anvisa-feeds published the flag */
+  restricao_hospitalar: boolean | null;
+  /** exempt from ICMS: the 0% price is the ceiling in every state, and the taxed columns do not apply */
   icms_0: boolean;
   pmc: Partial<Record<Aliquota, number>>;
   pmc_alc: Partial<Record<Aliquota, number>>;
+}
+
+/** The prices that apply, per rate: for a presentation exempt from ICMS, the 0% price at every rate the list
+ * gives, so whatever the state, the page shows the exempt ceiling and never a taxed column. */
+export function pmcAplicavel(a: Pick<Apresentacao, "icms_0" | "pmc">): Apresentacao["pmc"] {
+  const isento = a.pmc["0"];
+  if (!a.icms_0 || isento === undefined) return a.pmc;
+  return Object.fromEntries(Object.keys(a.pmc).map((k) => [k, isento]));
 }
 
 export interface Produto extends Omit<ItemProduto, "apresentacoes"> {
@@ -109,6 +131,7 @@ export function parseProduto(raw: unknown): Produto {
       eans: list(a.eans, `${where} eans`).filter((e): e is string => typeof e === "string"),
       regime_preco: str(a, "regime_preco", where),
       comercializado: bool(a, "comercializado", where),
+      restricao_hospitalar: boolOrAbsent(a, "restricao_hospitalar", where),
       icms_0: bool(a, "icms_0", where),
       pmc,
       pmc_alc: precos(a.pmc_alc, `${where} ${ggrem} pmc_alc`),
