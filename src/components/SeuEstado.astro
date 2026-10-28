@@ -4,10 +4,8 @@
 // select stays hidden and every list shows all rates. Which rate an element uses comes from the nearest
 // data-generico="1|0" around it. Elements opt in with:
 //   data-precos='{"17":"R$ 501,58",...}'  text becomes the price at the state's rate (precosPorAliquota)
-//   data-preco-da-lista                   text becomes the price in the list of its [data-apres] block
 //   data-aliquota="18"                    gets class "sua" when it is the state's rate
 //   data-uf-rotulo                        becomes "SP, ICMS 18%"
-//   details[data-recolher]                closed once a state is chosen
 // and, through CSS: data-so-com-estado, data-so-sem-estado, data-so-regime="p|g", and --ordem-g for lists.
 import { ESTADOS_POR_NOME } from "../lib/icms";
 ---
@@ -57,17 +55,11 @@ import { ESTADOS_POR_NOME } from "../lib/icms";
       const a = aliquota(el);
       trocar(el, a ? (JSON.parse(el.dataset.precos ?? "{}") as Record<string, string>)[a] : undefined);
     }
-    for (const el of todos("[data-preco-da-lista]")) {
-      const a = aliquota(el);
-      const linha = a ? el.closest("[data-apres]")?.querySelector(`[data-aliquota="${a}"] strong`) : null;
-      trocar(el, linha?.textContent ?? undefined);
-    }
     for (const el of todos("[data-aliquota]")) el.classList.toggle("sua", el.dataset.aliquota === aliquota(el));
     for (const el of todos("[data-uf-rotulo]")) {
       const a = aliquota(el);
       trocar(el, a ? `${uf}, ICMS ${aliquotaRotulo(a)}${A_CONFIRMAR.has(uf) ? ", a confirmar" : ""}` : undefined);
     }
-    for (const el of todos<HTMLDetailsElement>("details[data-recolher]")) el.open = !regime;
   }
 
   const caixa = document.querySelector<HTMLDivElement>(".seu-estado");

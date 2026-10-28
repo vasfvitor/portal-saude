@@ -1,0 +1,172 @@
+---
+// The price table of a product page: one row per dose and package, this product's ceiling at the reference rate
+// (the picker swaps it for the reader's state) and the cheapest product with the same dose and package. The rate
+// is said once, above the table; the cheaper column says its own once a state is picked, since a generic may pay
+// less ICMS than the rest (SP, MG). Exempt rows say so in the row.
+import Selo from "./Selo.astro";
+import { aliquotaRotulo, precoMaximo, precosPorAliquota } from "../lib/frases-remedios";
+import { TABELA, type Regime } from "../lib/icms";
+import type { Apresentacao } from "../lib/remedios";
+
+/** The cheapest product with the same dose and package, in one ICMS regime or in both (`regime` undefined). */
+export interface Barato {
+  regime?: Regime;
+  produto: string;
+  laboratorio: string;
+  tipo: string | null;
+  href: string;
+  pmc: Apresentacao["pmc"];
+  /** whole percent less, at the rates each product pays in the regime (negative when it costs more) */
+  menos: number;
+  /** offered because this presentation is not on sale, not because it is cheaper */
+  alternativa: boolean;
+  /** the cheaper one is exempt from ICMS: one price in every state, shown without a rate */
+  isento: boolean;
+}
+
+export interface Linha {
+  a: Apresentacao;
+  /** "20 mg · 10 comprimidos", or the list's own text when it cannot be read */
+  nome: string;
+  baratos: Barato[];
+  /** this presentation had no sales while the product did: worth a label in the row */
+  semVenda: boolean;
+}
+
+interface Props {
+  linhas: Linha[];
+  /** "1" when the product is a generic: which rate the picker uses for this product's prices */
+  marca: string;
+}
+const { linhas, marca } = Astro.props;
+const ref = TABELA.ref;
+const comBarato = linhas.some((l) => l.baratos.length > 0);
+const soAlternativas = linhas.every((l) => l.baratos.every((b) => b.alternativa));
+---
+
+<div class="tabela">
+  <table>
+    <thead>
+      <tr>
+        <th scope="col">Dose e embalagem</th>
+        <th scope="col" class="n">
+          Este remédio
+        </th>
+        {comBarato && <th scope="col">{soAlternativas ? "Com venda no último ano" : "Opção mais barata"}</th>}
+      </tr>
+    </thead>
+    <tbody>
+      {linhas.map(({ a, nome, baratos, semVenda }) => (
+        <tr>
+          <th scope="row">
+            {nome}
+            {semVenda && <Selo tom="atencao">sem venda no último ano</Selo>}
+            {a.restricao_hospitalar && <Selo tom="atencao">uso hospitalar</Selo>}
+          </th>
+          <td class="n" data-generico={marca}>
+            {a.icms_0 ? (
+              <>
+                <strong>{precoMaximo(a.pmc, "0")}</strong>
+                <small>isento de ICMS</small>
+              </>
+            ) : a.pmc[ref] === undefined ? (
+              <small>sem preço nesta faixa de ICMS</small>
+            ) : (
+              <strong data-precos={precosPorAliquota(a.pmc)}>{precoMaximo(a.pmc, ref)}</strong>
+            )}
+          </td>
+          {comBarato && (
+            <td>
+              {baratos.map((b) => (
+                <span class="barato" data-so-regime={b.regime} data-generico={b.tipo === "Genérico" ? "1" : "0"}>
+                  {b.isento ? (
+                    <>
+                      <strong>{precoMaximo(b.pmc, ref)}</strong>
+                      <small>isento de ICMS</small>
+                    </>
+                  ) : (
+                    <>
+                      <strong data-precos={precosPorAliquota(b.pmc)}>{precoMaximo(b.pmc, ref)}</strong>
+                      <small data-so-com-estado data-uf-rotulo>{`ICMS ${aliquotaRotulo(ref)}`}</small>
+                    </>
+                  )}
+                  {b.menos >= 1 && <small class="menos">{b.menos}% a menos</small>}
+                  {b.alternativa && !soAlternativas && <small>com venda no último ano</small>}
+                  <a href={b.href}>{b.produto}</a>
+                  {b.tipo && <small>{b.tipo.toLowerCase()}</small>}
+                </span>
+              ))}
+            </td>
+          )}
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+
+<style>
+  .tabela {
+    overflow-x: auto;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    margin: 0.75rem 0;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  th,
+  td {
+    text-align: left;
+    vertical-align: top;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  thead th {
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-weight: 600;
+    vertical-align: bottom;
+  }
+  tbody th {
+    font-weight: 400;
+  }
+  tbody tr:last-child > * {
+    border-bottom: 0;
+  }
+  .n {
+    text-align: right;
+    white-space: nowrap;
+  }
+  td small {
+    display: block;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+  td small.menos {
+    color: var(--good);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .barato {
+    display: block;
+  }
+  /* a long one-word name breaks only when it cannot fit, never in the middle of a word that fits */
+  .barato a {
+    font-size: 0.9rem;
+    overflow-wrap: break-word;
+  }
+  .barato strong,
+  .barato small {
+    display: block;
+    white-space: nowrap;
+  }
+  th,
+  td {
+    padding-inline: 8px;
+  }
+  .n strong {
+    white-space: nowrap;
+  }
+</style>

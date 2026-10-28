@@ -3,13 +3,12 @@ import { describe, expect, it } from "vitest";
 import { fmtMoney } from "../src/lib/format";
 import {
   embalagemInstitucional,
-  faixaPorUnidade,
   precoPorUnidade,
   acompanharSubstancia,
   aliquotaRotulo,
   avisoComercializacao,
+  avisoProduto,
   classeSemCodigo,
-  faixaPreco,
   fraseMedida,
   fraseRegistro,
   precoMaximo,
@@ -17,7 +16,7 @@ import {
   tarjaExplicada,
   tipoExplicado,
 } from "../src/lib/frases-remedios";
-import { ALIQUOTAS, parseProduto } from "../src/lib/remedios";
+import { parseProduto } from "../src/lib/remedios";
 
 const produto = (r: string) =>
   parseProduto(
@@ -38,10 +37,6 @@ describe("remedios sentences", () => {
     expect(precoMaximo(a.pmc, "18")).toBe("R$ 507,70");
     expect(JSON.parse(precosPorAliquota(a.pmc))).toMatchObject({ "18": "R$ 507,70" });
     expect(JSON.parse(precosPorAliquota(a.pmc))).not.toHaveProperty("0");
-    const sem0 = ALIQUOTAS.filter((k) => k !== "0");
-    expect(faixaPreco(a, sem0)).toBe("Entre R$ 473,09 e R$ 540,68, dependendo do estado.");
-    expect(faixaPreco({ ...a, pmc: { "18": 100 } }, sem0)).toBe("R$ 1,00 em todos os estados.");
-    expect(faixaPreco({ ...a, pmc: {} }, sem0)).toBeNull();
   });
 
   it("type, stripe and commercialization in plain words", () => {
@@ -107,6 +102,31 @@ describe("registration and ANVISA measures", () => {
     expect(novo.medidas[0]!.acoes).toEqual(["Recolhimento"]);
     expect(() => parseProduto({ ...base, situacao: { ativo: true, vencimento: "06/2028" } })).toThrow(/vencimento/);
   });
+
+  it("sums up what to check in one line, red only when ANVISA published a measure", () => {
+    const recolhimento = { data: "2019-10-02", acoes: ["Recolhimento", "Suspensão"], atividades: [], processo: null };
+    const proibicao = { data: "2023-03-01", acoes: ["Proibição"], atividades: ["Propaganda"], processo: null };
+    const ativo = { ativo: true, vencimento: null };
+    // CARDIZEM: inactive registration and a 2019 recall
+    expect(
+      avisoProduto({ situacao: { ativo: false, vencimento: null }, comercializado: true, medidas: [recolhimento] }),
+    ).toEqual({ resumo: "Registro inativo e recolhimento em 2019.", tom: "alerta" });
+    expect(avisoProduto({ situacao: ativo, comercializado: false, medidas: [] })).toEqual({
+      resumo: "Sem venda no último ano.",
+      tom: "atencao",
+    });
+    expect(avisoProduto({ situacao: null, comercializado: true, medidas: [proibicao] })?.resumo).toBe(
+      "Medida da ANVISA em 2023.",
+    );
+    expect(
+      avisoProduto({
+        situacao: { ativo: false, vencimento: null },
+        comercializado: false,
+        medidas: [recolhimento, proibicao],
+      })?.resumo,
+    ).toBe("Registro inativo, sem venda no último ano e 2 medidas da ANVISA, a última em 2023.");
+    expect(avisoProduto({ situacao: ativo, comercializado: true, medidas: [] })).toBeNull();
+  });
 });
 
 describe("price per unit", () => {
@@ -114,13 +134,6 @@ describe("price per unit", () => {
     expect(precoPorUnidade(8200, { n: 24, nome: "comprimido revestido" })).toBe("R$ 3,42 por comprimido");
     expect(precoPorUnidade(100000, { n: 50, nome: "frasco-ampola" })).toBe("R$ 20,00 por frasco-ampola");
     expect(precoPorUnidade(30, { n: 100, nome: "comprimido" })).toBe("menos de R$ 0,01 por comprimido");
-  });
-  it("gives the range over the rates, or one value", () => {
-    const a = { pmc: { "17": 7000, "18": 8200 } } as unknown as Parameters<typeof faixaPorUnidade>[0];
-    expect(faixaPorUnidade(a, ["17", "18"], { n: 20, nome: "comprimido" })).toBe(
-      "Por comprimido: de R$ 3,50 a R$ 4,10.",
-    );
-    expect(faixaPorUnidade(a, ["18"], { n: 20, nome: "comprimido" })).toBe("Por comprimido: R$ 4,10.");
   });
   it("treats hospital-only use as institutional even when the code says nothing", () => {
     expect(

@@ -1,0 +1,51 @@
+---
+// A closed section for what is not the page's answer (the sources, the feed, the rules behind a price): a title
+// the reader opens. Native <details>, so it opens without JavaScript. Put a run of them in `<div class="secoes">`
+// (Base.astro), which draws the line above the first.
+interface Props {
+  titulo: string;
+  /** a short hint after the title: "1", "troca, Procon" */
+  extra?: string;
+  id?: string;
+  aberta?: boolean;
+}
+const { titulo, extra, id, aberta = false } = Astro.props;
+---
+
+<details class="secao" id={id} open={aberta}>
+  <summary>
+    <span class="titulo">{titulo}</span>
+    {extra && <span class="extra">{extra}</span>}
+  </summary>
+  <div class="corpo">
+    <slot />
+  </div>
+</details>
+
+<style>
+  .secao {
+    border-bottom: 1px solid var(--line);
+    scroll-margin-top: 1rem;
+  }
+  /* stays a list item, so the browser's own open/closed marker shows */
+  summary {
+    padding: 12px 0;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  summary::marker {
+    color: var(--accent);
+  }
+  .extra {
+    color: var(--muted);
+    font-weight: 400;
+    font-size: 0.9rem;
+    margin-left: 0.6em;
+  }
+  .corpo {
+    padding: 0 0 1rem;
+  }
+  .corpo :global(p:first-child) {
+    margin-top: 0;
+  }
+</style>

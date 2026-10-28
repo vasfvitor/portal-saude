@@ -39,17 +39,6 @@ export const precosPorAliquota = (pmc: Apresentacao["pmc"]): string =>
     Object.fromEntries(TABELA.usadas.flatMap((k) => (pmc[k] === undefined ? [] : [[k, fmtMoney(pmc[k])]]))),
   );
 
-/** "Entre R$ 501,58 e R$ 540,68, dependendo do estado." over the rates with a price. */
-export function faixaPreco(a: Apresentacao, aliquotas: readonly Aliquota[]): string | null {
-  const com = aliquotas.filter((k) => a.pmc[k] !== undefined);
-  if (com.length === 0) return null;
-  const precos = com.map((k) => a.pmc[k]!);
-  const min = Math.min(...precos);
-  const max = Math.max(...precos);
-  if (min === max) return `${fmtMoney(min)} em todos os estados.`;
-  return `Entre ${fmtMoney(min)} e ${fmtMoney(max)}, dependendo do estado.`;
-}
-
 export function avisoComercializacao(comercializado: boolean): string | null {
   return comercializado
     ? null
@@ -58,6 +47,9 @@ export function avisoComercializacao(comercializado: boolean): string | null {
 
 /** "J1G1 - FLUORQUINOLONAS ORAIS" → "FLUORQUINOLONAS ORAIS": the ATC-like code means nothing to the reader. */
 export const classeSemCodigo = (classe: string): string => classe.replace(/^[A-Z0-9]{2,6}\s*-\s*/, "");
+
+/** Above the price table: the one line the reader needs; PRECO_MAXIMO, in "Antes de comprar", says the rest. */
+export const PRECO_MAXIMO_CURTO = "O teto que a farmácia pode cobrar.";
 
 export const PRECO_MAXIMO =
   "O preço máximo é o teto que a farmácia pode cobrar; ela pode cobrar menos. Quem fixa o teto é a CMED, o órgão do governo que regula o preço dos remédios, e ele muda com o ICMS de cada estado.";
@@ -92,6 +84,32 @@ export function fraseMedida(m: Medida): string {
   return `${fmtDate(m.data)}: ${acoes}${sobre}${voluntario ? ", a pedido da própria empresa" : ""}.`;
 }
 
+const inicial = (s: string): string => s.replace(/^./, (c) => c.toUpperCase());
+
+/** The one line at the top of a product page that has something to check: "Registro inativo e recolhimento em
+ * 2019." `tom` is `alerta` when ANVISA published a measure, `atencao` otherwise; the full sentences go below it. */
+export function avisoProduto(
+  p: Pick<Produto, "situacao" | "comercializado" | "medidas">,
+): { resumo: string; tom: "alerta" | "atencao" } | null {
+  const partes: string[] = [];
+  if (p.situacao && !p.situacao.ativo) partes.push("registro inativo");
+  if (!p.comercializado) partes.push("sem venda no último ano");
+  const ultima = [...p.medidas].sort((a, b) => b.data.localeCompare(a.data))[0];
+  if (ultima) {
+    const ano = ultima.data.slice(0, 4);
+    const recolhimento = p.medidas.every((m) => m.acoes.includes("Recolhimento"));
+    partes.push(
+      p.medidas.length > 1
+        ? `${p.medidas.length} medidas da ANVISA, a última em ${ano}`
+        : recolhimento
+          ? `recolhimento em ${ano}`
+          : `medida da ANVISA em ${ano}`,
+    );
+  }
+  if (partes.length === 0) return null;
+  return { resumo: `${inicial(juntar(partes))}.`, tom: ultima ? "alerta" : "atencao" };
+}
+
 /** Below the list of measures: the source has no lot number. */
 export const MEDIDAS_SEM_LOTE =
   "A ANVISA publica essas medidas sem o lote nos dados abertos: uma medida pode valer só para alguns lotes, não para o remédio todo. Se você tem uma caixa em casa, mostre o número do lote ao farmacêutico.";
@@ -100,9 +118,8 @@ export const MEDIDAS_SEM_LOTE =
 export const ATUALIZACAO_CMED =
   "A CMED publica uma lista nova quando muda algum preço, em geral uma vez por mês; o site é refeito todo dia e mostra a nova no máximo um dia depois.";
 
-/** A presentation exempt from ICMS: one ceiling for the whole country, so no line per state. */
-export const isentoDeIcms = (preco: string): string =>
-  `Isento de ICMS: o teto é o mesmo em todos os estados, até ${preco}.`;
+/** Above the price table of a product exempt from ICMS in every presentation: one ceiling for the whole country. */
+export const ISENTO_DE_ICMS = "Isento de ICMS: o teto é o mesmo em todos os estados.";
 
 /** A presentation the CMED list marks hospital-only but still prices. */
 export const USO_HOSPITALAR =
@@ -141,14 +158,3 @@ export const precosPorUnidade = (pmc: Apresentacao["pmc"], u: Unidade): string =
   JSON.stringify(
     Object.fromEntries(TABELA.usadas.flatMap((k) => (pmc[k] === undefined ? [] : [[k, precoPorUnidade(pmc[k], u)]]))),
   );
-
-/** "Por comprimido: de R$ 0,29 a R$ 0,34." over the same rates as faixaPreco. */
-export function faixaPorUnidade(a: Apresentacao, aliquotas: readonly Aliquota[], u: Unidade): string | null {
-  const precos = aliquotas.flatMap((k) => (a.pmc[k] === undefined ? [] : [a.pmc[k]]));
-  if (precos.length === 0) return null;
-  const [min, max] = [Math.min(...precos), Math.max(...precos)];
-  const de = precoPorUnidade(min, u).replace(/ por .*$/, "");
-  const ate = precoPorUnidade(max, u).replace(/ por .*$/, "");
-  const nome = nomeUnidade(u);
-  return `Por ${nome}: ${de === ate ? de : `de ${de} a ${ate}`}.`;
-}

@@ -1,12 +1,15 @@
 ---
-// One page per product: what it is, then one block per dose and package with the maximum price in each state
-// (a line per ICMS rate, with the states that use it), the price in the reader's state once they pick it, and the
-// cheapest product with the same dose and package. Prices come from the CMED list as published; a price is never
-// shown without its rate or its state next to it.
+// One page per product: a one-line warning when there is something to check, then one table with the maximum
+// price of each dose and package at the reference rate (the picker swaps in the reader's state) next to the
+// cheapest product with the same dose and package. Everything that is not that answer sits in closed sections:
+// the price in every state, the product's facts, the rules behind a price, the feed and the sources. A price is
+// never shown without its rate or its state next to it.
 import Acompanhar from "../../components/Acompanhar.astro";
 import Quadro from "../../components/Quadro.astro";
+import Secao from "../../components/Secao.astro";
 import Selo from "../../components/Selo.astro";
 import SeuEstado from "../../components/SeuEstado.astro";
+import TabelaPrecos, { type Barato, type Linha } from "../../components/TabelaPrecos.astro";
 import Base from "../../layouts/Base.astro";
 import { lerApresentacao } from "../../lib/apresentacao";
 import {
@@ -19,27 +22,25 @@ import {
   REGIMES,
 } from "../../lib/comparar";
 import { CMED_DADOS_URL } from "../../lib/config";
-import { fmtStamp } from "../../lib/format";
+import { contar, fmtStamp } from "../../lib/format";
 import {
   acompanharSubstancia,
   aliquotaRotulo,
   ATUALIZACAO_CMED,
   avisoComercializacao,
+  avisoProduto,
   classeSemCodigo,
   EMBALAGEM_INSTITUCIONAL,
   embalagemInstitucional,
   EMBALAGENS_INSTITUCIONAIS,
-  faixaPorUnidade,
-  faixaPreco,
   fraseMedida,
   fraseRegistro,
-  isentoDeIcms,
+  ISENTO_DE_ICMS,
   MEDIDAS_SEM_LOTE,
   PRECO_MAXIMO,
+  PRECO_MAXIMO_CURTO,
   precoMaximo,
   precoPorUnidade,
-  precosPorAliquota,
-  precosPorUnidade,
   REGISTRO_INATIVO,
   SE_COBRAREM_MAIS,
   tarjaExplicada,
@@ -47,7 +48,7 @@ import {
   tipoExplicado,
   USO_HOSPITALAR,
 } from "../../lib/frases-remedios";
-import { TABELA, type Regime } from "../../lib/icms";
+import { TABELA } from "../../lib/icms";
 import {
   paginaProduto,
   pmcAplicavel,
@@ -56,22 +57,6 @@ import {
   type Apresentacao,
   type Produto,
 } from "../../lib/remedios";
-
-/** The cheapest product with the same dose and package, in one ICMS regime or in both (`regime` undefined). */
-interface Barato {
-  regime?: Regime;
-  produto: string;
-  laboratorio: string;
-  tipo: string | null;
-  href: string;
-  pmc: Apresentacao["pmc"];
-  /** whole percent less, at the rates each product pays in the regime (negative when it costs more) */
-  menos: number;
-  /** offered because this presentation is not on sale, not because it is cheaper */
-  alternativa: boolean;
-  /** the cheaper one is exempt from ICMS: one price in every state, shown without a rate */
-  isento: boolean;
-}
 
 export async function getStaticPaths() {
   const produtos = await produtosForBuild(CMED_DADOS_URL);
@@ -127,19 +112,45 @@ const generico = ehGenerico(p);
 const marca = generico ? "1" : "0";
 const ufs = generico ? TABELA.ufs.generico : TABELA.ufs.normal;
 const cols = generico ? TABELA.colunas.generico : TABELA.colunas.normal;
+const ref = TABELA.ref;
+const rotuloRef = `ICMS de ${aliquotaRotulo(ref)} (${ufs.get(ref)?.join(", ") ?? ""})`;
 // exempt from ICMS everywhere: no line per state, so neither the picker nor the "a confirmar" note has a job
 const porEstado = p.apresentacoes.some((a) => !a.icms_0);
 const aConfirmar = porEstado && [...ufs.values()].flat().some((u) => u.endsWith("*"));
-const ref = TABELA.ref;
 const tipo = tipoExplicado(p.tipo_produto);
 const tarja = tarjaExplicada(p.tarja);
-const aviso = avisoComercializacao(p.comercializado);
-// boxes for the reader first, then the hospital and fractioned-sale ones under their own heading; `i` keeps the
-// list order, which `baratos` is indexed by
-const blocos = p.apresentacoes
-  .map((a, i) => ({ a, i, inst: embalagemInstitucional(a) }))
-  .sort((x, y) => Number(x.inst) - Number(y.inst) || x.i - y.i);
-const primeiroInst = blocos.findIndex((b) => b.inst);
+const aviso = avisoProduto(p);
+const semVenda = avisoComercializacao(p.comercializado);
+const alternativa = baratos.some((b) => b.some((x) => x.alternativa));
+const temBarato = baratos.some((b) => b.length > 0);
+
+// Presentations that differ only in what the list says about the blister (the same dose and package, the same
+// prices) are one row; the official texts of all of them stay in "Preço em cada estado".
+interface Grupo extends Linha {
+  codigos: string[];
+  inst: boolean;
+}
+const grupos = new Map<string, Grupo>();
+p.apresentacoes.forEach((a, i) => {
+  const nome = lerApresentacao(a.apresentacao)?.legivel ?? a.apresentacao;
+  const chave = JSON.stringify([nome, a.pmc, a.icms_0, a.comercializado, a.restricao_hospitalar]);
+  const ja = grupos.get(chave);
+  if (ja) ja.codigos.push(a.apresentacao);
+  else
+    grupos.set(chave, {
+      a,
+      nome,
+      baratos: baratos[i]!,
+      semVenda: p.comercializado && !a.comercializado,
+      codigos: [a.apresentacao],
+      inst: embalagemInstitucional(a),
+    });
+});
+// boxes for the reader first, then the hospital and fractioned-sale ones in a section of their own
+const paraVoce = [...grupos.values()].filter((l) => !l.inst);
+const institucionais = [...grupos.values()].filter((l) => l.inst);
+const comEstados = [...paraVoce, ...institucionais].filter((l) => !l.a.icms_0);
+
 const publicado = fmtStamp(p.stamp);
 const primeira = lerApresentacao(p.apresentacoes[0]!.apresentacao)?.legivel ?? p.apresentacoes[0]!.apresentacao;
 const descricao = `${p.produto} (${p.laboratorio}), ${primeira}: quanto a farmácia pode cobrar em cada estado, na lista da CMED de ${publicado}.`;
@@ -169,85 +180,82 @@ const breadcrumb = {
   </p>
   <h1>{p.produto}</h1>
   <p class="ficha">
-    <span>{p.laboratorio}</span>
+    {p.laboratorio}
     {p.tipo_produto && <Selo>{p.tipo_produto}</Selo>}
   </p>
 
-  {p.situacao && !p.situacao.ativo && (
-    <Quadro tipo="atencao">
-      <p>{REGISTRO_INATIVO}</p>
-    </Quadro>
-  )}
   {aviso && (
-    <Quadro tipo="atencao">
-      <p>{aviso}</p>
-      {baratos.some((b) => b.some((x) => x.alternativa)) && (
-        <p>Mais abaixo aparece um remédio com a mesma substância, dose e embalagem que teve venda no último ano.</p>
-      )}
+    <Quadro tipo={aviso.tom}>
+      <p class="aviso">{aviso.resumo}</p>
+      <details class="o-que-fazer">
+        <summary>O que fazer</summary>
+        {p.situacao && !p.situacao.ativo && <p>{REGISTRO_INATIVO}</p>}
+        {semVenda && (
+          <p>
+            {semVenda}
+            {alternativa &&
+              " Na tabela de preços aparece um remédio com a mesma substância, dose e embalagem que teve venda no último ano."}
+          </p>
+        )}
+        {p.medidas.length > 0 && (
+          <>
+            <ul>
+              {p.medidas.map((m) => (
+                <li>
+                  {fraseMedida(m)}
+                  {m.processo && <span class="muted"> Processo {m.processo}.</span>}
+                </li>
+              ))}
+            </ul>
+            <p>{MEDIDAS_SEM_LOTE}</p>
+          </>
+        )}
+      </details>
     </Quadro>
   )}
 
-  <p class="lead">{PRECO_MAXIMO}</p>
   {porEstado && <SeuEstado />}
 
-  {blocos.map(({ a, i, inst }, k) => {
-    const lida = lerApresentacao(a.apresentacao);
-    const u = lida?.unidade;
-    const faixa = faixaPreco(a, cols);
-    // exempt from ICMS: one ceiling for the country, so no line per state and nothing for the picker to swap
-    const isento = a.icms_0 ? precoMaximo(a.pmc, "0") : null;
-    const Titulo = inst ? "h3" : "h2";
-    return (
-      <>
-        {k === primeiroInst && (
-          <div class="grupo-inst">
-            <h2>{EMBALAGENS_INSTITUCIONAIS}</h2>
-            <p class="muted">{EMBALAGEM_INSTITUCIONAL}</p>
-          </div>
+  {paraVoce.length > 0 && (
+    <section data-generico={marca}>
+      <h2>Preço máximo</h2>
+      <p class="muted">
+        {PRECO_MAXIMO_CURTO}{" "}
+        {porEstado ? (
+          <>
+            Na tabela: <span data-uf-rotulo>{rotuloRef}</span>.
+          </>
+        ) : (
+          ISENTO_DE_ICMS
         )}
-        <section class="cartao" data-apres data-generico={marca}>
-          <Titulo>{lida?.legivel ?? a.apresentacao}</Titulo>
-          <p class="codigo">
-            {lida && <>Como está na lista oficial: {a.apresentacao}</>}
-            {!a.comercializado && <Selo tom="atencao">sem venda no último ano</Selo>}
-            {a.restricao_hospitalar && <Selo tom="atencao">uso hospitalar</Selo>}
-          </p>
-          {a.restricao_hospitalar && <p>{USO_HOSPITALAR}</p>}
-          {isento ? (
-            <>
-              <p class="faixa">{isentoDeIcms(isento)}</p>
-              {u && (
-                <p class="por-unidade">{`${precoPorUnidade(a.pmc["0"]!, u).replace(/^./, (c) => c.toUpperCase())}.`}</p>
-              )}
-            </>
-          ) : (
-            <>
-              <p class="no-estado" data-so-com-estado>
-                No seu estado (<span data-uf-rotulo />
-                ): até <strong data-preco-da-lista>{faixa}</strong>
-                {u && (
-                  <>
-                    {" "}
-                    (
-                    <span data-precos={precosPorUnidade(a.pmc, u)}>
-                      {a.pmc[ref] ? precoPorUnidade(a.pmc[ref], u) : ""}
-                    </span>
-                    )
-                  </>
-                )}
-              </p>
-              {faixa && (
-                <p class="faixa" data-so-sem-estado>
-                  {faixa}
-                </p>
-              )}
-              {faixa && u && (
-                <p class="por-unidade" data-so-sem-estado>
-                  {faixaPorUnidade(a, cols, u)}
-                </p>
-              )}
-              <details data-recolher open>
-                <summary>Preço máximo em cada estado</summary>
+      </p>
+      <TabelaPrecos linhas={paraVoce} marca={marca} />
+    </section>
+  )}
+
+  <div class="secoes">
+    {institucionais.length > 0 && (
+      <Secao
+        titulo={EMBALAGENS_INSTITUCIONAIS}
+        extra={contar(institucionais.length, "dose e embalagem", "doses e embalagens")}
+        aberta={paraVoce.length === 0}
+        id="institucionais"
+      >
+        <p class="muted">{EMBALAGEM_INSTITUCIONAL}</p>
+        {institucionais.some((l) => l.a.restricao_hospitalar) && <p class="muted">{USO_HOSPITALAR}</p>}
+        <TabelaPrecos linhas={institucionais} marca={marca} />
+      </Secao>
+    )}
+
+    {comEstados.length > 0 && (
+      <Secao titulo="Preço em cada estado" extra="e por unidade" id="estados">
+        <div data-generico={marca}>
+          {comEstados.map(({ a, nome, codigos }) => {
+            const u = lerApresentacao(a.apresentacao)?.unidade;
+            return (
+              <>
+                <h3>{nome}</h3>
+                <p class="codigo">Como está na lista oficial: {codigos.join("; ")}</p>
                 <ul class="linhas">
                   {cols
                     .filter((k) => a.pmc[k] !== undefined)
@@ -255,127 +263,79 @@ const breadcrumb = {
                       <li data-aliquota={k}>
                         <span class="ufs">{ufs.get(k)?.join(", ") ?? "nenhum estado como padrão"}</span>
                         <span class="icms">ICMS {aliquotaRotulo(k)}</span>
-                        <strong>{precoMaximo(a.pmc, k)}</strong>
+                        <span class="valor">
+                          <strong>{precoMaximo(a.pmc, k)}</strong>
+                          {u && <small>{precoPorUnidade(a.pmc[k]!, u)}</small>}
+                        </span>
                       </li>
                     ))}
                 </ul>
-              </details>
-            </>
-          )}
-          {baratos[i]!.map((b) => (
-            <p class="barato" data-so-regime={b.regime} data-generico={b.tipo === "Genérico" ? "1" : "0"}>
-              <strong>{b.alternativa ? "Com venda no último ano" : "Opção mais barata"}</strong>, com a mesma dose e
-              embalagem: <a href={b.href}>{b.produto}</a>
-              {b.tipo && ` (${b.tipo.toLowerCase()}, ${b.laboratorio})`}, até{" "}
-              {b.isento ? (
-                <>{precoMaximo(b.pmc, ref)} (isento de ICMS, o mesmo em todos os estados)</>
-              ) : (
-                <>
-                  <span data-precos={precosPorAliquota(b.pmc)}>{precoMaximo(b.pmc, ref)}</span> (
-                  <span data-uf-rotulo>{`ICMS ${aliquotaRotulo(ref)}`}</span>)
-                </>
-              )}
-              {b.menos >= 1 ? `: ${b.menos}% a menos.` : "."}
-            </p>
-          ))}
-        </section>
-      </>
-    );
-  })}
-  {baratos.some((b) => b.length > 0) && <p class="muted">{TROCA_NA_FARMACIA}</p>}
-  {aConfirmar && <p class="muted">* Estado com ICMS confirmado só por fontes não oficiais.</p>}
-  <p class="muted">{SE_COBRAREM_MAIS}</p>
+              </>
+            );
+          })}
+          {aConfirmar && <p class="muted">* Estado com ICMS confirmado só por fontes não oficiais.</p>}
+        </div>
+      </Secao>
+    )}
 
-  <section>
-    <h2>Sobre este remédio</h2>
-    <ul>
-      {tipo && <li>{tipo}</li>}
-      {tarja && <li>{tarja}</li>}
-      <li>
-        Substância: <a href={`/remedios/substancia/${substanciaSlug}/`}>{p.substancia}</a>, com as outras marcas e os
-        genéricos
-      </li>
-      {p.classe_terapeutica && <li>Grupo de remédios: {classeSemCodigo(p.classe_terapeutica)}</li>}
-      <li>{fraseRegistro(p.registro_produto, p.situacao)}</li>
-    </ul>
-  </section>
-
-  {p.medidas.length > 0 && (
-    <section>
-      <h2>Medidas da ANVISA</h2>
+    <Secao titulo="Sobre este remédio" id="sobre">
       <ul>
-        {p.medidas.map((m) => (
-          <li>
-            {fraseMedida(m)}
-            {m.processo && <span class="muted"> Processo {m.processo}.</span>}
-          </li>
-        ))}
+        {tipo && <li>{tipo}</li>}
+        {tarja && <li>{tarja}</li>}
+        <li>
+          Substância: <a href={`/remedios/substancia/${substanciaSlug}/`}>{p.substancia}</a>, com as outras marcas e os
+          genéricos
+        </li>
+        {p.classe_terapeutica && <li>Grupo de remédios: {classeSemCodigo(p.classe_terapeutica)}</li>}
+        <li>{fraseRegistro(p.registro_produto, p.situacao)}</li>
       </ul>
-      <p class="muted">{MEDIDAS_SEM_LOTE}</p>
-    </section>
-  )}
+    </Secao>
 
-  {p.feed_substancia && (
-    <Acompanhar
-      titulo="Acompanhar os preços"
-      avisa={acompanharSubstancia(p.substancia)}
-      href={p.feed_substancia}
-      rotulo={`Endereço do feed de ${p.substancia}`}
-    />
-  )}
+    <Secao titulo="Antes de comprar" extra={temBarato ? "troca, Procon" : "Procon"} id="antes">
+      <p>{PRECO_MAXIMO}</p>
+      {temBarato && <p>{TROCA_NA_FARMACIA}</p>}
+      <p>{SE_COBRAREM_MAIS}</p>
+      <p class="muted">{ATUALIZACAO_CMED}</p>
+    </Secao>
 
-  <section class="fontes">
-    <h2>Fontes</h2>
-    <p>
-      Lista de preços da CMED (ANVISA), publicada em {publicado}. {ATUALIZACAO_CMED} O ICMS de cada estado e a lei de
-      origem estão em <a href="/remedios/sobre-o-preco/">por que o preço muda de estado para estado</a>. Todos os
-      números deste remédio, num arquivo só: <a href={`${CMED_DADOS_URL}/produto/${p.registro_produto}.json`}>JSON</a>.
-    </p>
-  </section>
+    {p.feed_substancia && (
+      <Acompanhar
+        titulo="Receber aviso quando o preço mudar"
+        avisa={acompanharSubstancia(p.substancia)}
+        href={p.feed_substancia}
+        rotulo={`Endereço do feed de ${p.substancia}`}
+      />
+    )}
+
+    <Secao titulo="Fontes" id="fontes">
+      <p>
+        Lista de preços da CMED (ANVISA), publicada em {publicado}. O ICMS de cada estado e a lei de origem estão em{" "}
+        <a href="/remedios/sobre-o-preco/">por que o preço muda de estado para estado</a>. Todos os números deste
+        remédio, num arquivo só: <a href={`${CMED_DADOS_URL}/produto/${p.registro_produto}.json`}>JSON</a>.
+      </p>
+    </Secao>
+  </div>
 </Base>
 
 <style>
   .ficha {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px 12px;
     color: var(--muted);
-    font-size: 0.95rem;
+    font-size: 0.85rem;
+    margin-top: 0;
+  }
+  .aviso {
+    font-weight: 600;
+  }
+  .o-que-fazer summary {
+    cursor: pointer;
+    min-height: 32px;
+    text-decoration: underline 2px var(--accent);
+    text-underline-offset: 3px;
   }
   .codigo {
     font-size: 0.8rem;
     color: var(--muted);
-    margin: 0 0 0.5rem;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 10px;
-    align-items: center;
-  }
-  .no-estado {
-    font-size: 1.1rem;
-  }
-  .no-estado strong {
-    font-size: 1.35rem;
-  }
-  .faixa {
-    font-weight: 600;
-  }
-  .por-unidade {
-    margin-top: 0;
-    color: var(--muted);
-  }
-  .grupo-inst {
-    margin-top: 2rem;
-  }
-  details {
-    margin: 0.5rem 0;
-  }
-  summary {
-    cursor: pointer;
-    color: var(--accent-ink);
-    font-weight: 600;
-    font-size: 0.95rem;
+    margin: 0 0 0.25rem;
   }
   .ufs {
     color: var(--muted);
@@ -386,13 +346,16 @@ const breadcrumb = {
     color: var(--muted);
     white-space: nowrap;
   }
-  .linhas strong {
-    white-space: nowrap;
-    text-align: right;
+  .valor {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
   }
-  .barato {
-    border-top: 1px dashed var(--line);
-    padding-top: 0.6rem;
-    margin-top: 0.6rem;
+  .valor strong {
+    white-space: nowrap;
+  }
+  .valor small {
+    font-size: 0.8rem;
+    color: var(--muted);
   }
 </style>
