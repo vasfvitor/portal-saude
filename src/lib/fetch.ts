@@ -18,6 +18,8 @@ export function backoff(attempt: number, retryAfter: string | null = null): numb
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
+class NaoEncontrado extends Error {}
+
 /** GET JSON past the 600 s GitHub Pages cache; transport errors, timeouts, 429 and 5xx are retried, other 4xx fail
  * at once. */
 export async function getJson(url: string): Promise<unknown> {
@@ -29,7 +31,7 @@ export async function getJson(url: string): Promise<unknown> {
     try {
       const res = await fetch(u, { cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS) });
       if (res.ok) return (await res.json()) as unknown;
-      last = new Error(`HTTP ${res.status} at ${url}`);
+      last = new (res.status === 404 ? NaoEncontrado : Error)(`HTTP ${res.status} at ${url}`);
       if (res.status < 500 && res.status !== 429) break;
       retryAfter = res.headers.get("retry-after");
     } catch (e) {
@@ -38,6 +40,14 @@ export async function getJson(url: string): Promise<unknown> {
     if (attempt < RETRIES) await sleep(backoff(attempt, retryAfter));
   }
   throw last instanceof Error ? last : new Error(`fetch failed at ${url}`);
+}
+
+/** getJson for a file a producer may not have published yet: null on a 404, so deploy order does not matter. */
+export function getJsonOrNull(url: string): Promise<unknown> {
+  return getJson(url).catch((e: unknown) => {
+    if (e instanceof NaoEncontrado) return null;
+    throw e;
+  });
 }
 
 // one load per key per build, shared by every page and endpoint

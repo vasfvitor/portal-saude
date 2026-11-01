@@ -132,6 +132,16 @@ export const USO_HOSPITALAR =
 export const SE_COBRAREM_MAIS =
   "Se cobrarem acima do preço máximo do seu estado, guarde a nota fiscal e procure o Procon da sua cidade.";
 
+/** On a substância page, when every part of it is in the DCB. In the order of the parts of an association. */
+export const nomeOficial = (nomes: string[]): string => `Nome oficial no Brasil: ${nomes.join(" + ")}.`;
+
+export const DE_ONDE_VEM_O_NOME = "De onde vem este nome";
+
+export const DCB_EXPLICA =
+  "É a Denominação Comum Brasileira (DCB), o nome oficial de cada substância no Brasil. Quem mantém a lista é a Anvisa.";
+
+export const DCB_REUSO = "Quem reusar estes nomes deve citar a Anvisa, sem fim comercial e com a mesma licença.";
+
 /** "Acompanhar" box on a product or substância page: the anvisa-feeds feed covers every product with the substância. */
 export const acompanharSubstancia = (substancia: string): string =>
   `O feed avisa quando a lista mensal da CMED muda o preço máximo de algum remédio com ${substancia}, inclui uma dose e embalagem nova ou retira uma.`;

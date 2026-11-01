@@ -15,6 +15,10 @@ the sources and the rebuild schedule; a git-ignored `NOTES.local.md` holds pendi
   build reads `produtos.json` and `todos.json` (every product in one file). A key change there needs a
   follow-up in `src/lib/remedios.ts` and `test/fixtures/cmed/`. Every price is shown with its ICMS rate; the
   page never states one price for a state on its own.
+- `cmed/dados/substancias.json` has the official name (DCB) of the substâncias with every part in the list, and
+  is optional: without it the pages leave the line out. It is under Anvisa's CC BY-NC-SA 4.0, not open data, so
+  wherever a name appears, the list and the license go with it. A substância with only some parts in the list
+  shows nothing: being absent says nothing about the medicine.
 - The build never reads the per-entity files (`operadora/<r>.json`, `produto/<r>.json`): thousands of requests
   in one build made GitHub Pages answer 429. Each bundle is checked against its index, field by field.
 - "Acompanhar": `feed` (operator) and `feed_substancia` (product) come from the bundles and are optional; without

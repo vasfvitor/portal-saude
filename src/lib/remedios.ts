@@ -1,7 +1,7 @@
 // CMED maximum consumer prices from anvisa-feeds (`/cmed/dados/`, contract in its `schema.md`), read at
 // build time. Same rules as the operator data: every source is required and validated, so a contract change
 // upstream fails the build instead of publishing a wrong price. Prices are in centavos, per ICMS rate.
-import { getJson, once } from "./fetch";
+import { getJson, getJsonOrNull, once } from "./fetch";
 import { slug } from "./slug";
 import {
   bool,
@@ -254,6 +254,66 @@ export function produtosForBuild(dadosUrl: string): Promise<Produto[]> {
     const [indice, todos] = await Promise.all([indiceProdutosForBuild(dadosUrl), getJson(`${dadosUrl}/todos.json`)]);
     return parseTodos(todos, indice);
   });
+}
+
+// ---------------------------------------------------------------- official names
+
+/** `substancias.json`: the official name (DCB) of the substâncias with every part in the list. Unlike the rest of
+ * cmed/dados it is under Anvisa's CC license, so the page cites the list and the license beside the names. */
+export interface Dcb {
+  titulo: string;
+  licenca: { nome: string; url: string };
+  nomes: Map<string, string[]>;
+}
+
+/** null when anvisa-feeds could not read the names for this build (`fonte: null`). */
+export function parseDcb(raw: unknown): Dcb | null {
+  const o = obj(raw, "substancias.json");
+  const fonte = objOrAbsent(o, "fonte", "substancias.json");
+  if (!fonte) return null;
+  const licenca = obj(fonte.licenca, "substancias.json fonte licenca");
+  const nomes = Object.entries(obj(o.substancias, "substancias.json substancias")).map(
+    ([substancia, v]): [string, string[]] => {
+      const partes = list(v, `substancias.json ${substancia}`);
+      if (partes.length === 0 || !partes.every((p) => typeof p === "string" && p !== ""))
+        throw new Error(`substancias.json ${substancia}: not a list of names`);
+      return [substancia, partes as string[]];
+    },
+  );
+  return {
+    titulo: str(fonte, "titulo", "substancias.json fonte"),
+    licenca: {
+      nome: str(licenca, "name", "substancias.json fonte licenca"),
+      url: str(licenca, "url", "substancias.json fonte licenca"),
+    },
+    nomes: new Map(nomes),
+  };
+}
+
+export function dcbForBuild(dadosUrl: string): Promise<Dcb | null> {
+  return once(`dcb ${dadosUrl}`, async () => {
+    const raw = await getJsonOrNull(`${dadosUrl}/substancias.json`);
+    return raw === null ? null : parseDcb(raw);
+  });
+}
+
+/** The other CMED spellings of each substância: names in the list with the same official names, like ÁCIDO
+ * ACETILSALICÍLICO and ACIDO ACETILSALICILICO. */
+export function outrasGrafias(nomes: Map<string, string[]>, substancias: string[]): Map<string, string[]> {
+  const grupos = new Map<string, string[]>();
+  for (const s of substancias) {
+    const oficial = nomes.get(s)?.join("|");
+    if (oficial) grupos.set(oficial, [...(grupos.get(oficial) ?? []), s]);
+  }
+  const out = new Map<string, string[]>();
+  for (const grupo of grupos.values())
+    for (const s of grupo)
+      if (grupo.length > 1)
+        out.set(
+          s,
+          grupo.filter((g) => g !== s).sort((a, b) => a.localeCompare(b, "pt-BR")),
+        );
+  return out;
 }
 
 // ---------------------------------------------------------------- URLs

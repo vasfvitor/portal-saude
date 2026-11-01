@@ -2,8 +2,11 @@ import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ALIQUOTAS,
+  dcbForBuild,
   indiceProdutosForBuild,
+  outrasGrafias,
   paginaProduto,
+  parseDcb,
   parseIndiceProdutos,
   parseProduto,
   parseTodos,
@@ -108,6 +111,58 @@ describe("fetching", () => {
     expect(() => parseTodos(com(0, { substancia: "OUTRA" }), indice)).toThrow(/substancia OUTRA/);
     const [primeira] = todos.produtos[2]!.apresentacoes as unknown[];
     expect(() => parseTodos(com(2, { apresentacoes: [primeira] }), indice)).toThrow(/1 apresentacoes/);
+  });
+});
+
+describe("official names", () => {
+  const fonte = {
+    build_id: "b",
+    built_at: "2026-11-01T16:19:34Z",
+    titulo: "Lista consolidada das DCB: versão IN Anvisa n° 473",
+    licenca: { name: "CC BY-NC-SA 4.0", url: "https://creativecommons.org/licenses/by-nc-sa/4.0/" },
+  };
+  const arquivo = { fonte, substancias: { LOSARTANA: ["losartana"], "A;B": ["a", "b"] } };
+
+  it("reads the names with the list and the license to cite", () => {
+    const dcb = parseDcb(arquivo)!;
+    expect(dcb.titulo).toBe(fonte.titulo);
+    expect(dcb.licenca).toEqual({ nome: "CC BY-NC-SA 4.0", url: fonte.licenca.url });
+    expect(dcb.nomes.get("A;B")).toEqual(["a", "b"]);
+  });
+
+  it("is null when anvisa-feeds could not read them, and fails on a broken file", () => {
+    expect(parseDcb({ fonte: null, substancias: {} })).toBeNull();
+    expect(() => parseDcb({ fonte: { ...fonte, titulo: "" }, substancias: {} })).toThrow(/no titulo/);
+    expect(() => parseDcb({ fonte, substancias: { X: [] } })).toThrow(/X: not a list of names/);
+    expect(() => parseDcb({ fonte, substancias: { X: [null] } })).toThrow(/X: not a list of names/);
+  });
+
+  it("treats a file not published yet as no names", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response("", { status: 404 }))),
+    );
+    await expect(dcbForBuild("https://x.test/ausente")).resolves.toBeNull();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(arquivo))),
+    );
+    await expect(dcbForBuild("https://x.test/presente")).resolves.toMatchObject({ titulo: fonte.titulo });
+  });
+
+  it("finds the other spellings of a substância by its official names", () => {
+    const nomes = new Map([
+      ["ÁCIDO", ["ácido"]],
+      ["ACIDO", ["ácido"]],
+      ["ÁCIDO;B", ["ácido", "b"]],
+      ["SEM PAR", ["outro"]],
+      ["FORA DA LISTA", ["ácido"]],
+    ]);
+    const grafias = outrasGrafias(nomes, ["ÁCIDO", "ACIDO", "ÁCIDO;B", "SEM PAR", "SEM NOME"]);
+    expect([...grafias]).toEqual([
+      ["ÁCIDO", ["ACIDO"]],
+      ["ACIDO", ["ÁCIDO"]],
+    ]);
   });
 });
 

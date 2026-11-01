@@ -71,3 +71,6 @@ const build = JSON.parse(readFileSync(join(DIST, "build.json"), "utf-8"));
 if (build.situacao_build === null) {
   console.warn("warning: built without the ANVISA registration data (cmed/dados situacao_fonte is null or absent)");
 }
+if (build.dcb === null) {
+  console.warn("warning: built without the official names (cmed/dados/substancias.json is absent or has no fonte)");
+}

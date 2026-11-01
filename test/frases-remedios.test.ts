@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { fmtMoney } from "../src/lib/format";
 import {
+  nomeOficial,
   embalagemInstitucional,
   precoPorUnidade,
   acompanharSubstancia,
@@ -49,6 +50,13 @@ describe("remedios sentences", () => {
     expect(classeSemCodigo("J1G1 - FLUORQUINOLONAS ORAIS")).toBe("FLUORQUINOLONAS ORAIS");
     expect(classeSemCodigo("ANALGÉSICOS")).toBe("ANALGÉSICOS");
     expect(avisoComercializacao(produto("151670007").comercializado)).toMatch(/em falta ou fora das farmácias/);
+  });
+});
+
+describe("official name", () => {
+  it("names one substância, or the parts of an association in order", () => {
+    expect(nomeOficial(["losartana potássica"])).toBe("Nome oficial no Brasil: losartana potássica.");
+    expect(nomeOficial(["ezetimiba", "sinvastatina"])).toBe("Nome oficial no Brasil: ezetimiba + sinvastatina.");
   });
 });
 

@@ -10,21 +10,33 @@ import Selo from "../../../components/Selo.astro";
 import SeuEstado from "../../../components/SeuEstado.astro";
 import Base from "../../../layouts/Base.astro";
 import { ehGenerico, porChave, quantoMenos, REGIMES, type Opcao } from "../../../lib/comparar";
-import { CMED_DADOS_URL } from "../../../lib/config";
+import { CMED_DADOS_URL, DCB_URL } from "../../../lib/config";
 import { contar } from "../../../lib/format";
 import {
   acompanharSubstancia,
   aliquotaRotulo,
+  DCB_EXPLICA,
+  DCB_REUSO,
+  DE_ONDE_VEM_O_NOME,
   EMBALAGEM_INSTITUCIONAL,
   embalagemInstitucional,
   EMBALAGENS_INSTITUCIONAIS,
+  nomeOficial,
   tipoExplicado,
 } from "../../../lib/frases-remedios";
 import { TABELA, type Regime } from "../../../lib/icms";
-import { paginaProduto, produtosForBuild, slugsSubstancias, type Produto } from "../../../lib/remedios";
+import {
+  dcbForBuild,
+  outrasGrafias,
+  paginaProduto,
+  produtosForBuild,
+  slugsSubstancias,
+  type Dcb,
+  type Produto,
+} from "../../../lib/remedios";
 
 export async function getStaticPaths() {
-  const produtos = await produtosForBuild(CMED_DADOS_URL);
+  const [produtos, dcb] = await Promise.all([produtosForBuild(CMED_DADOS_URL), dcbForBuild(CMED_DADOS_URL)]);
   const slugs = slugsSubstancias(produtos.map((p) => p.substancia));
   const por = new Map<string, Produto[]>();
   for (const p of produtos) {
@@ -32,17 +44,26 @@ export async function getStaticPaths() {
     lista.push(p);
     por.set(p.substancia, lista);
   }
+  const grafias = outrasGrafias(dcb?.nomes ?? new Map<string, string[]>(), [...por.keys()]);
   return [...por.entries()].map(([substancia, lista]) => ({
     params: { slug: slugs.get(substancia)! },
-    props: { substancia, lista },
+    props: {
+      substancia,
+      lista,
+      dcb,
+      outras: (grafias.get(substancia) ?? []).map((nome) => ({ nome, slug: slugs.get(nome)! })),
+    },
   }));
 }
 
 interface Props {
   substancia: string;
   lista: Produto[];
+  dcb: Dcb | null;
+  outras: { nome: string; slug: string }[];
 }
-const { substancia, lista } = Astro.props;
+const { substancia, lista, dcb, outras } = Astro.props;
+const nomes = dcb?.nomes.get(substancia);
 const ref = TABELA.ref;
 const ufsRef = TABELA.ufs.normal.get(ref) ?? [];
 const MAX_LINHAS = 8;
@@ -128,6 +149,30 @@ const resumo = `${contar(lista.length, "produto tem", "produtos têm")} esta sub
     {resumo}
     {grupos.length > 0 && " Para comparar preço, compare a mesma dose e embalagem."}
   </p>
+  {dcb && nomes && (
+    <div class="oficial">
+      <p>{nomeOficial(nomes)}</p>
+      {outras.length > 0 && (
+        <p>
+          Mesma substância em outra grafia na lista da CMED:{" "}
+          {outras.map((o, i) => (
+            <>
+              {i > 0 && ", "}
+              <a href={`/remedios/substancia/${o.slug}/`}>{o.nome}</a>
+            </>
+          ))}
+          .
+        </p>
+      )}
+      <details>
+        <summary>{DE_ONDE_VEM_O_NOME}</summary>
+        <p>
+          {DCB_EXPLICA} Fonte: <a href={DCB_URL}>{dcb.titulo}</a>, Anvisa, licença{" "}
+          <a href={dcb.licenca.url}>{dcb.licenca.nome}</a>. {DCB_REUSO}
+        </p>
+      </details>
+    </div>
+  )}
 
   {grupos.length > 0 && (
     <section>
@@ -199,6 +244,21 @@ const resumo = `${contar(lista.length, "produto tem", "produtos têm")} esta sub
 </Base>
 
 <style>
+  .oficial p {
+    margin: 0.3rem 0;
+  }
+  .oficial summary {
+    cursor: pointer;
+    min-height: 32px;
+    padding-top: 4px;
+    color: var(--accent-ink);
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+  .oficial details p {
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
   .produtos {
     padding-left: 1.1rem;
   }
