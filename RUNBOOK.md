@@ -13,6 +13,7 @@ Quem cria ou muda um alarme ou uma mensagem de erro atualiza este arquivo no mes
 
 | Workflow     | Trecho da mensagem                                                                            | Entrada                                                                 |
 | ------------ | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Publish site | `could not read the` (aviso amarelo)                                                          | [Fonte não abriu no verify](#fonte-não-abriu-no-verify)                 |
 | Publish site | `HTTP 404 at`, `HTTP 503 at`, `HTTP 429 at`, `TimeoutError`, `fetch failed`                   | [Fonte fora do ar ou lenta](#fonte-fora-do-ar-ou-lenta)                 |
 | Publish site | `schema_version`, `(this site reads 1)`                                                       | [Contrato de uma fonte mudou](#contrato-de-uma-fonte-mudou)             |
 | Publish site | `not an object`, `no <campo>`, `bad <campo>`, `without PMC`, `cancelled without cancelamento` | [Campo inválido numa fonte](#campo-inválido-numa-fonte)                 |
@@ -32,16 +33,33 @@ Roda em push no `main`, à mão, e três vezes por dia (13:15, 17:45 e 21:15 UTC
 - o carimbo da lista da CMED, no anvisa-feeds;
 - o build da situação dos registros, também no anvisa-feeds.
 
-Se não conseguir ler alguma delas, publica mesmo assim.
+Se não conseguir ler a data do ans-feeds ou o carimbo da CMED, não publica e deixa um aviso amarelo (ver
+[Fonte não abriu no verify](#fonte-não-abriu-no-verify)). Se quem não abre é o `/build.json` do próprio
+site, publica.
 
 Todas as fontes são obrigatórias. Em qualquer falha do build, **o site anterior continua no ar**.
+
+### Fonte não abriu no verify
+
+- **Onde aparece:** job `verify`, como aviso amarelo. O run fica verde e o build não roda.
+- **Mensagem:** `::warning::could not read the date of the ans-feeds meta.json; not publishing, the site keeps its current build`.
+  Ou `the CMED stamp of the anvisa-feeds meta.json`, ou os dois.
+- **O que quer dizer:** num horário fixo, o `meta.json` do ans-feeds ou do anvisa-feeds não abriu, ou
+  veio sem a data. Como todas as fontes são obrigatórias, o build falharia.
+- **O site foi afetado?** Não. Segue com o build anterior, que fica velho enquanto isso durar.
+- **Agir ou esperar:** esperar. O próximo horário tenta de novo, e o alarme do produtor diz o motivo: ver
+  o RUNBOOK do [ans-feeds](https://github.com/vasfvitor/ans-feeds/blob/main/RUNBOOK.md) ou do
+  [anvisa-feeds](https://github.com/vasfvitor/anvisa-feeds/blob/main/RUNBOOK.md).
+- **Pedir ajuda quando:** o aviso se repetir por mais de um dia com o produtor verde.
 
 ### Fonte fora do ar ou lenta
 
 - **Onde aparece:** passo Build.
 - **Mensagens:** `HTTP 404 at <url>`, `HTTP 503 at <url>`, `HTTP 429 at <url>`,
   `TimeoutError: The operation was aborted due to timeout`, `fetch failed at <url>`.
-- **O que quer dizer:** um arquivo do ans-feeds ou do anvisa-feeds não abriu. O build tenta de novo, com
+- **O que quer dizer:** um arquivo do ans-feeds ou do anvisa-feeds não abriu durante o build. Nos
+  horários fixos, o `verify` costuma parar antes, com o aviso amarelo; este vermelho aparece num push, num
+  "Run workflow" ou quando a fonte cai entre o `verify` e o build. O build tenta de novo, com
   espera crescente, em erro de rede, tempo esgotado, 429 e 5xx. Um 404 falha na hora.
 - **O site foi afetado?** Não. O site anterior continua.
 - **Exemplo real:** de 23 a 26/10/2026, o Pages respondeu 429 porque o build pedia milhares de arquivos
@@ -155,7 +173,9 @@ pode desligar o cron deste repo sem avisar.
 
 - **O que fazer:**
   1. Abrir Actions → Publish site neste repo e ver o último run.
-  2. Se estiver vermelho, achar a entrada acima pela mensagem.
+  2. Se estiver vermelho, achar a entrada acima pela mensagem. Se estiver verde com o aviso
+     `could not read`, o portal parou porque uma fonte não abre: ver
+     [Fonte não abriu no verify](#fonte-não-abriu-no-verify).
   3. Se não houver run recente, o cron pode ter sido desligado: na página do workflow, "Enable workflow",
      e depois "Run workflow".
   4. Se o run estiver verde e o alarme continuar, abrir `https://saude.abelhaninja.de/build.json` no

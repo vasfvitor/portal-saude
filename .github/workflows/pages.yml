@@ -47,20 +47,29 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # ?t= gets past the 600 s Pages cache; any failed read counts as a change (publish)
+          # ?t= gets past the 600 s Pages cache. A producer file that cannot be read is no reason to publish:
+          # every source is required, so the build would fail. The run skips with a warning and the site
+          # keeps its build; the producer's own alarm says why. A /build.json that cannot be read still
+          # publishes: the site itself may be broken.
           dados=$(curl -fsS "$META?t=$(date +%s)" | jq -er .date) || dados=""
-          cmed=$(curl -fsS "$CMED_META?t=$(date +%s)" | jq -er .cmed.stamp) || cmed=""
+          feeds_meta=$(curl -fsS "$CMED_META?t=$(date +%s)") || feeds_meta=""
+          cmed=$(jq -er .cmed.stamp <<<"$feeds_meta" 2>/dev/null) || cmed=""
           # the registration status and measures change daily, independently of the list stamp
           # jq -r without -e: a missing build prints null on both sides and still compares
-          situacao=$(curl -fsS "$CMED_META?t=$(date +%s)" | jq -r .cmed.situacao_build) || situacao=""
+          situacao=$(jq -r .cmed.situacao_build <<<"$feeds_meta" 2>/dev/null) || situacao=""
           # plain http as a fallback while the Pages certificate is missing or being renewed
           site=$(curl -fsS "$PUBLISHED?t=$(date +%s)" || curl -fsS "${PUBLISHED/https:/http:}?t=$(date +%s)") || site=""
           site_dados=$(jq -er .dados_date <<<"$site" 2>/dev/null) || site_dados=""
           site_cmed=$(jq -er .cmed_stamp <<<"$site" 2>/dev/null) || site_cmed=""
           site_situacao=$(jq -r .situacao_build <<<"$site" 2>/dev/null) || site_situacao=""
           echo "dados: ${dados:-?} / ${site_dados:-?} · cmed: ${cmed:-?} / ${site_cmed:-?} · situação: ${situacao:-?} / ${site_situacao:-?}"
-          if [ -n "$dados" ] && [ "$dados" = "$site_dados" ] && [ -n "$cmed" ] && [ "$cmed" = "$site_cmed" ] \
-            && [ -n "$situacao" ] && [ "$situacao" = "$site_situacao" ]; then
+          faltou=""
+          [ -n "$dados" ] || faltou="the date of the ans-feeds meta.json"
+          [ -n "$cmed" ] || faltou="${faltou:+$faltou and }the CMED stamp of the anvisa-feeds meta.json"
+          if [ -n "$faltou" ]; then
+            echo "::warning::could not read $faltou; not publishing, the site keeps its current build"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          elif [ "$dados" = "$site_dados" ] && [ "$cmed" = "$site_cmed" ] && [ "$situacao" = "$site_situacao" ]; then
             echo "unchanged: built from the data of $dados, the CMED list $cmed and the registration build $situacao"
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
