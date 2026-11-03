@@ -17,6 +17,7 @@ import {
   strOrAbsent,
   strOrNull,
   type Obj,
+  versao,
 } from "./validar";
 
 /** ICMS rates in the CMED list, as the JSON keys spell them. */
@@ -155,6 +156,7 @@ function parseItem(o: Obj, where: string): Omit<ItemProduto, "apresentacoes"> {
 
 export function parseIndiceProdutos(raw: unknown): IndiceProdutos {
   const o = obj(raw, "produtos.json");
+  versao(o, "produtos.json");
   const stamp = listaStamp(o, "produtos.json");
   const produtos = list(o.produtos, "produtos.json produtos").map((x, i) => {
     const where = `produtos.json[${i}]`;
@@ -246,6 +248,7 @@ const CAMPOS_DO_INDICE = [
  * half-deployed upstream fails the build instead of mixing two lists or linking to pages that do not exist. */
 export function parseTodos(raw: unknown, indice: IndiceProdutos): Produto[] {
   const o = obj(raw, "todos.json");
+  versao(o, "todos.json");
   const lista = { stamp: listaStamp(o, "todos.json"), publicado_em: str(o, "publicado_em", "todos.json") };
   for (const k of ["stamp", "publicado_em"] as const)
     if (lista[k] !== indice[k]) throw new Error(`todos.json: ${k} ${lista[k]}, but produtos.json has ${indice[k]}`);
@@ -290,6 +293,7 @@ export interface Dcb {
 /** null when anvisa-feeds could not read the names for this build (`fonte: null`). */
 export function parseDcb(raw: unknown): Dcb | null {
   const o = obj(raw, "substancias.json");
+  versao(o, "substancias.json");
   const fonte = objOrAbsent(o, "fonte", "substancias.json");
   if (!fonte) return null;
   const licenca = obj(fonte.licenca, "substancias.json fonte licenca");

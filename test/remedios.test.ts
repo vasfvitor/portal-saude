@@ -59,6 +59,20 @@ describe("parsers", () => {
     expect(() => parseProduto(com({ comercializacao_periodo: "2025/2026" }))).toThrow(/comercializacao_periodo/);
   });
 
+  it("reads the contract version when anvisa-feeds publishes it, and fails on a version it does not know", () => {
+    const indice = fixture("produtos.json") as Record<string, unknown>;
+    // the fixtures predate the key: absent reads, and so does 1
+    expect(parseIndiceProdutos({ ...indice, schema_version: 1 }).stamp).toBe("20261009");
+    expect(() => parseIndiceProdutos({ ...indice, schema_version: 2 })).toThrow(/produtos.json: schema_version 2/);
+    const todos = fixture("todos.json") as Record<string, unknown>;
+    const idx = parseIndiceProdutos(indice);
+    expect(parseTodos({ ...todos, schema_version: 1 }, idx)).toHaveLength(3);
+    expect(() => parseTodos({ ...todos, schema_version: "1" }, idx)).toThrow(/todos.json: schema_version "1"/);
+    const dcb = { fonte: { titulo: "Lista", licenca: { name: "CC", url: "https://x.test" } }, substancias: {} };
+    expect(parseDcb({ ...dcb, schema_version: 1 })?.titulo).toBe("Lista");
+    expect(() => parseDcb({ ...dcb, schema_version: 3 })).toThrow(/substancias.json: schema_version 3/);
+  });
+
   it("reads the year the sales flags are about, and one year for a list only when the presentations agree", () => {
     const base = fixture("produto/170560103.json") as Record<string, unknown>;
     const apres = (base.apresentacoes as Record<string, unknown>[])[0]!;

@@ -47,6 +47,9 @@ describe("parsers", () => {
     expect(parseMeta(fixture("meta.json")).date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(() => parseMeta({ date: "23/10/2026" })).toThrow(/date/);
     expect(parseMeta({ date: "2026-10-28" }).falhas).toEqual([]); // before ans-feeds published the list
+    // the contract version: absent (before ans-feeds published it) or 1 reads; another fails the build
+    expect(parseMeta({ date: "2026-10-28", schema_version: 1 }).date).toBe("2026-10-28");
+    expect(() => parseMeta({ date: "2026-10-28", schema_version: 2 })).toThrow(/meta.json: schema_version 2/);
     const falha = { dia: "2026-10-29", fonte: "pda-023-igr.csv", motivo: "1354 bytes contra 6756" };
     // the subject comes from ans-feeds; the reason is for people reading meta.json, not the page
     expect(parseMeta({ date: "2026-10-28", falhas: [{ ...falha, assunto: "reclamacoes" }] }).falhas).toEqual([

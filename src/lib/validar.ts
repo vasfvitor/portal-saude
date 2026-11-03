@@ -3,6 +3,16 @@
 
 export type Obj = Record<string, unknown>;
 
+/** The contract version a producer's bundle may carry (`schema_version`, as in the anvisa-api manifest): it
+ * only changes when a reader must change to keep reading. Absent (data from before the key) or this version
+ * passes; any other value fails the build, since the fields may no longer mean what this code reads. */
+export const VERSAO_CONTRATO = 1;
+export function versao(o: Obj, where: string): void {
+  const v = o.schema_version;
+  if (v !== undefined && v !== VERSAO_CONTRATO)
+    throw new Error(`${where}: schema_version ${JSON.stringify(v)} (this site reads ${VERSAO_CONTRATO})`);
+}
+
 export function obj(v: unknown, where: string): Obj {
   if (typeof v !== "object" || v === null || Array.isArray(v)) throw new Error(`${where}: not an object`);
   return v as Obj;

@@ -17,6 +17,7 @@ import {
   str,
   strOrAbsent,
   strOrNull,
+  versao,
 } from "./validar";
 
 export type Situacao = "ativa" | "cancelada";
@@ -261,6 +262,7 @@ function parseMeta623(raw: unknown, where: string): MetaRn623 | null {
 
 export function parseMeta(raw: unknown): Meta {
   const o = obj(raw, "meta.json");
+  versao(o, "meta.json");
   const date = str(o, "date", "meta.json");
   if (!DIA.test(date)) throw new Error(`meta.json: bad date ${date}`);
   const falhas = listOrEmpty(o, "falhas", "meta.json").map((x) => {
@@ -292,6 +294,7 @@ const CAMPOS_DO_INDICE = [
  * same operators in the same order with the same index fields, so a half-deployed upstream fails the build. */
 export function parseTodas(raw: unknown, indice: ItemIndice[], meta: Meta): Operadora[] {
   const o = obj(raw, "todas.json");
+  versao(o, "todas.json");
   const date = str(o, "date", "todas.json");
   if (date !== meta.date) throw new Error(`todas.json: date ${date}, but meta.json has ${meta.date}`);
   const ops = list(o.operadoras, "todas.json operadoras").map((x) => parseOperadora(x));

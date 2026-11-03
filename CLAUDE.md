@@ -19,6 +19,9 @@ the sources and the rebuild schedule; a git-ignored `NOTES.local.md` holds pendi
   is optional: without it the pages leave the line out. It is under Anvisa's CC BY-NC-SA 4.0, not open data, so
   wherever a name appears, the list and the license go with it. A substância with only some parts in the list
   shows nothing: being absent says nothing about the medicine.
+- The bundles may carry `schema_version` (the producers' contract version, as in the anvisa-api manifest).
+  `versao()` in `src/lib/validar.ts` reads it: absent or 1 passes, any other value fails the build. A new
+  version upstream means reading the contract change first, then raising `VERSAO_CONTRATO`.
 - The build never reads the per-entity files (`operadora/<r>.json`, `produto/<r>.json`): thousands of requests
   in one build made GitHub Pages answer 429. Each bundle is checked against its index, field by field.
 - "Acompanhar": `feed` (operator) and `feed_substancia` (product) come from the bundles and are optional; without
