@@ -192,4 +192,3 @@ Achados em 2026-11-03, ainda sem correção.
   medidas, situação, beneficiários, entre outros), o build fica verde e o bloco some da página. Fase 3.
 - **Nomes oficiais novos podem esperar.** O `verify` não compara a versão da DCB. Um `substancias.json`
   novo só entra quando outra das três coisas mudar.
-- **keepalive verde sem ter feito nada.** Conferir no log do dia 1 as linhas `enabled`. Fase 2.
