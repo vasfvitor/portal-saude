@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ALIQUOTAS,
+  anoDeVenda,
   dcbForBuild,
   indiceProdutosForBuild,
   outrasGrafias,
@@ -55,6 +56,23 @@ describe("parsers", () => {
     expect(() => parseProduto(com({ ggrem: "123" }))).toThrow(/ggrem/);
     expect(() => parseProduto({ ...base, apresentacoes: [] })).toThrow(/no apresentacoes/);
     expect(() => parseIndiceProdutos({ stamp: "2026-10", publicado_em: "x", produtos: [] })).toThrow(/stamp/);
+    expect(() => parseProduto(com({ comercializacao_periodo: "2025/2026" }))).toThrow(/comercializacao_periodo/);
+  });
+
+  it("reads the year the sales flags are about, and one year for a list only when the presentations agree", () => {
+    const base = fixture("produto/170560103.json") as Record<string, unknown>;
+    const apres = (base.apresentacoes as Record<string, unknown>[])[0]!;
+    const cipro = parseProduto(base);
+    expect(cipro.apresentacoes.map((a) => a.comercializacao_periodo)).toEqual(["2025", "2025"]);
+    expect(anoDeVenda(cipro.apresentacoes)).toBe("2025");
+    // data from before anvisa-feeds published the field
+    const antes = { ...apres };
+    delete antes.comercializacao_periodo;
+    expect(parseProduto({ ...base, apresentacoes: [antes] }).apresentacoes[0]!.comercializacao_periodo).toBeNull();
+    expect(anoDeVenda([{ comercializacao_periodo: null }])).toBeNull();
+    expect(anoDeVenda([{ comercializacao_periodo: "2025" }, { comercializacao_periodo: "2026" }])).toBeNull();
+    expect(anoDeVenda([{ comercializacao_periodo: "2025" }, { comercializacao_periodo: null }])).toBeNull();
+    expect(anoDeVenda([])).toBeNull();
   });
 });
 

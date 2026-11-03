@@ -4,9 +4,9 @@
 // is said once, above the table; the cheaper column says its own once a state is picked, since a generic may pay
 // less ICMS than the rest (SP, MG). Exempt rows say so in the row.
 import Selo from "./Selo.astro";
-import { aliquotaRotulo, precoMaximo, precosPorAliquota } from "../lib/frases-remedios";
+import { aliquotaRotulo, precoMaximo, precosPorAliquota, quandoVenda } from "../lib/frases-remedios";
 import { TABELA, type Regime } from "../lib/icms";
-import type { Apresentacao } from "../lib/remedios";
+import { anoDeVenda, type Apresentacao } from "../lib/remedios";
 
 /** The cheapest product with the same dose and package, in one ICMS regime or in both (`regime` undefined). */
 export interface Barato {
@@ -42,6 +42,8 @@ const { linhas, marca } = Astro.props;
 const ref = TABELA.ref;
 const comBarato = linhas.some((l) => l.baratos.length > 0);
 const soAlternativas = linhas.every((l) => l.baratos.every((b) => b.alternativa));
+// "em 2025": the year of this list, read from the rows; the cheaper products come from the same list
+const venda = quandoVenda(anoDeVenda(linhas.map((l) => l.a)));
 ---
 
 <div class="tabela">
@@ -52,7 +54,7 @@ const soAlternativas = linhas.every((l) => l.baratos.every((b) => b.alternativa)
         <th scope="col" class="n">
           Este remédio
         </th>
-        {comBarato && <th scope="col">{soAlternativas ? "Com venda no último ano" : "Opção mais barata"}</th>}
+        {comBarato && <th scope="col">{soAlternativas ? `Com venda ${venda}` : "Opção mais barata"}</th>}
       </tr>
     </thead>
     <tbody>
@@ -60,7 +62,7 @@ const soAlternativas = linhas.every((l) => l.baratos.every((b) => b.alternativa)
         <tr>
           <th scope="row">
             {nome}
-            {semVenda && <Selo tom="atencao">sem venda no último ano</Selo>}
+            {semVenda && <Selo tom="atencao">{`sem venda ${venda}`}</Selo>}
             {a.restricao_hospitalar && <Selo tom="atencao">uso hospitalar</Selo>}
           </th>
           <td class="n" data-generico={marca}>
@@ -91,7 +93,7 @@ const soAlternativas = linhas.every((l) => l.baratos.every((b) => b.alternativa)
                     </>
                   )}
                   {b.menos >= 1 && <small class="menos">{b.menos}% a menos</small>}
-                  {b.alternativa && !soAlternativas && <small>com venda no último ano</small>}
+                  {b.alternativa && !soAlternativas && <small>{`com venda ${venda}`}</small>}
                   <a href={b.href}>{b.produto}</a>
                   {b.tipo && <small>{b.tipo.toLowerCase()}</small>}
                 </span>

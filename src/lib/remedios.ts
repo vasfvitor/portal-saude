@@ -14,6 +14,7 @@ import {
   obj,
   objOrAbsent,
   str,
+  strOrAbsent,
   strOrNull,
   type Obj,
 } from "./validar";
@@ -38,6 +39,9 @@ export interface Apresentacao {
   eans: string[];
   regime_preco: string;
   comercializado: boolean;
+  /** the year `comercializado` is about, as the list's header says it ("2025" on the October 2026 list); null
+   * before anvisa-feeds published it */
+  comercializacao_periodo: string | null;
   /** the list marks it hospital-only (not sold in pharmacies); null before anvisa-feeds published the flag */
   restricao_hospitalar: boolean | null;
   /** exempt from ICMS: the 0% price is the ceiling in every state, and the taxed columns do not apply */
@@ -123,6 +127,7 @@ export interface IndiceProdutos {
 const REGISTRO = /^\d{9}$/;
 const GGREM = /^\d{15}$/;
 const STAMP = /^\d{8}$/;
+const ANO = /^\d{4}$/;
 
 function precos(raw: unknown, where: string): Partial<Record<Aliquota, number>> {
   const o = obj(raw, where);
@@ -174,6 +179,21 @@ function listaStamp(o: Obj, where: string): string {
   return stamp;
 }
 
+// the pages print it as "em 2025": anything but a year fails the build instead of printing a broken sentence
+function periodo(a: Obj, where: string): string | null {
+  const ano = strOrAbsent(a, "comercializacao_periodo", where);
+  if (ano !== null && !ANO.test(ano)) throw new Error(`${where}: bad comercializacao_periodo ${ano}`);
+  return ano;
+}
+
+/** The year the sales flags are about, when every presentation given names the same one; null when none does or
+ * they disagree, and the pages then say "no último ano". */
+export function anoDeVenda(apresentacoes: Pick<Apresentacao, "comercializacao_periodo">[]): string | null {
+  const anos = new Set(apresentacoes.map((a) => a.comercializacao_periodo));
+  const [ano] = anos;
+  return anos.size === 1 && ano !== undefined ? ano : null;
+}
+
 export function parseProduto(raw: unknown): Produto {
   const o = obj(raw, "produto");
   const where = `produto ${String(o.registro_produto)}`;
@@ -189,6 +209,7 @@ export function parseProduto(raw: unknown): Produto {
       eans: list(a.eans, `${where} eans`).filter((e): e is string => typeof e === "string"),
       regime_preco: str(a, "regime_preco", where),
       comercializado: bool(a, "comercializado", where),
+      comercializacao_periodo: periodo(a, where),
       restricao_hospitalar: boolOrAbsent(a, "restricao_hospitalar", where),
       icms_0: bool(a, "icms_0", where),
       pmc,

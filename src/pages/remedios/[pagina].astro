@@ -42,6 +42,7 @@ import {
   PRECO_MAXIMO_CURTO,
   precoMaximo,
   precoPorUnidade,
+  quandoVenda,
   REGISTRO_INATIVO,
   SE_COBRAREM_MAIS,
   tarjaExplicada,
@@ -51,6 +52,7 @@ import {
 } from "../../lib/frases-remedios";
 import { TABELA } from "../../lib/icms";
 import {
+  anoDeVenda,
   paginaProduto,
   pmcAplicavel,
   indiceProdutosForBuild,
@@ -132,7 +134,8 @@ const aConfirmar = porEstado && [...ufs.values()].flat().some((u) => u.endsWith(
 const tipo = tipoExplicado(p.tipo_produto);
 const tarja = tarjaExplicada(p.tarja);
 const aviso = avisoProduto(p);
-const semVenda = avisoComercializacao(p.comercializado);
+const anoVenda = anoDeVenda(p.apresentacoes);
+const semVenda = avisoComercializacao(p.comercializado, anoVenda);
 const alternativa = baratos.some((b) => b.some((x) => x.alternativa));
 const temBarato = baratos.some((b) => b.length > 0);
 
@@ -206,7 +209,7 @@ const breadcrumb = {
           <p>
             {semVenda}
             {alternativa &&
-              " Na tabela de preços aparece um remédio com a mesma substância, dose e embalagem que teve venda no último ano."}
+              ` Na tabela de preços aparece um remédio com a mesma substância, dose e embalagem que teve venda ${quandoVenda(anoVenda)}.`}
           </p>
         )}
         {p.medidas.length > 0 && (

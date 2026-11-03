@@ -22,10 +22,12 @@ import {
   embalagemInstitucional,
   EMBALAGENS_INSTITUCIONAIS,
   nomeOficial,
+  quandoVenda,
   tipoExplicado,
 } from "../../../lib/frases-remedios";
 import { TABELA, type Regime } from "../../../lib/icms";
 import {
+  anoDeVenda,
   dcbForBuild,
   outrasGrafias,
   paginaProduto,
@@ -136,6 +138,8 @@ const feed = lista.find((p) => p.feed_substancia)?.feed_substancia ?? null;
 const resumo = `${contar(lista.length, "produto tem", "produtos têm")} esta substância${temGenerico ? ", entre marcas e genéricos" : ""}.`;
 // associations are written "A;B" with no space, one unbreakable word on a phone: the h1 puts a <wbr> after each ";"
 const partesDoNome = substancia.split(";");
+// "em 2025": the year the sales flags of this list are about
+const venda = quandoVenda(anoDeVenda(lista.flatMap((p) => p.apresentacoes)));
 ---
 
 <Base
@@ -182,7 +186,7 @@ const partesDoNome = substancia.split(";");
       <h2>A mesma dose e embalagem, do mais barato ao mais caro</h2>
       <p class="muted">
         Preço máximo: <span data-uf-rotulo>{`ICMS de ${aliquotaRotulo(ref)} (${ufsRef.join(", ")})`}</span>. Só entram
-        remédios com venda no último ano.{" "}
+        remédios com venda {venda}.{" "}
         {referencias.length === 1
           ? `O "% menos" é em relação ao ${referencias[0]}, o remédio de referência, no mesmo estado.`
           : 'O "% menos" é em relação ao remédio de referência (o "Novo"), no mesmo estado.'}
@@ -226,7 +230,7 @@ const partesDoNome = substancia.split(";");
                   {detalhe(p) && ` · ${detalhe(p)}`} ·{" "}
                   {contar(p.apresentacoes.length, "dose e embalagem", "doses e embalagens")}
                 </span>
-                {!p.comercializado && <Selo tom="atencao">sem venda no último ano</Selo>}
+                {!p.comercializado && <Selo tom="atencao">{`sem venda ${venda}`}</Selo>}
               </li>
             ))}
           </ul>

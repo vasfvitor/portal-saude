@@ -14,6 +14,7 @@ import {
   fraseRegistro,
   precoMaximo,
   precosPorAliquota,
+  quandoVenda,
   tarjaExplicada,
   tipoExplicado,
 } from "../src/lib/frases-remedios";
@@ -46,10 +47,17 @@ describe("remedios sentences", () => {
     expect(tipoExplicado(null)).toBeNull();
     expect(tarjaExplicada("Tarja Vermelha sob restrição")).toContain("retida");
     expect(tarjaExplicada("- (*)")).toBeNull();
-    expect(avisoComercializacao(true)).toBeNull();
+    expect(avisoComercializacao(true, "2025")).toBeNull();
     expect(classeSemCodigo("J1G1 - FLUORQUINOLONAS ORAIS")).toBe("FLUORQUINOLONAS ORAIS");
     expect(classeSemCodigo("ANALGÉSICOS")).toBe("ANALGÉSICOS");
-    expect(avisoComercializacao(produto("151670007").comercializado)).toMatch(/em falta ou fora das farmácias/);
+    expect(avisoComercializacao(produto("151670007").comercializado, "2025")).toMatch(/em falta ou fora das farmácias/);
+  });
+
+  it("names the year of the sales flags, and says 'no último ano' without one", () => {
+    expect(quandoVenda("2025")).toBe("em 2025");
+    expect(quandoVenda(null)).toBe("no último ano");
+    expect(avisoComercializacao(false, "2025")).toContain("nenhuma venda deste remédio à CMED em 2025.");
+    expect(avisoComercializacao(false, null)).toContain("à CMED no último ano.");
   });
 });
 
@@ -115,25 +123,41 @@ describe("registration and ANVISA measures", () => {
     const recolhimento = { data: "2019-10-02", acoes: ["Recolhimento", "Suspensão"], atividades: [], processo: null };
     const proibicao = { data: "2023-03-01", acoes: ["Proibição"], atividades: ["Propaganda"], processo: null };
     const ativo = { ativo: true, vencimento: null };
+    const de2025 = [{ comercializacao_periodo: "2025" }];
     // CARDIZEM: inactive registration and a 2019 recall
     expect(
-      avisoProduto({ situacao: { ativo: false, vencimento: null }, comercializado: true, medidas: [recolhimento] }),
+      avisoProduto({
+        situacao: { ativo: false, vencimento: null },
+        comercializado: true,
+        medidas: [recolhimento],
+        apresentacoes: de2025,
+      }),
     ).toEqual({ resumo: "Registro inativo e recolhimento em 2019.", tom: "alerta" });
-    expect(avisoProduto({ situacao: ativo, comercializado: false, medidas: [] })).toEqual({
-      resumo: "Sem venda no último ano.",
+    expect(avisoProduto({ situacao: ativo, comercializado: false, medidas: [], apresentacoes: de2025 })).toEqual({
+      resumo: "Sem venda em 2025.",
       tom: "atencao",
     });
-    expect(avisoProduto({ situacao: null, comercializado: true, medidas: [proibicao] })?.resumo).toBe(
-      "Medida da ANVISA em 2023.",
-    );
+    // data from before anvisa-feeds published the year
+    expect(
+      avisoProduto({
+        situacao: ativo,
+        comercializado: false,
+        medidas: [],
+        apresentacoes: [{ comercializacao_periodo: null }],
+      })?.resumo,
+    ).toBe("Sem venda no último ano.");
+    expect(
+      avisoProduto({ situacao: null, comercializado: true, medidas: [proibicao], apresentacoes: de2025 })?.resumo,
+    ).toBe("Medida da ANVISA em 2023.");
     expect(
       avisoProduto({
         situacao: { ativo: false, vencimento: null },
         comercializado: false,
         medidas: [recolhimento, proibicao],
+        apresentacoes: de2025,
       })?.resumo,
-    ).toBe("Registro inativo, sem venda no último ano e 2 medidas da ANVISA, a última em 2023.");
-    expect(avisoProduto({ situacao: ativo, comercializado: true, medidas: [] })).toBeNull();
+    ).toBe("Registro inativo, sem venda em 2025 e 2 medidas da ANVISA, a última em 2023.");
+    expect(avisoProduto({ situacao: ativo, comercializado: true, medidas: [], apresentacoes: de2025 })).toBeNull();
   });
 });
 

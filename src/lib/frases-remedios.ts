@@ -3,7 +3,7 @@
 import { fmtDate, fmtMes, fmtMoney } from "./format";
 import { TABELA } from "./icms";
 import { lerApresentacao, marcaInstitucional, type ApresentacaoLida } from "./apresentacao";
-import type { Aliquota, Apresentacao, Medida, Produto } from "./remedios";
+import { anoDeVenda, type Aliquota, type Apresentacao, type Medida, type Produto } from "./remedios";
 
 type Unidade = NonNullable<ApresentacaoLida["unidade"]>;
 
@@ -39,10 +39,14 @@ export const precosPorAliquota = (pmc: Apresentacao["pmc"]): string =>
     Object.fromEntries(TABELA.usadas.flatMap((k) => (pmc[k] === undefined ? [] : [[k, fmtMoney(pmc[k])]]))),
   );
 
-export function avisoComercializacao(comercializado: boolean): string | null {
+/** When the sales flags are about: "em 2025", the year the list names (`anoDeVenda`), or "no último ano" without
+ * one. Every "sem venda" / "com venda" on the site goes through here. */
+export const quandoVenda = (ano: string | null): string => (ano ? `em ${ano}` : "no último ano");
+
+export function avisoComercializacao(comercializado: boolean, ano: string | null): string | null {
   return comercializado
     ? null
-    : "O fabricante não informou nenhuma venda deste remédio à CMED no último ano. Ele pode estar em falta ou fora das farmácias.";
+    : `O fabricante não informou nenhuma venda deste remédio à CMED ${quandoVenda(ano)}. Ele pode estar em falta ou fora das farmácias.`;
 }
 
 /** "J1G1 - FLUORQUINOLONAS ORAIS" → "FLUORQUINOLONAS ORAIS": the ATC-like code means nothing to the reader. */
@@ -89,11 +93,13 @@ const inicial = (s: string): string => s.replace(/^./, (c) => c.toUpperCase());
 /** The one line at the top of a product page that has something to check: "Registro inativo e recolhimento em
  * 2019." `tom` is `alerta` when ANVISA published a measure, `atencao` otherwise; the full sentences go below it. */
 export function avisoProduto(
-  p: Pick<Produto, "situacao" | "comercializado" | "medidas">,
+  p: Pick<Produto, "situacao" | "comercializado" | "medidas"> & {
+    apresentacoes: Pick<Apresentacao, "comercializacao_periodo">[];
+  },
 ): { resumo: string; tom: "alerta" | "atencao" } | null {
   const partes: string[] = [];
   if (p.situacao && !p.situacao.ativo) partes.push("registro inativo");
-  if (!p.comercializado) partes.push("sem venda no último ano");
+  if (!p.comercializado) partes.push(`sem venda ${quandoVenda(anoDeVenda(p.apresentacoes))}`);
   const ultima = [...p.medidas].sort((a, b) => b.data.localeCompare(a.data))[0];
   if (ultima) {
     const ano = ultima.data.slice(0, 4);
