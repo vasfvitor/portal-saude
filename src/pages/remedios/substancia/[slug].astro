@@ -134,6 +134,8 @@ const referencias = [...new Set(lista.filter((p) => p.tipo_produto === "Novo").m
 // every product with the substância carries the same feed address
 const feed = lista.find((p) => p.feed_substancia)?.feed_substancia ?? null;
 const resumo = `${contar(lista.length, "produto tem", "produtos têm")} esta substância${temGenerico ? ", entre marcas e genéricos" : ""}.`;
+// associations are written "A;B" with no space, one unbreakable word on a phone: the h1 puts a <wbr> after each ";"
+const partesDoNome = substancia.split(";");
 ---
 
 <Base
@@ -144,7 +146,7 @@ const resumo = `${contar(lista.length, "produto tem", "produtos têm")} esta sub
   <p class="trilha">
     <a href="/remedios/">Remédios</a> › Substância
   </p>
-  <h1>{substancia}</h1>
+  <h1>{partesDoNome.map((parte, i) => (i > 0 ? [";", <wbr />, parte] : parte))}</h1>
   <p class="lead">
     {resumo}
     {grupos.length > 0 && " Para comparar preço, compare a mesma dose e embalagem."}
@@ -244,6 +246,10 @@ const resumo = `${contar(lista.length, "produto tem", "produtos têm")} esta sub
 </Base>
 
 <style>
+  /* a few names have words longer than a phone line (RACEALFAOXOBETAMETILPENTANOATO): cut those, after the <wbr> */
+  h1 {
+    overflow-wrap: break-word;
+  }
   .oficial p {
     margin: 0.3rem 0;
   }
