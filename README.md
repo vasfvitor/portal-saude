@@ -37,9 +37,10 @@ affected and what to do.
 
 ## Rebuild schedule
 
-`.github/workflows/pages.yml` runs on push, on manual dispatch and on three crons (11:15, 15:15 and 21:15
-UTC). On a cron it compares the `date` of ans-feeds' `meta.json` with `/build.json` and only rebuilds when
-the data moved. The custom domain comes from `public/CNAME` plus the repository's Pages settings.
+`.github/workflows/pages.yml` runs on push, on manual dispatch and on three crons (13:15, 17:45 and 21:15
+UTC). On a cron it compares three values with `/build.json` and only rebuilds when one of them moved: the
+`date` of ans-feeds' `meta.json`, and the CMED list stamp and the ANVISA registration build in anvisa-feeds'
+`meta.json`. The custom domain comes from `public/CNAME` plus the repository's Pages settings.
 
 ## Client JavaScript
 
