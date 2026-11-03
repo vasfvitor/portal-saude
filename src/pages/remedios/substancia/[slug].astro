@@ -6,6 +6,7 @@
 import Acompanhar from "../../../components/Acompanhar.astro";
 import ComparaDose, { type Linha } from "../../../components/ComparaDose.astro";
 import Secao from "../../../components/Secao.astro";
+import NomeSubstancia from "../../../components/NomeSubstancia.astro";
 import Selo from "../../../components/Selo.astro";
 import SeuEstado from "../../../components/SeuEstado.astro";
 import Base from "../../../layouts/Base.astro";
@@ -136,8 +137,6 @@ const referencias = [...new Set(lista.filter((p) => p.tipo_produto === "Novo").m
 // every product with the substância carries the same feed address
 const feed = lista.find((p) => p.feed_substancia)?.feed_substancia ?? null;
 const resumo = `${contar(lista.length, "produto tem", "produtos têm")} esta substância${temGenerico ? ", entre marcas e genéricos" : ""}.`;
-// associations are written "A;B" with no space, one unbreakable word on a phone: the h1 puts a <wbr> after each ";"
-const partesDoNome = substancia.split(";");
 // "em 2025": the year the sales flags of this list are about
 const venda = quandoVenda(anoDeVenda(lista.flatMap((p) => p.apresentacoes)));
 ---
@@ -150,7 +149,9 @@ const venda = quandoVenda(anoDeVenda(lista.flatMap((p) => p.apresentacoes)));
   <p class="trilha">
     <a href="/remedios/">Remédios</a> › Substância
   </p>
-  <h1>{partesDoNome.map((parte, i) => (i > 0 ? [";", <wbr />, parte] : parte))}</h1>
+  <h1>
+    <NomeSubstancia nome={substancia} />
+  </h1>
   <p class="lead">
     {resumo}
     {grupos.length > 0 && " Para comparar preço, compare a mesma dose e embalagem."}
@@ -164,7 +165,9 @@ const venda = quandoVenda(anoDeVenda(lista.flatMap((p) => p.apresentacoes)));
           {outras.map((o, i) => (
             <>
               {i > 0 && ", "}
-              <a href={`/remedios/substancia/${o.slug}/`}>{o.nome}</a>
+              <a href={`/remedios/substancia/${o.slug}/`}>
+                <NomeSubstancia nome={o.nome} />
+              </a>
             </>
           ))}
           .

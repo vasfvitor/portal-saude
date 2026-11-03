@@ -5,6 +5,7 @@
 // the price in every state, the product's facts, the rules behind a price, the feed and the sources. A price is
 // never shown without its rate or its state next to it.
 import Acompanhar from "../../components/Acompanhar.astro";
+import NomeSubstancia from "../../components/NomeSubstancia.astro";
 import Quadro from "../../components/Quadro.astro";
 import Secao from "../../components/Secao.astro";
 import Selo from "../../components/Selo.astro";
@@ -191,7 +192,10 @@ const breadcrumb = {
   feed={p.feed_substancia ? { href: p.feed_substancia, title: `${p.substancia}: preços da CMED` } : undefined}
 >
   <p class="trilha">
-    <a href="/remedios/">Remédios</a> › <a href={`/remedios/substancia/${substanciaSlug}/`}>{p.substancia}</a>
+    <a href="/remedios/">Remédios</a> ›{" "}
+    <a href={`/remedios/substancia/${substanciaSlug}/`}>
+      <NomeSubstancia nome={p.substancia} />
+    </a>
   </p>
   <h1>{p.produto}</h1>
   <p class="ficha">
@@ -298,8 +302,11 @@ const breadcrumb = {
         {tipo && <li>{tipo}</li>}
         {tarja && <li>{tarja}</li>}
         <li>
-          Substância: <a href={`/remedios/substancia/${substanciaSlug}/`}>{p.substancia}</a>, com as outras marcas e os
-          genéricos
+          Substância:{" "}
+          <a href={`/remedios/substancia/${substanciaSlug}/`}>
+            <NomeSubstancia nome={p.substancia} />
+          </a>
+          , com as outras marcas e os genéricos
         </li>
         {p.classe_terapeutica && <li>Grupo de remédios: {classeSemCodigo(p.classe_terapeutica)}</li>}
         <li>{fraseRegistro(p.registro_produto, p.situacao)}</li>

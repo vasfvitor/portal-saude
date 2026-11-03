@@ -1,0 +1,10 @@
+---
+// A substância name as a page prints it. Associations are written "A;B;C" or "A+B" with no space, one word wider
+// than a phone (59 characters on the list of 2026-10-09): a <wbr> after each joiner lets the line break there.
+interface Props {
+  nome: string;
+}
+const partes = Astro.props.nome.split(/(?<=[;+])/);
+---
+
+{partes.map((parte, i) => (i > 0 ? [<wbr />, parte] : parte))}

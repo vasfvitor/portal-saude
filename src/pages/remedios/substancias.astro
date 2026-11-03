@@ -1,5 +1,6 @@
 ---
 // Every substância A to Z: the way in without JavaScript, and a page search engines can follow.
+import NomeSubstancia from "../../components/NomeSubstancia.astro";
 import Base from "../../layouts/Base.astro";
 import { CMED_DADOS_URL } from "../../lib/config";
 import { fmtInt } from "../../lib/format";
@@ -33,7 +34,9 @@ const letras = [...new Set(nomes.map(inicial))];
           .filter((n) => inicial(n) === l)
           .map((n) => (
             <li>
-              <a href={`/remedios/substancia/${slugs.get(n)!}/`}>{n}</a>
+              <a href={`/remedios/substancia/${slugs.get(n)!}/`}>
+                <NomeSubstancia nome={n} />
+              </a>
               <span class="muted"> · {fmtInt(contagem.get(n)!)}</span>
             </li>
           ))}
