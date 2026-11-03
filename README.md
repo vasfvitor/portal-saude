@@ -32,6 +32,9 @@ does not validate fails the build, and the previous deploy stays live.
 
 `/build.json` records the data date the deploy was built from; `/llms.txt` describes the site for assistants.
 
+When a run turns red, [RUNBOOK.md](RUNBOOK.md) (in Portuguese) says what the message means, whether the site was
+affected and what to do.
+
 ## Rebuild schedule
 
 `.github/workflows/pages.yml` runs on push, on manual dispatch and on three crons (11:15, 15:15 and 21:15
