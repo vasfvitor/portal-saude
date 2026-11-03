@@ -63,6 +63,17 @@ export const TROCA_NA_FARMACIA =
   "Pela lei, o farmacêutico pode trocar o remédio de referência pelo genérico com a mesma substância e dose, se o médico não tiver proibido na receita. Para qualquer outra troca, pergunte ao farmacêutico ou ao médico.";
 
 /** The registration line in "Sobre este remédio"; null when the data does not say. */
+/** The page's meta description, for "registro medicamento anvisa": the registration number first (always on the
+ * page), its status only when the data says it, then what the page answers. Around 160 characters, what a
+ * result shows. */
+export function descricaoRemedio(
+  p: Pick<Produto, "produto" | "laboratorio" | "registro_produto" | "situacao">,
+  publicado: string,
+): string {
+  const situacao = p.situacao ? (p.situacao.ativo ? ", ativo" : ", inativo") : "";
+  return `${p.produto} (${p.laboratorio}), registro na ANVISA ${p.registro_produto}${situacao}: quanto a farmácia pode cobrar em cada estado, na lista da CMED de ${publicado}.`;
+}
+
 export function fraseRegistro(registro: string, s: Produto["situacao"]): string {
   if (!s) return `Registro na ANVISA: ${registro}`;
   if (!s.ativo) return `Registro na ANVISA: ${registro}, inativo`;

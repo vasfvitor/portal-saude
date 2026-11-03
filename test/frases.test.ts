@@ -16,6 +16,7 @@ import {
   comparativoIdss,
   umParaCada,
   resumo,
+  tituloOperadora,
 } from "../src/lib/frases";
 import { parseOperadora, type Idss, type Reclamacoes } from "../src/lib/operadoras";
 
@@ -279,5 +280,16 @@ describe("sources the last ANS collection could not update", () => {
     ).toBe(
       "Na coleta de 29/10/2026 não foi possível atualizar: Índice de reclamações, Ressarcimento ao SUS, outra_fonte.csv. Esses números são os da coleta anterior.",
     );
+  });
+});
+
+describe("page title", () => {
+  it("says what the page has, in the words people search with, and only what the data holds", () => {
+    const ativa = op("333689"); // complaints published
+    expect(tituloOperadora(ativa)).toMatch(/: reclamações na ANS$/);
+    expect(tituloOperadora(op("422134"))).toMatch(/: registro cancelado na ANS$/); // cancelled comes first
+    expect(tituloOperadora({ ...ativa, reclamacoes: [] })).toMatch(/: plano de saúde na ANS$/);
+    // the name is the one the h1 shows
+    expect(tituloOperadora(ativa).startsWith(`${ativa.fantasia ?? ativa.nome}:`)).toBe(true);
   });
 });

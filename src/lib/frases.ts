@@ -2,7 +2,15 @@
 // a risk label of our own. "Típica" in the text is the operator in the middle of its peers (the median), and
 // each `explica` says so in words. `tom` only drives styling and is never shown as words.
 import { contar, fmtClientes, fmtDate, fmtDec, fmtInt, fmtMes, fmtPct, fmtReais, fmtTrimestre } from "./format";
-import type { Idss, MetaRn623, Operadora, PontoSerie, Reclamacoes, Ressarcimento } from "./operadoras";
+import {
+  nomeExibido,
+  type Idss,
+  type MetaRn623,
+  type Operadora,
+  type PontoSerie,
+  type Reclamacoes,
+  type Ressarcimento,
+} from "./operadoras";
 
 export type Tom = "favoravel" | "neutro" | "desfavoravel" | "sem-base";
 
@@ -318,6 +326,16 @@ export function motivoCancelamento(motivo: string): string {
   const rn = /^descumprimento da (rn nº [\d./]+)$/i.exec(motivo.trim());
   if (rn) return `a operadora descumpriu uma norma da ANS (${rn[1]!.toUpperCase().replace("Nº", "nº")})`;
   return MOTIVOS[k] ?? motivo;
+}
+
+/** The page's <title> (the h1 stays the name): what the page has, in the words people search with
+ * ("reclamações unimed"). Only what the data holds: a cancelled operator says so first, complaints only when
+ * the ANS published some for it. */
+export function tituloOperadora(o: Pick<Operadora, "nome" | "fantasia" | "cancelamento" | "reclamacoes">): string {
+  const nome = nomeExibido(o);
+  if (o.cancelamento) return `${nome}: registro cancelado na ANS`;
+  if (o.reclamacoes.length > 0) return `${nome}: reclamações na ANS`;
+  return `${nome}: plano de saúde na ANS`;
 }
 
 export function fraseCancelamento(o: Pick<Operadora, "cancelamento">): string | null {

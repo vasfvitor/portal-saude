@@ -10,6 +10,7 @@ import {
   avisoComercializacao,
   avisoProduto,
   classeSemCodigo,
+  descricaoRemedio,
   fraseMedida,
   fraseRegistro,
   precoMaximo,
@@ -174,5 +175,18 @@ describe("price per unit", () => {
     expect(
       embalagemInstitucional({ apresentacao: "30 MG/ML SOL INJ CT 1 SER X 1 ML", restricao_hospitalar: null }),
     ).toBe(false);
+  });
+});
+
+describe("meta description", () => {
+  it("leads with the registration and says its status only when the data does", () => {
+    const base = { produto: "CIPRO", laboratorio: "BAYER S.A.", registro_produto: "170560103" };
+    expect(descricaoRemedio({ ...base, situacao: { ativo: true, vencimento: "2028-06" } }, "09/10/2026")).toBe(
+      "CIPRO (BAYER S.A.), registro na ANVISA 170560103, ativo: quanto a farmácia pode cobrar em cada estado, na lista da CMED de 09/10/2026.",
+    );
+    expect(descricaoRemedio({ ...base, situacao: { ativo: false, vencimento: null } }, "x")).toContain(
+      "170560103, inativo:",
+    );
+    expect(descricaoRemedio({ ...base, situacao: null }, "x")).toContain("registro na ANVISA 170560103: quanto");
   });
 });

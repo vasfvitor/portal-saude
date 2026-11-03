@@ -31,6 +31,7 @@ import {
   avisoComercializacao,
   avisoProduto,
   classeSemCodigo,
+  descricaoRemedio,
   EMBALAGEM_INSTITUCIONAL,
   embalagemInstitucional,
   EMBALAGENS_INSTITUCIONAIS,
@@ -168,8 +169,7 @@ const institucionais = [...grupos.values()].filter((l) => l.inst);
 const comEstados = [...paraVoce, ...institucionais].filter((l) => !l.a.icms_0);
 
 const publicado = fmtStamp(p.stamp);
-const primeira = lerApresentacao(p.apresentacoes[0]!.apresentacao)?.legivel ?? p.apresentacoes[0]!.apresentacao;
-const descricao = `${p.produto} (${p.laboratorio}), ${primeira}: quanto a farmácia pode cobrar em cada estado, na lista da CMED de ${publicado}.`;
+const descricao = descricaoRemedio(p, publicado);
 const breadcrumb = {
   "@type": "BreadcrumbList",
   itemListElement: [
@@ -186,7 +186,7 @@ const breadcrumb = {
 ---
 
 <Base
-  title={`${p.produto}: preço máximo`}
+  title={`${p.produto}: preço máximo e registro na ANVISA`}
   description={descricao}
   structured={[breadcrumb]}
   feed={p.feed_substancia ? { href: p.feed_substancia, title: `${p.substancia}: preços da CMED` } : undefined}

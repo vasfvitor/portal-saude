@@ -27,6 +27,7 @@ import {
   SINAIS_CONTEXTO,
   SINAIS_O_QUE_FAZER,
   sinaisDeDificuldade,
+  tituloOperadora,
   type ItemResumo,
 } from "../../lib/frases";
 import {
@@ -97,7 +98,7 @@ const breadcrumb = {
 ---
 
 <Base
-  title={titulo}
+  title={tituloOperadora(op)}
   description={descricao}
   structured={[breadcrumb]}
   feed={op.feed ? { href: op.feed, title: `${titulo}: avisos da ANS` } : undefined}
