@@ -22,7 +22,7 @@ Quem cria ou muda um alarme ou uma mensagem de erro atualiza este arquivo no mes
 | Publish site | `problem(s) in`, `unexpected <script`, `broken internal link`, `e-mail-like text`             | [Conferência do site gerado falhou](#conferência-do-site-gerado-falhou) |
 | Publish site | `warning: built without the`                                                                  | [Site saiu sem dados da ANVISA](#site-saiu-sem-dados-da-anvisa)         |
 | Publish site | `format:check`, `lint`, `test`, `check`                                                       | [Lint, formato, testes ou tipos](#lint-formato-testes-ou-tipos)         |
-| (ans-feeds)  | `the portal could not be read or is more than 2 days behind`                                  | [Portal atrasado](#portal-atrasado)                                     |
+| (ans-feeds)  | issue "Portal N dias atrás", `the portal could not be read or is more than 2 days behind`     | [Portal atrasado](#portal-atrasado)                                     |
 
 ## Publish site
 
@@ -167,9 +167,10 @@ Todas as fontes são obrigatórias. Em qualquer falha do build, **o site anterio
 
 ## Portal atrasado
 
-Este alarme fica vermelho no **ans-feeds**, não aqui:
-`::error::the portal could not be read or is more than 2 days behind <data>`. Ele existe porque o GitHub
-pode desligar o cron deste repo sem avisar.
+Este alarme fica no **ans-feeds**, não aqui: uma issue "Portal N dias atrás dos dados da ANS" ou "O
+build.json do portal não abriu" no repo ans-feeds, que fecha sozinha quando o portal alcançar. No log de lá:
+`the portal could not be read or is more than 2 days behind <data>`. Ele existe porque o GitHub pode
+desligar o cron deste repo sem avisar.
 
 - **O que fazer:**
   1. Abrir Actions → Publish site neste repo e ver o último run.
@@ -178,7 +179,7 @@ pode desligar o cron deste repo sem avisar.
      [Fonte não abriu no verify](#fonte-não-abriu-no-verify).
   3. Se não houver run recente, o cron pode ter sido desligado: na página do workflow, "Enable workflow",
      e depois "Run workflow".
-  4. Se o run estiver verde e o alarme continuar, abrir `https://saude.abelhaninja.de/build.json` no
+  4. Se o run estiver verde e a issue continuar aberta, abrir `https://saude.abelhaninja.de/build.json` no
      navegador. Se não abrir, pode ser o certificado do Pages (ver o RUNBOOK do hub).
 
 ## Problemas conhecidos
