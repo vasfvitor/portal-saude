@@ -281,6 +281,13 @@ describe("sources the last ANS collection could not update", () => {
       "Na coleta de 29/10/2026 não foi possível atualizar: Índice de reclamações, Ressarcimento ao SUS, outra_fonte.csv. Esses números são os da coleta anterior.",
     );
   });
+
+  it("reads well when the collection stopped halfway without naming a source", () => {
+    // ans-feeds' feeds.yml writes this fonte, with no assunto, when snapshot.sh stops halfway
+    expect(fraseFalhas([{ dia: "2026-11-07", fonte: "algumas fontes (a coleta parou no meio)", assunto: null }])).toBe(
+      "Na coleta de 07/11/2026 não foi possível atualizar: algumas fontes (a coleta parou no meio). Esses números são os da coleta anterior.",
+    );
+  });
 });
 
 describe("page title", () => {
