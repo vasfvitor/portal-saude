@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { lerApresentacao } from "../src/lib/apresentacao";
 import { maisBarato, porChave, precoNoRegime, quantoMenos } from "../src/lib/comparar";
-import { aliquotaPorUf } from "../src/lib/icms";
+import { aliquotaPorUf, TABELA } from "../src/lib/icms";
 import { parseProduto, pmcAplicavel, type Produto } from "../src/lib/remedios";
 
 const produto = (r: string): Produto =>
@@ -52,6 +52,18 @@ describe("same dose and package across brands", () => {
     expect(precoNoRegime(eurofarma, a, "g")).toBe(a.pmc["12"]);
     expect(precoNoRegime(cipro, cipro.apresentacoes[0]!, "g")).toBe(cipro.apresentacoes[0]!.pmc["18"]);
     expect(precoNoRegime(eurofarma, a, "p")).toBe(a.pmc["17"]);
+  });
+
+  it("before a state is picked, a row ranks at the rate the price label names, so one with no price there never ranks", () => {
+    // ComparaDose shows TABELA.ref before a state is picked; regime "p" must rank at that same rate, or a row saying
+    // "sem preço nesta faixa de ICMS" could come first, highlighted, with "X% menos"
+    const a = eurofarma.apresentacoes[0]!;
+    expect(precoNoRegime(eurofarma, a, "p")).toBe(pmcAplicavel(a)[TABELA.ref]);
+    expect(precoNoRegime(cipro, cipro.apresentacoes[0]!, "p")).toBe(pmcAplicavel(cipro.apresentacoes[0]!)[TABELA.ref]);
+    const pmc = Object.fromEntries(Object.entries(a.pmc).filter(([k]) => k !== TABELA.ref));
+    const semPreco = { ...eurofarma, registro_produto: "999999998", apresentacoes: [{ ...a, pmc }] };
+    const todos = [...porChave([eurofarma, cipro, semPreco], "p").values()].flat();
+    expect(todos.some((o) => o.produto.registro_produto === "999999998")).toBe(false);
   });
 
   it("a presentation exempt from ICMS costs its 0% price in every regime and every state", () => {

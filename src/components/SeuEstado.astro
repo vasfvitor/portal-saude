@@ -4,6 +4,7 @@
 // select stays hidden and every list shows all rates. Which rate an element uses comes from the nearest
 // data-generico="1|0" around it. Elements opt in with:
 //   data-precos='{"17":"R$ 501,58",...}'  text becomes the price at the state's rate (precosPorAliquota)
+//                                         and gets data-trocado while it shows a swapped-in text
 //   data-aliquota="18"                    gets class "sua" when it is the state's rate
 //   data-uf-rotulo                        becomes "SP, ICMS 18%"
 // and, through CSS: data-so-com-estado, data-so-sem-estado, data-so-regime="p|g", and --ordem-g for lists.
@@ -35,10 +36,11 @@ import { ESTADOS_POR_NOME } from "../lib/icms";
   const originais = new WeakMap<Element, string>();
   const todos = <E extends Element = HTMLElement>(sel: string) => document.querySelectorAll<E>(sel);
 
-  /** Sets the text, or puts back the one the page was built with. */
+  /** Sets the text, or puts back the one the page was built with; data-trocado says which (for CSS). */
   function trocar(el: Element, texto: string | undefined) {
     if (!originais.has(el)) originais.set(el, el.textContent ?? "");
     el.textContent = texto ?? originais.get(el)!;
+    el.toggleAttribute("data-trocado", texto !== undefined);
   }
 
   function aplicar(uf: string) {

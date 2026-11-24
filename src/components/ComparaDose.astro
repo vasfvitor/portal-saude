@@ -30,8 +30,10 @@ const { legivel, unidade, linhas, alem } = Astro.props;
 const ref = TABELA.ref;
 const nome = (p: Produto) => (p.produto === p.substancia ? p.laboratorio : p.produto);
 const detalhe = (p: Produto) => (p.produto === p.substancia ? null : p.laboratorio);
-// A product with no price at the rate the label names says so (never another rate's price under that label); the
-// picker still swaps in the reader's state when that rate has one.
+// A product with no price at the rate the label names says so (never another rate's price under that label), in the
+// element the other rows keep their price in, so the picker can swap in the reader's state when that rate has one.
+// Such a row never ranks before a state is picked: the regime "p" ranks at that same rate (TABELA.noRegime), so it
+// is past the cut there (data-fora="p").
 const menosTexto = (n: number | undefined) => (n !== undefined && n >= 1 ? `${n}% menos` : "");
 ---
 
@@ -52,7 +54,9 @@ const menosTexto = (n: number | undefined) => (n !== undefined && n >= 1 ? `${n}
         <span>{o.produto.tipo_produto && <Selo>{o.produto.tipo_produto}</Selo>}</span>
         <span class="valor">
           {pmcAplicavel(o.apresentacao)[ref] === undefined ? (
-            <small data-precos={precosPorAliquota(pmcAplicavel(o.apresentacao))}>sem preço nesta faixa de ICMS</small>
+            <strong class="sem-preco" data-precos={precosPorAliquota(pmcAplicavel(o.apresentacao))}>
+              sem preço nesta faixa de ICMS
+            </strong>
           ) : (
             <strong data-precos={precosPorAliquota(pmcAplicavel(o.apresentacao))}>
               {fmtMoney(pmcAplicavel(o.apresentacao)[ref]!)}
@@ -66,8 +70,15 @@ const menosTexto = (n: number | undefined) => (n !== undefined && n >= 1 ? `${n}
           )}
           {o.apresentacao.icms_0 && <small>isento de ICMS</small>}
           {menos.p === menos.g
-            ? menosTexto(menos.p) && <small>{menosTexto(menos.p)}</small>
-            : REGIMES.map((r) => menosTexto(menos[r]) && <small data-so-regime={r}>{menosTexto(menos[r])}</small>)}
+            ? menosTexto(menos.p) && <small class="menos">{menosTexto(menos.p)}</small>
+            : REGIMES.map(
+                (r) =>
+                  menosTexto(menos[r]) && (
+                    <small class="menos" data-so-regime={r}>
+                      {menosTexto(menos[r])}
+                    </small>
+                  ),
+              )}
         </span>
       </li>
     ))}
@@ -76,9 +87,6 @@ const menosTexto = (n: number | undefined) => (n !== undefined && n >= 1 ? `${n}
 </div>
 
 <style>
-  .valor small.unidade {
-    color: var(--muted);
-  }
   .quem {
     display: flex;
     flex-direction: column;
@@ -97,8 +105,18 @@ const menosTexto = (n: number | undefined) => (n !== undefined && n >= 1 ? `${n}
     flex-direction: column;
   }
   .valor small {
-    color: var(--good);
+    color: var(--muted);
     font-size: 0.78rem;
+  }
+  /* a price below the reference product's: good news */
+  .valor small.menos {
+    color: var(--good);
+  }
+  /* a missing price is a note, not a result; once the picker swaps in a price (data-trocado) it looks like one */
+  .valor .sem-preco:not([data-trocado]) {
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 400;
   }
   .mais {
     margin: 0.4rem 0 0;
