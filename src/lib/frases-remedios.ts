@@ -1,6 +1,6 @@
 // Plain pt-BR for the CMED prices. The price is a ceiling set by the government, never a price we quote:
 // the pharmacy may charge less. Every price shown carries its ICMS rate next to it.
-import { fmtDate, fmtMes, fmtMoney } from "./format";
+import { fmtDate, fmtMes, fmtMoney, fmtStamp } from "./format";
 import { TABELA } from "./icms";
 import { lerApresentacao, marcaInstitucional, type ApresentacaoLida } from "./apresentacao";
 import { anoDeVenda, type Aliquota, type Apresentacao, type Medida, type Produto } from "./remedios";
@@ -62,18 +62,18 @@ export const PRECO_MAXIMO =
 export const TROCA_NA_FARMACIA =
   "Pela lei, o farmacêutico pode trocar o remédio de referência pelo genérico com a mesma substância e dose, se o médico não tiver proibido na receita. Para qualquer outra troca, pergunte ao farmacêutico ou ao médico.";
 
-/** The registration line in "Sobre este remédio"; null when the data does not say. */
 /** The page's meta description, for "registro medicamento anvisa": the registration number first (always on the
  * page), its status only when the data says it, then what the page answers. Around 160 characters, what a
  * result shows. */
 export function descricaoRemedio(
   p: Pick<Produto, "produto" | "laboratorio" | "registro_produto" | "situacao">,
-  publicado: string,
+  stamp: string,
 ): string {
   const situacao = p.situacao ? (p.situacao.ativo ? ", ativo" : ", inativo") : "";
-  return `${p.produto} (${p.laboratorio}), registro na ANVISA ${p.registro_produto}${situacao}: quanto a farmácia pode cobrar em cada estado, na lista da CMED de ${publicado}.`;
+  return `${p.produto} (${p.laboratorio}), registro na ANVISA ${p.registro_produto}${situacao}: quanto a farmácia pode cobrar em cada estado, na lista da CMED do arquivo da ANVISA de ${fmtStamp(stamp)}.`;
 }
 
+/** The registration line in "Sobre este remédio". */
 export function fraseRegistro(registro: string, s: Produto["situacao"]): string {
   if (!s) return `Registro na ANVISA: ${registro}`;
   if (!s.ativo) return `Registro na ANVISA: ${registro}, inativo`;
@@ -131,13 +131,14 @@ export function avisoProduto(
 export const MEDIDAS_SEM_LOTE =
   "A ANVISA publica essas medidas sem o lote nos dados abertos: uma medida pode valer só para alguns lotes, não para o remédio todo. Se você tem uma caixa em casa, mostre o número do lote ao farmacêutico.";
 
-/** Next to the list date on the medicine pages: when the prices change next. */
 /** In "Sobre este remédio" when anvisa-feeds could not read the registration source for this list. */
 export const REGISTRO_NAO_CONFERIDO =
   "Nesta atualização do site não foi possível conferir na ANVISA se o registro está ativo nem se há medidas sobre este remédio.";
 
-export const ATUALIZACAO_CMED =
-  "A CMED publica uma lista nova quando muda algum preço, em geral uma vez por mês; o site é refeito todo dia e mostra a nova no máximo um dia depois.";
+/** Next to the prices: the date of the list shown, said as what it is. The stamp is the date of the ANVISA open-data
+ * file, not the CMED's own publication date, and the CMED page may already have a newer list. */
+export const listaCmed = (stamp: string): string =>
+  `Preços da lista da CMED no arquivo de dados abertos da ANVISA de ${fmtStamp(stamp)}.`;
 
 /** Above the price table of a product exempt from ICMS in every presentation: one ceiling for the whole country. */
 export const ISENTO_DE_ICMS = "Isento de ICMS: o teto é o mesmo em todos os estados.";

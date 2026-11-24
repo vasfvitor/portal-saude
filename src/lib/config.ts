@@ -15,6 +15,10 @@ export const ANS_FEEDS_URL = "https://ans.feeds.abelhaninja.de/";
 export const ANVISA_HUB_URL = "https://anvisa.abelhaninja.de/";
 export const CONTEM_URL = "https://contem.abelhaninja.de/";
 export const CMED_URL = "https://anvisa.feeds.abelhaninja.de/cmed/";
+// The CMED price list where its publisher puts it, and the ANVISA open-data file anvisa-feeds reads it from: the
+// list's `stamp` is that file's date, which can be behind the newest list on the CMED page.
+export const CMED_PRECOS_URL = "https://www.gov.br/anvisa/pt-br/assuntos/medicamentos/cmed/precos";
+export const CMED_ARQUIVO_URL = "https://dados.anvisa.gov.br/dados/TA_PRECO_MEDICAMENTO.csv";
 
 export const ANS_URL = "https://www.gov.br/ans/pt-br";
 export const ANVISA_URL = "https://www.gov.br/anvisa/pt-br";

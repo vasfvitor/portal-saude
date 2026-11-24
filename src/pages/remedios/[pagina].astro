@@ -22,12 +22,11 @@ import {
   quantoMenos,
   REGIMES,
 } from "../../lib/comparar";
-import { CMED_DADOS_URL } from "../../lib/config";
-import { contar, fmtStamp } from "../../lib/format";
+import { CMED_ARQUIVO_URL, CMED_DADOS_URL, CMED_PRECOS_URL } from "../../lib/config";
+import { contar } from "../../lib/format";
 import {
   acompanharSubstancia,
   aliquotaRotulo,
-  ATUALIZACAO_CMED,
   avisoComercializacao,
   avisoProduto,
   classeSemCodigo,
@@ -37,6 +36,7 @@ import {
   EMBALAGENS_INSTITUCIONAIS,
   fraseMedida,
   fraseRegistro,
+  listaCmed,
   REGISTRO_NAO_CONFERIDO,
   ISENTO_DE_ICMS,
   MEDIDAS_SEM_LOTE,
@@ -168,8 +168,8 @@ const paraVoce = [...grupos.values()].filter((l) => !l.inst);
 const institucionais = [...grupos.values()].filter((l) => l.inst);
 const comEstados = [...paraVoce, ...institucionais].filter((l) => !l.a.icms_0);
 
-const publicado = fmtStamp(p.stamp);
-const descricao = descricaoRemedio(p, publicado);
+const lista = listaCmed(p.stamp);
+const descricao = descricaoRemedio(p, p.stamp);
 const breadcrumb = {
   "@type": "BreadcrumbList",
   itemListElement: [
@@ -246,7 +246,8 @@ const breadcrumb = {
           </>
         ) : (
           ISENTO_DE_ICMS
-        )}
+        )}{" "}
+        {lista}
       </p>
       <TabelaPrecos linhas={paraVoce} marca={marca} />
     </section>
@@ -260,7 +261,10 @@ const breadcrumb = {
         aberta={paraVoce.length === 0}
         id="institucionais"
       >
-        <p class="muted">{EMBALAGEM_INSTITUCIONAL}</p>
+        <p class="muted">
+          {EMBALAGEM_INSTITUCIONAL}
+          {paraVoce.length === 0 && ` ${lista}`}
+        </p>
         {institucionais.some((l) => l.a.restricao_hospitalar) && <p class="muted">{USO_HOSPITALAR}</p>}
         <TabelaPrecos linhas={institucionais} marca={marca} />
       </Secao>
@@ -318,7 +322,6 @@ const breadcrumb = {
       <p>{PRECO_MAXIMO}</p>
       {temBarato && <p>{TROCA_NA_FARMACIA}</p>}
       <p>{SE_COBRAREM_MAIS}</p>
-      <p class="muted">{ATUALIZACAO_CMED}</p>
     </Secao>
 
     {p.feed_substancia && (
@@ -332,9 +335,11 @@ const breadcrumb = {
 
     <Secao titulo="Fontes" id="fontes">
       <p>
-        Lista de preços da CMED (ANVISA), publicada em {publicado}. O ICMS de cada estado e a lei de origem estão em{" "}
-        <a href="/remedios/sobre-o-preco/">por que o preço muda de estado para estado</a>. Todos os números deste
-        remédio, num arquivo só: <a href={`${CMED_DADOS_URL}/produto/${p.registro_produto}.json`}>JSON</a>.
+        {lista} O arquivo: <a href={CMED_ARQUIVO_URL}>TA_PRECO_MEDICAMENTO.csv</a>, nos dados abertos da ANVISA. A CMED
+        publica as listas na <a href={CMED_PRECOS_URL}>página de preços da CMED</a>. O ICMS de cada estado e a lei de
+        origem estão em <a href="/remedios/sobre-o-preco/">por que o preço muda de estado para estado</a>. Todos os
+        números deste remédio, num arquivo só: <a href={`${CMED_DADOS_URL}/produto/${p.registro_produto}.json`}>JSON</a>
+        .
       </p>
     </Secao>
   </div>

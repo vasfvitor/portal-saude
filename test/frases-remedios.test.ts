@@ -13,6 +13,7 @@ import {
   descricaoRemedio,
   fraseMedida,
   fraseRegistro,
+  listaCmed,
   precoMaximo,
   precosPorAliquota,
   quandoVenda,
@@ -178,15 +179,22 @@ describe("price per unit", () => {
   });
 });
 
+describe("date of the CMED list", () => {
+  it("is the date of the ANVISA open-data file, said as such, with no promise of when the next list comes", () => {
+    expect(listaCmed("20261009")).toBe("Preços da lista da CMED no arquivo de dados abertos da ANVISA de 09/10/2026.");
+    expect(listaCmed("20261009")).not.toMatch(/publicad|dia depois|todo dia|por mês/);
+  });
+});
+
 describe("meta description", () => {
   it("leads with the registration and says its status only when the data does", () => {
     const base = { produto: "CIPRO", laboratorio: "BAYER S.A.", registro_produto: "170560103" };
-    expect(descricaoRemedio({ ...base, situacao: { ativo: true, vencimento: "2028-06" } }, "09/10/2026")).toBe(
-      "CIPRO (BAYER S.A.), registro na ANVISA 170560103, ativo: quanto a farmácia pode cobrar em cada estado, na lista da CMED de 09/10/2026.",
+    expect(descricaoRemedio({ ...base, situacao: { ativo: true, vencimento: "2028-06" } }, "20261009")).toBe(
+      "CIPRO (BAYER S.A.), registro na ANVISA 170560103, ativo: quanto a farmácia pode cobrar em cada estado, na lista da CMED do arquivo da ANVISA de 09/10/2026.",
     );
-    expect(descricaoRemedio({ ...base, situacao: { ativo: false, vencimento: null } }, "x")).toContain(
+    expect(descricaoRemedio({ ...base, situacao: { ativo: false, vencimento: null } }, "20261009")).toContain(
       "170560103, inativo:",
     );
-    expect(descricaoRemedio({ ...base, situacao: null }, "x")).toContain("registro na ANVISA 170560103: quanto");
+    expect(descricaoRemedio({ ...base, situacao: null }, "20261009")).toContain("registro na ANVISA 170560103: quanto");
   });
 });
