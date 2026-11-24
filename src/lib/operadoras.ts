@@ -114,7 +114,18 @@ export interface Meta {
   date: string;
   /** sources the last ANS collection could not update (their numbers are older than `date`); empty when
    * all were updated or when ans-feeds did not publish the list yet */
-  falhas: { dia: string; fonte: string; assunto: string | null }[];
+  falhas: Falha[];
+  /** the "atualizado em" day the ANS special-portability page carried in the last copy read; null when absent */
+  portabilidade_atualizada_em: string | null;
+}
+
+export interface Falha {
+  /** the last collection that failed */
+  dia: string;
+  /** the first day of the current run of failures; `dia` when ans-feeds did not publish it */
+  desde: string;
+  fonte: string;
+  assunto: string | null;
 }
 
 // ---------------------------------------------------------------- validation
@@ -265,15 +276,23 @@ export function parseMeta(raw: unknown): Meta {
   versao(o, "meta.json");
   const date = str(o, "date", "meta.json");
   if (!DIA.test(date)) throw new Error(`meta.json: bad date ${date}`);
-  const falhas = listOrEmpty(o, "falhas", "meta.json").map((x) => {
+  const dia = (v: string | null, k: string): string | null => {
+    if (v !== null && !DIA.test(v)) throw new Error(`meta.json: bad ${k} ${v}`);
+    return v;
+  };
+  const falhas = listOrEmpty(o, "falhas", "meta.json").map((x): Falha => {
     const f = obj(x, "meta.json falhas");
+    const ultimo = dia(str(f, "dia", "meta.json falhas"), "falhas dia")!;
     return {
-      dia: str(f, "dia", "meta.json falhas"),
+      dia: ultimo,
+      // optional in the contract (absent before ans-feeds kept the first day of a run of failures)
+      desde: dia(strOrAbsent(f, "desde", "meta.json falhas"), "falhas desde") ?? ultimo,
       fonte: str(f, "fonte", "meta.json falhas"),
       assunto: strOrAbsent(f, "assunto", "meta.json falhas"),
     };
   });
-  return { date, falhas };
+  const portabilidade = dia(strOrAbsent(o, "portabilidade_atualizada_em", "meta.json"), "portabilidade_atualizada_em");
+  return { date, falhas, portabilidade_atualizada_em: portabilidade };
 }
 
 // ---------------------------------------------------------------- fetching

@@ -10,6 +10,9 @@ import {
   frasePortabilidade,
   fraseReclamacoes,
   fraseFalhas,
+  fraseCopiaPortabilidade,
+  falhaDe,
+  COLETA_COMPLETA,
   fraseRessarcimento,
   modalidadePlural,
   motivoCancelamento,
@@ -18,7 +21,7 @@ import {
   resumo,
   tituloOperadora,
 } from "../src/lib/frases";
-import { parseOperadora, type Idss, type Reclamacoes } from "../src/lib/operadoras";
+import { parseMeta, parseOperadora, type Idss, type Reclamacoes } from "../src/lib/operadoras";
 
 const op = (reg: string) =>
   parseOperadora(
@@ -267,26 +270,93 @@ describe("signs of difficulty", () => {
   });
 });
 
-describe("sources the last ANS collection could not update", () => {
-  it("names them by subject, once each, and says the numbers are the previous ones", () => {
+describe("sources the ANS collection keeps failing", () => {
+  const meta = (falhas: unknown[], extra: object = {}) => parseMeta({ date: "2026-11-23", falhas, ...extra });
+  const rn623 = { dia: "2026-11-23", fonte: "listas RN 623", motivo: "página fora do ar", assunto: "rn623" };
+  const port = {
+    dia: "2026-11-23",
+    fonte: "portabilidade-especial.html",
+    motivo: "HTTP 000",
+    assunto: "portabilidade",
+  };
+
+  it("names each source by subject, once, with the first day of its run of failures", () => {
     expect(fraseFalhas([])).toBeNull();
     expect(
+      fraseFalhas(
+        meta([
+          { ...rn623, desde: "2026-11-21" },
+          { ...port, desde: "2026-11-21" },
+        ]).falhas,
+      ),
+    ).toBe(
+      "Desde 21/11/2026, o site não consegue baixar da ANS: Listas de metas de reclamação (RN 623), Portabilidade especial. Os dados dessas fontes são os da última coleta que deu certo, antes dessa data.",
+    );
+    expect(
       fraseFalhas([
-        { dia: "2026-10-29", fonte: "pda-023-igr.csv", assunto: "reclamacoes" },
-        { dia: "2026-10-29", fonte: "índice de ressarcimento", assunto: "ressarcimento" },
-        { dia: "2026-10-29", fonte: "202609_Indice_de_Efetivo_Pagamento.csv", assunto: "ressarcimento" },
-        { dia: "2026-10-29", fonte: "outra_fonte.csv", assunto: null },
+        { desde: "2026-10-29", fonte: "índice de ressarcimento", assunto: "ressarcimento" },
+        { desde: "2026-10-27", fonte: "202609_Indice_de_Efetivo_Pagamento.csv", assunto: "ressarcimento" },
+        { desde: "2026-10-29", fonte: "pda-023-igr.csv", assunto: "reclamacoes" },
+        { desde: "2026-10-29", fonte: "outra_fonte.csv", assunto: null },
       ]),
     ).toBe(
-      "Na coleta de 29/10/2026 não foi possível atualizar: Índice de reclamações, Ressarcimento ao SUS, outra_fonte.csv. Esses números são os da coleta anterior.",
+      "Desde 27/10/2026, o site não consegue baixar da ANS: Ressarcimento ao SUS. Desde 29/10/2026, o site não consegue baixar da ANS: Índice de reclamações, outra_fonte.csv. Os dados dessas fontes são os da última coleta que deu certo, antes dessas datas.",
     );
+  });
+
+  it("reads the day of the failure as its first day when ans-feeds does not publish desde", () => {
+    const sem = meta([rn623]).falhas;
+    expect(sem[0]!.desde).toBe("2026-11-23");
+    expect(fraseFalhas(sem)).toBe(
+      "Desde 23/11/2026, o site não consegue baixar da ANS: Listas de metas de reclamação (RN 623). Os dados dessa fonte são os da última coleta que deu certo, antes dessa data.",
+    );
+    expect(meta([{ ...rn623, desde: "2026-11-21" }]).falhas[0]!.desde).toBe("2026-11-21");
+    expect(() => meta([{ ...rn623, desde: "21/11/2026" }])).toThrow(/bad falhas desde/);
   });
 
   it("reads well when the collection stopped halfway without naming a source", () => {
     // ans-feeds' feeds.yml writes this fonte, with no assunto, when snapshot.sh stops halfway
-    expect(fraseFalhas([{ dia: "2026-11-07", fonte: "algumas fontes (a coleta parou no meio)", assunto: null }])).toBe(
-      "Na coleta de 07/11/2026 não foi possível atualizar: algumas fontes (a coleta parou no meio). Esses números são os da coleta anterior.",
+    expect(
+      fraseFalhas([{ desde: "2026-11-07", fonte: "algumas fontes (a coleta parou no meio)", assunto: null }]),
+    ).toBe(
+      "Desde 07/11/2026, o site não consegue baixar da ANS: algumas fontes (a coleta parou no meio). Os dados dessas fontes são os da última coleta que deu certo, antes dessa data.",
     );
+  });
+
+  it("only says every source was collected as a fact of that collection, never a cadence", () => {
+    expect(COLETA_COMPLETA).not.toMatch(/todo dia|diariamente|sempre/);
+  });
+
+  it("the RN 623 sentence says the lists page fails, from its first day", () => {
+    const m = {
+      trimestre: "3T2026",
+      atingiu: true,
+      meta: { odontológica: 0.6 },
+      ate_reclamacoes: { odontológica: 2 },
+      listas: [],
+    };
+    expect(fraseMetaRn623(m)).not.toContain("Desde");
+    const falha = falhaDe(meta([{ ...rn623, desde: "2026-11-21" }, port]).falhas, "rn623");
+    expect(fraseMetaRn623(m, falha)).toMatch(
+      /algumas semanas depois do fim do trimestre\. Desde 21\/11\/2026, o site não consegue baixar a página da ANS onde ficam as listas oficiais: uma lista publicada depois disso ainda não aparece aqui\.$/,
+    );
+    expect(falhaDe(meta([port]).falhas, "rn623")).toBeNull();
+  });
+
+  it("the portability list gives the date of its copy, and the failure when the page cannot be read", () => {
+    const ok = meta([], { portabilidade_atualizada_em: "2026-02-24" });
+    expect(fraseCopiaPortabilidade(ok)).toBe(
+      "Lista copiada da página de portabilidade especial da ANS na coleta de 23/11/2026; a página diz que foi atualizada em 24/02/2026.",
+    );
+    expect(fraseCopiaPortabilidade(meta([]))).toBe(
+      "Lista copiada da página de portabilidade especial da ANS na coleta de 23/11/2026.",
+    );
+    expect(fraseCopiaPortabilidade(meta([rn623, port], { portabilidade_atualizada_em: "2026-02-24" }))).toBe(
+      "Desde 23/11/2026, o site não consegue baixar a página de portabilidade especial da ANS. A lista é a da última coleta que deu certo, antes dessa data; naquela coleta, a página dizia ter sido atualizada em 24/02/2026.",
+    );
+    expect(fraseCopiaPortabilidade(meta([{ ...port, desde: "2026-11-21" }]))).toMatch(/^Desde 21\/11\/2026, /);
+    // another source failing does not touch the portability sentence
+    expect(fraseCopiaPortabilidade(meta([rn623]))).toMatch(/^Lista copiada/);
   });
 });
 

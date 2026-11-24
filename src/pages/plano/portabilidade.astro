@@ -1,12 +1,13 @@
 ---
-// Special portability explained, with the operators that have it now. The deadline and the details are in
+// Special portability explained, with the operators in the copy of the ANS list. The deadline and the details are in
 // each Resolução Operacional, linked from the operator's page; this page does not restate them.
 import Base from "../../layouts/Base.astro";
 import { ANS_PORTABILIDADE_URL, DADOS_URL, META_URL } from "../../lib/config";
 import { fmtClientes, fmtDate } from "../../lib/format";
-import { nomeExibido, operadorasForBuild, paginaOperadora } from "../../lib/operadoras";
+import { fraseCopiaPortabilidade } from "../../lib/frases";
+import { metaForBuild, nomeExibido, operadorasForBuild, paginaOperadora } from "../../lib/operadoras";
 
-const ops = await operadorasForBuild(DADOS_URL, META_URL);
+const [ops, meta] = await Promise.all([operadorasForBuild(DADOS_URL, META_URL), metaForBuild(META_URL)]);
 const vigentes = ops
   .filter((o) => o.portabilidade_vigente.length > 0)
   .sort((a, b) => b.portabilidade_vigente[0]!.data.localeCompare(a.portabilidade_vigente[0]!.data));
@@ -45,8 +46,9 @@ const faqLd = {
     A lista oficial e as regras estão na <a href={ANS_PORTABILIDADE_URL}>página de portabilidade especial da ANS</a>.
   </p>
 
-  <h2>Operadoras com portabilidade especial agora</h2>
-  {vigentes.length === 0 && <p class="muted">Nenhuma na lista da ANS hoje.</p>}
+  <h2>Operadoras com portabilidade especial</h2>
+  <p class="muted">{fraseCopiaPortabilidade(meta)}</p>
+  {vigentes.length === 0 && <p class="muted">Nenhuma operadora nessa lista.</p>}
   <ul class="vigentes">
     {vigentes.map((o) => (
       <li>
@@ -63,10 +65,7 @@ const faqLd = {
       </li>
     ))}
   </ul>
-  <p class="muted">
-    A página da ANS de onde vem esta lista às vezes demora a ser atualizada. O prazo que vale é o da Resolução
-    Operacional.
-  </p>
+  <p class="muted">O prazo que vale é o da Resolução Operacional de cada operadora.</p>
 </Base>
 
 <style>

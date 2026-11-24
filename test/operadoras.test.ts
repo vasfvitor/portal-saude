@@ -53,8 +53,19 @@ describe("parsers", () => {
     const falha = { dia: "2026-10-29", fonte: "pda-023-igr.csv", motivo: "1354 bytes contra 6756" };
     // the subject comes from ans-feeds; the reason is for people reading meta.json, not the page
     expect(parseMeta({ date: "2026-10-28", falhas: [{ ...falha, assunto: "reclamacoes" }] }).falhas).toEqual([
-      { dia: "2026-10-29", fonte: "pda-023-igr.csv", assunto: "reclamacoes" },
+      { dia: "2026-10-29", desde: "2026-10-29", fonte: "pda-023-igr.csv", assunto: "reclamacoes" },
     ]);
+    // desde (first day of the run of failures) is optional in the contract: absent reads as dia
+    expect(parseMeta({ date: "2026-10-28", falhas: [{ ...falha, desde: "2026-10-27" }] }).falhas[0]!.desde).toBe(
+      "2026-10-27",
+    );
+    expect(() => parseMeta({ date: "2026-10-28", falhas: [{ ...falha, dia: "29/10/2026" }] })).toThrow(
+      /bad falhas dia/,
+    );
+    expect(parseMeta({ date: "2026-10-28" }).portabilidade_atualizada_em).toBeNull();
+    expect(
+      parseMeta({ date: "2026-10-28", portabilidade_atualizada_em: "2026-02-24" }).portabilidade_atualizada_em,
+    ).toBe("2026-02-24");
   });
 });
 

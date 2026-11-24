@@ -12,7 +12,8 @@ import { ANS_CANAIS_URL, DADOS_URL, DISQUE_ANS, DISQUE_ANS_SURDOS, META_URL } fr
 import { fmtClientes, fmtDate, fmtMes } from "../../lib/format";
 import {
   ACOMPANHAR_OPERADORA,
-  ATUALIZACAO_ANS,
+  COLETA_COMPLETA,
+  falhaDe,
   fraseFalhas,
   NOMES_FONTE,
   cobertura,
@@ -35,26 +36,31 @@ import {
   nomeExibido,
   operadorasForBuild,
   paginaOperadora,
+  type Falha,
   type Operadora,
   type Reclamacoes,
 } from "../../lib/operadoras";
 
 export async function getStaticPaths() {
   const [ops, meta] = await Promise.all([operadorasForBuild(DADOS_URL, META_URL), metaForBuild(META_URL)]);
-  const falhas = fraseFalhas(meta.falhas); // the same for every operator
+  // the same for every operator
+  const falhas = fraseFalhas(meta.falhas);
+  const falhaRn623 = falhaDe(meta.falhas, "rn623");
   return ops.map((op) => ({
     params: { pagina: paginaOperadora(op).split("/")[2]! },
-    props: { op, dia: meta.date, falhas },
+    props: { op, dia: meta.date, falhas, falhaRn623 },
   }));
 }
 
 interface Props {
   op: Operadora;
   dia: string;
-  /** what the last ANS collection could not update, or null */
+  /** the ANS sources that keep failing, or null */
   falhas: string | null;
+  /** the RN 623 lists page, when it keeps failing */
+  falhaRn623: Falha | null;
 }
-const { op, dia, falhas } = Astro.props;
+const { op, dia, falhas, falhaRn623 } = Astro.props;
 const titulo = nomeExibido(op);
 const cancelamento = fraseCancelamento(op);
 const portabilidade = frasePortabilidade(op);
@@ -193,7 +199,7 @@ const breadcrumb = {
             ))}
           {k === ultimaReclamacao && op.meta_rn623 && (
             <p>
-              {fraseMetaRn623(op.meta_rn623)}
+              {fraseMetaRn623(op.meta_rn623, falhaRn623)}
               {op.meta_rn623.listas.map((url, i) => (
                 <>
                   {" "}
@@ -263,7 +269,7 @@ const breadcrumb = {
     <Secao titulo="Fontes" id="fontes">
       <p>
         {titulo !== op.nome && `Razão social: ${op.nome}. `}Registro ANS {op.registro}. Dados da ANS coletados em{" "}
-        {fmtDate(dia)}. {ATUALIZACAO_ANS} Todos os números desta página, num arquivo só:{" "}
+        {fmtDate(dia)}. {!falhas && `${COLETA_COMPLETA} `}Todos os números desta página, num arquivo só:{" "}
         <a href={`${DADOS_URL}/operadora/${op.registro}.json`}>JSON</a>.
       </p>
       {falhas && <p class="muted">{falhas}</p>}

@@ -4,7 +4,7 @@ import Busca from "../../components/Busca.astro";
 import Base from "../../layouts/Base.astro";
 import { DADOS_URL, META_URL } from "../../lib/config";
 import { fmtDate, fmtInt } from "../../lib/format";
-import { motivoCancelamento } from "../../lib/frases";
+import { fraseCopiaPortabilidade, motivoCancelamento } from "../../lib/frases";
 import { metaForBuild, nomeExibido, operadorasForBuild, paginaOperadora } from "../../lib/operadoras";
 
 const RECENTES_DIAS = 90;
@@ -29,7 +29,7 @@ const ativas = ops.filter((o) => o.situacao === "ativa").length;
   <p class="lead">
     Procure a empresa do seu plano (a operadora, como Unimed, Amil ou Bradesco Saúde) para ver se ela recebe mais
     reclamações que outras do mesmo tamanho, que nota a ANS deu a ela e o que fazer se tiver problema. São{" "}
-    {fmtInt(ativas)} operadoras com registro ativo; dados de {fmtDate(meta.date)}.
+    {fmtInt(ativas)} operadoras com registro ativo na coleta de dados da ANS de {fmtDate(meta.date)}.
   </p>
   <Busca
     indice="/plano/busca.json"
@@ -40,12 +40,13 @@ const ativas = ops.filter((o) => o.situacao === "ativa").length;
   />
 
   <section>
-    <h2>Quem pode trocar de plano sem carência agora</h2>
+    <h2>Quem pode trocar de plano sem carência</h2>
     <p class="muted">
       Clientes destas operadoras podem ir para outro plano sem cumprir carência de novo, porque a ANS liberou a
       portabilidade especial.
     </p>
-    {portabilidade.length === 0 && <p class="muted">Nenhuma operadora com portabilidade especial hoje.</p>}
+    <p class="muted">{fraseCopiaPortabilidade(meta)}</p>
+    {portabilidade.length === 0 && <p class="muted">Nenhuma operadora nessa lista.</p>}
     <ul class="lista">
       {portabilidade.slice(0, 10).map((o) => (
         <li>
