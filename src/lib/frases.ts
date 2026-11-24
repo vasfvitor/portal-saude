@@ -314,10 +314,27 @@ export function fraseRessarcimento(r: Ressarcimento | null): Frase | null {
     texto:
       "Quando um cliente de plano é atendido pelo SUS, a operadora tem de devolver ao SUS o custo do atendimento. Mostra se a operadora paga o que deve; não afeta o atendimento de quem tem o plano.",
   };
-  if (r.indice_pagamento === null || !r.valor_cobrado) {
+  // null (not published) and 0 (nothing charged) are separate answers; only a real 0 is "não cobrou nada"
+  if (r.valor_cobrado === null) {
+    return {
+      titulo: "A ANS não informou quanto o SUS cobrou desta operadora.",
+      detalhe: `Situação em ${fmtMes(r.competencia)}.`,
+      explica,
+      tom: "sem-base",
+    };
+  }
+  if (r.valor_cobrado === 0) {
     return {
       titulo: "O SUS não cobrou nada desta operadora.",
       detalhe: `Situação em ${fmtMes(r.competencia)}.`,
+      explica,
+      tom: "sem-base",
+    };
+  }
+  if (r.indice_pagamento === null) {
+    return {
+      titulo: "A ANS não informou quanto a operadora pagou do que o SUS cobrou.",
+      detalhe: `O SUS cobrou ${fmtReais(r.valor_cobrado)} desta operadora até ${fmtMes(r.competencia)}.`,
       explica,
       tom: "sem-base",
     };
@@ -455,13 +472,18 @@ export function resumo(op: Pick<Operadora, "reclamacoes" | "idss" | "modalidade"
   out.push({ assunto: "Nota da ANS", ...comparativoIdss(op.idss), ancora: "nota" });
   const sus = fraseRessarcimento(op.ressarcimento);
   if (sus) {
-    const pago = op.ressarcimento?.indice_pagamento;
+    const pago = op.ressarcimento?.indice_pagamento ?? null;
+    const cobrado = op.ressarcimento?.valor_cobrado ?? null;
     const texto =
-      pago == null || !op.ressarcimento?.valor_cobrado
-        ? "nada cobrado"
-        : pago >= 100
-          ? "pagou ou parcelou tudo"
-          : `pagou ou parcelou ${fmtPct(pago)} do que foi cobrado`;
+      cobrado === null
+        ? "cobrança não informada"
+        : cobrado === 0
+          ? "nada cobrado"
+          : pago === null
+            ? "pagamento não informado"
+            : pago >= 100
+              ? "pagou ou parcelou tudo"
+              : `pagou ou parcelou ${fmtPct(pago)} do que foi cobrado`;
     out.push({ assunto: "Pagamentos ao SUS", texto, tom: sus.tom, ancora: "sus" });
   }
   return out;

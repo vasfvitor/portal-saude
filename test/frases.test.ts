@@ -167,6 +167,22 @@ describe("real operators", () => {
     expect(comParcela.detalhe).toContain("Desse total, R$ 100 mil foram parcelados.");
   });
 
+  it("SUS: a value the ANS did not publish is said, never read as nothing charged", () => {
+    const u = op("422134").ressarcimento!;
+    const zero = fraseRessarcimento({ ...u, valor_cobrado: 0, indice_pagamento: null })!;
+    expect(zero.titulo).toBe("O SUS não cobrou nada desta operadora.");
+    const semCobranca = fraseRessarcimento({ ...u, valor_cobrado: null, indice_pagamento: null })!;
+    expect(semCobranca.titulo).toBe("A ANS não informou quanto o SUS cobrou desta operadora.");
+    expect(semCobranca.tom).toBe("sem-base");
+    const semIndice = fraseRessarcimento({ ...u, indice_pagamento: null })!;
+    expect(semIndice.titulo).toBe("A ANS não informou quanto a operadora pagou do que o SUS cobrou.");
+    expect(semIndice.detalhe).toMatch(/^O SUS cobrou R\$ 466 mil desta operadora até [a-zç]+ de \d{4}\.$/);
+    const sus = (r: typeof u) => resumo({ ...op("422134"), ressarcimento: r }).find((x) => x.ancora === "sus")?.texto;
+    expect(sus({ ...u, valor_cobrado: 0 })).toBe("nada cobrado");
+    expect(sus({ ...u, valor_cobrado: null })).toBe("cobrança não informada");
+    expect(sus({ ...u, indice_pagamento: null })).toBe("pagamento não informado");
+  });
+
   it("summary lines agree with the full sentences", () => {
     expect(resumo(op("005711"))).toEqual([
       { assunto: "Reclamações", texto: "mais que o dobro da típica", tom: "desfavoravel", ancora: "reclamacoes" },
