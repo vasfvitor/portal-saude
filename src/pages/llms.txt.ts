@@ -13,7 +13,7 @@ export const GET: APIRoute = async ({ site }) => {
 
 > ${TITLE}. ${DESCRIPTION}
 
-Dados de ${fmtDate(meta.date)}: ${fmtInt(ativas)} operadoras de planos de saúde ativas na ANS e ${fmtInt(indice.length - ativas)} ${indice.length - ativas === 1 ? "cancelada" : "canceladas"} nos últimos 5 anos.
+Coleta de dados da ANS de ${fmtDate(meta.date)}: ${fmtInt(ativas)} operadoras de planos de saúde ativas na ANS e ${fmtInt(indice.length - ativas)} ${indice.length - ativas === 1 ? "cancelada" : "canceladas"} nos últimos 5 anos.
 
 ## Páginas
 

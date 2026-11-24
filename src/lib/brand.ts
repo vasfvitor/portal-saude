@@ -5,7 +5,7 @@ export const NAME = "saude.abelhaninja.de";
 export const TITLE = "Plano de saúde e preço de remédios";
 
 export const DESCRIPTION =
-  "Compare a sua operadora de plano de saúde com as do mesmo porte e veja quanto a farmácia pode cobrar por cada remédio no seu estado. Números da ANS e da ANVISA, com a fonte de cada um.";
+  "Compare a sua operadora de plano de saúde com as do mesmo porte e veja quanto a farmácia pode cobrar por cada remédio no seu estado. Números publicados pela ANS e pela ANVISA.";
 
 /** followed by the links to both agencies in the footer */
 export const DISCLAIMER =
