@@ -9,7 +9,6 @@ import {
   conferirComIndice,
   feedOrNull,
   list,
-  listOrEmpty,
   num,
   numOrAbsent,
   numOrNull,
@@ -112,9 +111,9 @@ export interface Operadora extends ItemIndice {
 
 export interface Meta {
   date: string;
-  /** sources the last ANS collection could not update (their numbers are older than `date`); empty when
-   * all were updated or when ans-feeds did not publish the list yet */
-  falhas: Falha[];
+  /** sources the last ANS collection could not update (their numbers are older than `date`): empty when all were
+   * updated, null when meta.json has no list (an older build of ans-feeds), which says nothing either way */
+  falhas: Falha[] | null;
   /** the "atualizado em" day the ANS special-portability page carried in the last copy read; null when absent */
   portabilidade_atualizada_em: string | null;
 }
@@ -122,8 +121,9 @@ export interface Meta {
 export interface Falha {
   /** the last collection that failed */
   dia: string;
-  /** the first day of the current run of failures; `dia` when ans-feeds did not publish it */
-  desde: string;
+  /** the first day of the current run of failures; null when ans-feeds did not publish it (never read as `dia`,
+   * which moves with every run) */
+  desde: string | null;
   fonte: string;
   assunto: string | null;
 }
@@ -280,17 +280,21 @@ export function parseMeta(raw: unknown): Meta {
     if (v !== null && !DIA.test(v)) throw new Error(`meta.json: bad ${k} ${v}`);
     return v;
   };
-  const falhas = listOrEmpty(o, "falhas", "meta.json").map((x): Falha => {
-    const f = obj(x, "meta.json falhas");
-    const ultimo = dia(str(f, "dia", "meta.json falhas"), "falhas dia")!;
-    return {
-      dia: ultimo,
-      // optional in the contract (absent before ans-feeds kept the first day of a run of failures)
-      desde: dia(strOrAbsent(f, "desde", "meta.json falhas"), "falhas desde") ?? ultimo,
-      fonte: str(f, "fonte", "meta.json falhas"),
-      assunto: strOrAbsent(f, "assunto", "meta.json falhas"),
-    };
-  });
+  // `dia`, `desde` and `portabilidade_atualizada_em` are AAAA-MM-DD in the ans-feeds contract (dados/schema.md):
+  // anything else fails the build ("bad <campo>" in RUNBOOK.md)
+  const falhas =
+    o.falhas === undefined
+      ? null
+      : list(o.falhas, "meta.json falhas").map((x): Falha => {
+          const f = obj(x, "meta.json falhas");
+          return {
+            dia: dia(str(f, "dia", "meta.json falhas"), "falhas dia")!,
+            // optional in the contract (absent before ans-feeds kept the first day of a run of failures)
+            desde: dia(strOrAbsent(f, "desde", "meta.json falhas"), "falhas desde"),
+            fonte: str(f, "fonte", "meta.json falhas"),
+            assunto: strOrAbsent(f, "assunto", "meta.json falhas"),
+          };
+        });
   const portabilidade = dia(strOrAbsent(o, "portabilidade_atualizada_em", "meta.json"), "portabilidade_atualizada_em");
   return { date, falhas, portabilidade_atualizada_em: portabilidade };
 }

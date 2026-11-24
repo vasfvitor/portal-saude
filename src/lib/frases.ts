@@ -149,7 +149,7 @@ export function fraseReclamacoes(r: Reclamacoes): Frase {
 
 /** The RN 623 complaints target in the latest quarter, as one sentence with its limits and where the number
  * comes from. The ANS list itself comes out weeks after the quarter; the page links it once it exists. */
-export function fraseMetaRn623(m: MetaRn623, falha: Pick<Falha, "desde"> | null = null): string {
+export function fraseMetaRn623(m: MetaRn623, falha: Pick<Falha, "dia" | "desde"> | null = null): string {
   const limites = Object.keys(m.meta)
     .map(
       (c) =>
@@ -161,9 +161,11 @@ export function fraseMetaRn623(m: MetaRn623, falha: Pick<Falha, "desde"> | null 
     ? "A ANS já publicou a lista oficial deste trimestre."
     : "A ANS publica a lista oficial algumas semanas depois do fim do trimestre.";
   // the target is computed from the complaints index; only the list comes from the page that fails
-  const semPagina = falha
-    ? ` Desde ${fmtDate(falha.desde)}, o site não consegue baixar a página da ANS onde ficam as listas oficiais: uma lista publicada depois disso ainda não aparece aqui.`
-    : "";
+  const semPagina = !falha
+    ? ""
+    : falha.desde
+      ? ` Desde ${fmtDate(falha.desde)}, o site não consegue baixar a página da ANS onde ficam as listas oficiais: uma lista publicada depois disso ainda não aparece aqui.`
+      : ` Na coleta de ${fmtDate(falha.dia)}, o site não conseguiu baixar a página da ANS onde ficam as listas oficiais: uma lista publicada depois da última coleta que deu certo ainda não aparece aqui.`;
   return `Meta de reclamações da ANS (RN 623/2024): ${fmtTrimestre(m.trimestre)}, a operadora ${resultado} da meta (${limites}). A conta é deste site, com os números da ANS. ${lista}${semPagina}`;
 }
 
@@ -184,7 +186,8 @@ export function fraseAnoAnterior(serie: PontoSerie[]): string | null {
   return ultimo.indice > antes.indice ? `Piorou em um ano: ${era}.` : `Melhorou em um ano: ${era}.`;
 }
 
-/** Next to the collection date in "Fontes" when `falhas` is empty: read from the data, not a promise of cadence. */
+/** Next to the collection date in "Fontes" when meta.json lists no failure for the page's sources (never when it
+ * has no `falhas` at all): read from the data, not a promise of cadence. */
 export const COLETA_COMPLETA = "Nessa coleta, o site conseguiu baixar todas as fontes da ANS listadas abaixo.";
 
 /** The ANS sources by the key ans-feeds publishes (`fontes`, `falhas[].assunto`), as the pages name them. */
@@ -199,38 +202,66 @@ export const NOMES_FONTE: Record<string, string> = {
   rn623: "Listas de metas de reclamação (RN 623)",
 };
 
-/** The failure of one ANS source by its subject (`fontes` key), or null when it was collected. */
-export const falhaDe = (falhas: Falha[], assunto: string): Falha | null =>
-  falhas.find((f) => f.assunto === assunto) ?? null;
+/** The failure of one ANS source by its subject (`fontes` key), or null when it was collected (or meta.json has
+ * no list). */
+export const falhaDe = (falhas: Falha[] | null, assunto: string): Falha | null =>
+  falhas?.find((f) => f.assunto === assunto) ?? null;
 
-/** In "Fontes" when the ANS sources keep failing: each one named, with the first day of its run of failures
- * (`desde`); the numbers shown are the last ones collected. Null when every source was collected. */
-export function fraseFalhas(falhas: Pick<Falha, "desde" | "fonte" | "assunto">[]): string | null {
+/** The row ans-feeds writes when its collection stopped halfway without naming a source (dados/schema.md): any
+ * source may be stale, so every page shows it. */
+export const COLETA_PELA_METADE = "algumas fontes (a coleta parou no meio)";
+
+/** The subjects (`fontes` keys, `falhas[].assunto`) an operator page is built from: its own `fontes`, the
+ * special-portability list (the "Pode trocar de plano" box), the technical-direction regimes (its history) and, when
+ * it shows the RN 623 target, the RN 623 lists page. */
+export function assuntosDaOperadora(op: Pick<Operadora, "fontes" | "meta_rn623">): Set<string> {
+  return new Set([...Object.keys(op.fontes), "portabilidade", "direcao_tecnica", ...(op.meta_rn623 ? ["rn623"] : [])]);
+}
+
+/** The failures a page shows: those of the subjects it is built from, plus a collection that stopped halfway. Null
+ * when meta.json has no list. */
+export const falhasDaPagina = (falhas: Falha[] | null, assuntos: Set<string>): Falha[] | null =>
+  falhas?.filter((f) => (f.assunto ? assuntos.has(f.assunto) : f.fonte === COLETA_PELA_METADE)) ?? null;
+
+/** In "Fontes" when ANS sources failed: each one named, with the first day of its run of failures when ans-feeds
+ * publishes it (`desde`), or else the day of the collection that failed (`dia`, never said as "desde": it moves with
+ * every run); the numbers shown are the last ones collected. Null when the list is empty. */
+export function fraseFalhas(falhas: Pick<Falha, "dia" | "desde" | "fonte" | "assunto">[]): string | null {
   if (falhas.length === 0) return null;
-  const porDia = new Map<string, string[]>();
+  const porDia = new Map<string, { dia: string; desde: boolean; nomes: string[] }>();
   const vistos = new Set<string>();
-  for (const f of [...falhas].sort((a, b) => a.desde.localeCompare(b.desde))) {
+  const quando = (f: Pick<Falha, "dia" | "desde">) => f.desde ?? f.dia;
+  for (const f of [...falhas].sort((a, b) => quando(a).localeCompare(quando(b)))) {
     const nome = (f.assunto && NOMES_FONTE[f.assunto]) ?? f.fonte;
     if (vistos.has(nome)) continue;
     vistos.add(nome);
-    porDia.set(f.desde, [...(porDia.get(f.desde) ?? []), nome]);
+    const chave = `${f.desde ? "desde" : "dia"} ${quando(f)}`;
+    const grupo = porDia.get(chave) ?? { dia: quando(f), desde: f.desde !== null, nomes: [] };
+    grupo.nomes.push(nome);
+    porDia.set(chave, grupo);
   }
-  const frases = [...porDia].map(
-    ([desde, nomes]) => `Desde ${fmtDate(desde)}, o site não consegue baixar da ANS: ${nomes.join(", ")}.`,
+  const frases = [...porDia.values()].map(({ dia, desde, nomes }) =>
+    desde
+      ? `Desde ${fmtDate(dia)}, o site não consegue baixar da ANS: ${nomes.join(", ")}.`
+      : `Na coleta de ${fmtDate(dia)}, o site não conseguiu baixar da ANS: ${nomes.join(", ")}.`,
   );
-  // a halfway stop names no source (`assunto` null, fonte "algumas fontes (…)"): more than one, then
+  // a halfway stop names no source (`assunto` null, fonte COLETA_PELA_METADE): more than one, then
   const uma = vistos.size === 1 && falhas.every((f) => f.assunto !== null);
   const fecho = `Os dados ${uma ? "dessa fonte" : "dessas fontes"} são os da última coleta que deu certo, antes ${porDia.size === 1 ? "dessa data" : "dessas datas"}.`;
   return `${frases.join(" ")} ${fecho}`;
 }
 
 /** Where the special-portability list comes from, and the date of the copy: the collection's, or the first day the
- * page could not be read. The "atualizado em" the ANS page carries goes with it when ans-feeds read one. */
+ * page could not be read (the day of the failed collection when ans-feeds does not publish the first one). The
+ * "atualizado em" the ANS page carries goes with it when ans-feeds read one. */
 export function fraseCopiaPortabilidade(m: Pick<Meta, "date" | "falhas" | "portabilidade_atualizada_em">): string {
   const falha = falhaDe(m.falhas, "portabilidade");
   const atualizada = m.portabilidade_atualizada_em && fmtDate(m.portabilidade_atualizada_em);
   if (falha) {
-    return `Desde ${fmtDate(falha.desde)}, o site não consegue baixar a página de portabilidade especial da ANS. A lista é a da última coleta que deu certo, antes dessa data${atualizada ? `; naquela coleta, a página dizia ter sido atualizada em ${atualizada}` : ""}.`;
+    const quando = falha.desde
+      ? `Desde ${fmtDate(falha.desde)}, o site não consegue`
+      : `Na coleta de ${fmtDate(falha.dia)}, o site não conseguiu`;
+    return `${quando} baixar a página de portabilidade especial da ANS. A lista é a da última coleta que deu certo, antes dessa data${atualizada ? `; naquela coleta, a página dizia ter sido atualizada em ${atualizada}` : ""}.`;
   }
   return `Lista copiada da página de portabilidade especial da ANS na coleta de ${fmtDate(m.date)}${atualizada ? `; a página diz que foi atualizada em ${atualizada}` : ""}.`;
 }

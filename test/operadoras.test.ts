@@ -46,17 +46,18 @@ describe("parsers", () => {
     expect(() => parseOperadora({ ...base, feed: "https://x.test/a.json" })).toThrow(/feed/);
     expect(parseMeta(fixture("meta.json")).date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(() => parseMeta({ date: "23/10/2026" })).toThrow(/date/);
-    expect(parseMeta({ date: "2026-10-28" }).falhas).toEqual([]); // before ans-feeds published the list
+    expect(parseMeta({ date: "2026-10-28" }).falhas).toBeNull(); // before ans-feeds published the list: unknown
+    expect(parseMeta({ date: "2026-10-28", falhas: [] }).falhas).toEqual([]); // every source collected
     // the contract version: absent (before ans-feeds published it) or 1 reads; another fails the build
     expect(parseMeta({ date: "2026-10-28", schema_version: 1 }).date).toBe("2026-10-28");
     expect(() => parseMeta({ date: "2026-10-28", schema_version: 2 })).toThrow(/meta.json: schema_version 2/);
     const falha = { dia: "2026-10-29", fonte: "pda-023-igr.csv", motivo: "1354 bytes contra 6756" };
     // the subject comes from ans-feeds; the reason is for people reading meta.json, not the page
     expect(parseMeta({ date: "2026-10-28", falhas: [{ ...falha, assunto: "reclamacoes" }] }).falhas).toEqual([
-      { dia: "2026-10-29", desde: "2026-10-29", fonte: "pda-023-igr.csv", assunto: "reclamacoes" },
+      { dia: "2026-10-29", desde: null, fonte: "pda-023-igr.csv", assunto: "reclamacoes" },
     ]);
-    // desde (first day of the run of failures) is optional in the contract: absent reads as dia
-    expect(parseMeta({ date: "2026-10-28", falhas: [{ ...falha, desde: "2026-10-27" }] }).falhas[0]!.desde).toBe(
+    // desde (first day of the run of failures) is optional in the contract: absent reads as null, never as dia
+    expect(parseMeta({ date: "2026-10-28", falhas: [{ ...falha, desde: "2026-10-27" }] }).falhas![0]!.desde).toBe(
       "2026-10-27",
     );
     expect(() => parseMeta({ date: "2026-10-28", falhas: [{ ...falha, dia: "29/10/2026" }] })).toThrow(
