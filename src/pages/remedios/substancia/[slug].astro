@@ -256,10 +256,10 @@ const dataLista = listaCmed(lista[0]!.stamp);
 
     <Secao titulo="Fontes" id="fontes">
       <p>
-        {dataLista} O arquivo: <a href={CMED_ARQUIVO_URL}>TA_PRECO_MEDICAMENTO.csv</a>, nos dados abertos da ANVISA. A
-        CMED publica as listas na <a href={CMED_PRECOS_URL}>página de preços da CMED</a>. O ICMS de cada estado e a lei
-        de origem estão em <a href="/remedios/sobre-o-preco/">por que o preço muda de estado para estado</a>. Os números
-        de cada remédio, num arquivo só, estão na página dele; todos os remédios da lista, num arquivo só:{" "}
+        {dataLista} Arquivo da ANVISA: <a href={CMED_ARQUIVO_URL}>TA_PRECO_MEDICAMENTO.csv</a>. A CMED publica as listas
+        na <a href={CMED_PRECOS_URL}>página de preços da CMED</a>. O ICMS de cada estado e a lei de origem estão em{" "}
+        <a href="/remedios/sobre-o-preco/">por que o preço muda de estado para estado</a>. Os números de cada remédio,
+        num arquivo só, estão na página dele; todos os remédios da lista, num arquivo só:{" "}
         <a href={`${CMED_DADOS_URL}/todos.json`}>JSON</a>.
       </p>
     </Secao>

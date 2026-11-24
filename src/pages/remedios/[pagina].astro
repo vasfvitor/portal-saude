@@ -335,11 +335,10 @@ const breadcrumb = {
 
     <Secao titulo="Fontes" id="fontes">
       <p>
-        {lista} O arquivo: <a href={CMED_ARQUIVO_URL}>TA_PRECO_MEDICAMENTO.csv</a>, nos dados abertos da ANVISA. A CMED
-        publica as listas na <a href={CMED_PRECOS_URL}>página de preços da CMED</a>. O ICMS de cada estado e a lei de
-        origem estão em <a href="/remedios/sobre-o-preco/">por que o preço muda de estado para estado</a>. Todos os
-        números deste remédio, num arquivo só: <a href={`${CMED_DADOS_URL}/produto/${p.registro_produto}.json`}>JSON</a>
-        .
+        {lista} Arquivo da ANVISA: <a href={CMED_ARQUIVO_URL}>TA_PRECO_MEDICAMENTO.csv</a>. A CMED publica as listas na{" "}
+        <a href={CMED_PRECOS_URL}>página de preços da CMED</a>. O ICMS de cada estado e a lei de origem estão em{" "}
+        <a href="/remedios/sobre-o-preco/">por que o preço muda de estado para estado</a>. Todos os números deste
+        remédio, num arquivo só: <a href={`${CMED_DADOS_URL}/produto/${p.registro_produto}.json`}>JSON</a>.
       </p>
     </Secao>
   </div>
