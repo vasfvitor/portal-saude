@@ -25,7 +25,7 @@ Dados de ${fmtDate(meta.date)}: ${fmtInt(ativas)} operadoras de planos de saúde
 
 ## Regras do conteúdo
 
-- Só fatos comparados, com a base e a fonte; o site não dá nota nem rótulo de risco.
+- Fatos comparados, com a base e a fonte; o site não dá nota nem rótulo de risco.
 - "Operadora típica" é a mediana das operadoras do mesmo porte (reclamações) ou da mesma modalidade (IDSS).
 - Sem vínculo com a ANS nem com a ANVISA.
 
