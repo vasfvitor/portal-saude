@@ -345,6 +345,34 @@ describe("sources the ANS collection keeps failing", () => {
     expect(() => meta([{ ...rn623, desde: "21/11/2026" }])).toThrow(/bad falhas desde/);
   });
 
+  it("dates the copy shown when ans-feeds publishes ultima_copia, and only then", () => {
+    // ultima_copia is the day of the stored version shown, not a download day: said as "a cópia mostrada é de"
+    const comCopia = meta([
+      { ...rn623, desde: "2026-11-21", ultima_copia: "2026-11-20" },
+      { ...port, desde: "2026-11-21", ultima_copia: "2026-11-20" },
+    ]).falhas;
+    expect(fraseFalhas(comCopia)).toBe(
+      "Desde 21/11/2026, o site não consegue baixar da ANS: Listas de metas de reclamação (RN 623), Portabilidade especial; as cópias mostradas são de 20/11/2026. Os dados dessas fontes são os da última coleta que deu certo, antes dessa data.",
+    );
+    // one copy dated, one not: each says what is known
+    expect(fraseFalhas(meta([{ ...rn623, ultima_copia: "2026-02-24" }, port]).falhas)).toBe(
+      "Na coleta de 23/11/2026, o site não conseguiu baixar da ANS: Listas de metas de reclamação (RN 623); a cópia mostrada é de 24/02/2026. Na coleta de 23/11/2026, o site não conseguiu baixar da ANS: Portabilidade especial. Os dados dessas fontes são os da última coleta que deu certo, antes dessa data.",
+    );
+    expect(fraseCopiaPortabilidade(meta(comCopia, { portabilidade_atualizada_em: "2026-02-24" }))).toBe(
+      "Desde 21/11/2026, o site não consegue baixar a página de portabilidade especial da ANS. A lista é a da última coleta que deu certo, antes dessa data (a cópia mostrada é de 20/11/2026); naquela coleta, a página dizia ter sido atualizada em 24/02/2026.",
+    );
+    const m = {
+      trimestre: "3T2026",
+      atingiu: true,
+      meta: { odontológica: 0.6 },
+      ate_reclamacoes: { odontológica: 2 },
+      listas: [],
+    };
+    expect(fraseMetaRn623(m, falhaDe(comCopia, "rn623"))).toMatch(
+      /\. Desde 21\/11\/2026, o site não consegue baixar a página da ANS onde ficam as listas oficiais \(a cópia mostrada é de 20\/11\/2026\): uma lista publicada depois disso ainda não aparece aqui\.$/,
+    );
+  });
+
   it("reads well when the collection stopped halfway without naming a source", () => {
     // ans-feeds' feeds.yml writes this fonte, with no assunto, when snapshot.sh stops halfway
     expect(

@@ -147,9 +147,19 @@ export function fraseReclamacoes(r: Reclamacoes): Frase {
   };
 }
 
+/** "Desde {desde}, o site não consegue baixar" or, without `desde`, "Na coleta de {dia}, o site não conseguiu baixar"
+ * (`dia` is never said as "desde": it moves with every run). */
+const naoBaixa = (f: Pick<Falha, "dia" | "desde">): string =>
+  f.desde
+    ? `Desde ${fmtDate(f.desde)}, o site não consegue baixar`
+    : `Na coleta de ${fmtDate(f.dia)}, o site não conseguiu baixar`;
+
 /** The RN 623 complaints target in the latest quarter, as one sentence with its limits and where the number
  * comes from. The ANS list itself comes out weeks after the quarter; the page links it once it exists. */
-export function fraseMetaRn623(m: MetaRn623, falha: Pick<Falha, "dia" | "desde"> | null = null): string {
+export function fraseMetaRn623(
+  m: MetaRn623,
+  falha: (Pick<Falha, "dia" | "desde"> & Partial<Pick<Falha, "ultima_copia">>) | null = null,
+): string {
   const limites = Object.keys(m.meta)
     .map(
       (c) =>
@@ -161,11 +171,12 @@ export function fraseMetaRn623(m: MetaRn623, falha: Pick<Falha, "dia" | "desde">
     ? "A ANS já publicou a lista oficial deste trimestre."
     : "A ANS publica a lista oficial algumas semanas depois do fim do trimestre.";
   // the target is computed from the complaints index; only the list comes from the page that fails
+  const copia = falha?.ultima_copia ? ` (a cópia mostrada é de ${fmtDate(falha.ultima_copia)})` : "";
   const semPagina = !falha
     ? ""
     : falha.desde
-      ? ` Desde ${fmtDate(falha.desde)}, o site não consegue baixar a página da ANS onde ficam as listas oficiais: uma lista publicada depois disso ainda não aparece aqui.`
-      : ` Na coleta de ${fmtDate(falha.dia)}, o site não conseguiu baixar a página da ANS onde ficam as listas oficiais: uma lista publicada depois da última coleta que deu certo ainda não aparece aqui.`;
+      ? ` Desde ${fmtDate(falha.desde)}, o site não consegue baixar a página da ANS onde ficam as listas oficiais${copia}: uma lista publicada depois disso ainda não aparece aqui.`
+      : ` Na coleta de ${fmtDate(falha.dia)}, o site não conseguiu baixar a página da ANS onde ficam as listas oficiais${copia}: uma lista publicada depois da última coleta que deu certo ainda não aparece aqui.`;
   return `Meta de reclamações da ANS (RN 623/2024): ${fmtTrimestre(m.trimestre)}, a operadora ${resultado} da meta (${limites}). A conta é deste site, com os números da ANS. ${lista}${semPagina}`;
 }
 
@@ -224,30 +235,41 @@ export const falhasDaPagina = (falhas: Falha[] | null, assuntos: Set<string>): F
   falhas?.filter((f) => (f.assunto ? assuntos.has(f.assunto) : f.fonte === COLETA_PELA_METADE)) ?? null;
 
 /** In "Fontes" when ANS sources failed: each one named, with the first day of its run of failures when ans-feeds
- * publishes it (`desde`), or else the day of the collection that failed (`dia`, never said as "desde": it moves with
- * every run); the numbers shown are the last ones collected. Null when the list is empty. */
-export function fraseFalhas(falhas: Pick<Falha, "dia" | "desde" | "fonte" | "assunto">[]): string | null {
+ * publishes it (`desde`), or else the day of the collection that failed (`dia`); the numbers shown are the last ones
+ * collected, with the day of the copy shown when ans-feeds publishes it (`ultima_copia`). Null when the list is
+ * empty. */
+export function fraseFalhas(
+  falhas: (Pick<Falha, "dia" | "desde" | "fonte" | "assunto"> & Partial<Pick<Falha, "ultima_copia">>)[],
+): string | null {
   if (falhas.length === 0) return null;
-  const porDia = new Map<string, { dia: string; desde: boolean; nomes: string[] }>();
+  const grupos = new Map<
+    string,
+    { falha: Pick<Falha, "dia" | "desde"> & Partial<Pick<Falha, "ultima_copia">>; nomes: string[] }
+  >();
   const vistos = new Set<string>();
   const quando = (f: Pick<Falha, "dia" | "desde">) => f.desde ?? f.dia;
   for (const f of [...falhas].sort((a, b) => quando(a).localeCompare(quando(b)))) {
     const nome = (f.assunto && NOMES_FONTE[f.assunto]) ?? f.fonte;
     if (vistos.has(nome)) continue;
     vistos.add(nome);
-    const chave = `${f.desde ? "desde" : "dia"} ${quando(f)}`;
-    const grupo = porDia.get(chave) ?? { dia: quando(f), desde: f.desde !== null, nomes: [] };
+    const chave = `${f.desde ? "desde" : "dia"} ${quando(f)} ${f.ultima_copia ?? ""}`;
+    const grupo = grupos.get(chave) ?? { falha: f, nomes: [] };
     grupo.nomes.push(nome);
-    porDia.set(chave, grupo);
+    grupos.set(chave, grupo);
   }
-  const frases = [...porDia.values()].map(({ dia, desde, nomes }) =>
-    desde
-      ? `Desde ${fmtDate(dia)}, o site não consegue baixar da ANS: ${nomes.join(", ")}.`
-      : `Na coleta de ${fmtDate(dia)}, o site não conseguiu baixar da ANS: ${nomes.join(", ")}.`,
-  );
+  const frases = [...grupos.values()].map(({ falha, nomes }) => {
+    // the day of the stored version shown (ans-feeds keeps a file only when it changes), not a download day
+    const copia = !falha.ultima_copia
+      ? ""
+      : nomes.length === 1
+        ? `; a cópia mostrada é de ${fmtDate(falha.ultima_copia)}`
+        : `; as cópias mostradas são de ${fmtDate(falha.ultima_copia)}`;
+    return `${naoBaixa(falha)} da ANS: ${nomes.join(", ")}${copia}.`;
+  });
   // a halfway stop names no source (`assunto` null, fonte COLETA_PELA_METADE): more than one, then
   const uma = vistos.size === 1 && falhas.every((f) => f.assunto !== null);
-  const fecho = `Os dados ${uma ? "dessa fonte" : "dessas fontes"} são os da última coleta que deu certo, antes ${porDia.size === 1 ? "dessa data" : "dessas datas"}.`;
+  const dias = new Set([...grupos.values()].map((g) => quando(g.falha))).size;
+  const fecho = `Os dados ${uma ? "dessa fonte" : "dessas fontes"} são os da última coleta que deu certo, antes ${dias === 1 ? "dessa data" : "dessas datas"}.`;
   return `${frases.join(" ")} ${fecho}`;
 }
 
@@ -258,10 +280,8 @@ export function fraseCopiaPortabilidade(m: Pick<Meta, "date" | "falhas" | "porta
   const falha = falhaDe(m.falhas, "portabilidade");
   const atualizada = m.portabilidade_atualizada_em && fmtDate(m.portabilidade_atualizada_em);
   if (falha) {
-    const quando = falha.desde
-      ? `Desde ${fmtDate(falha.desde)}, o site não consegue`
-      : `Na coleta de ${fmtDate(falha.dia)}, o site não conseguiu`;
-    return `${quando} baixar a página de portabilidade especial da ANS. A lista é a da última coleta que deu certo, antes dessa data${atualizada ? `; naquela coleta, a página dizia ter sido atualizada em ${atualizada}` : ""}.`;
+    const copia = falha.ultima_copia ? ` (a cópia mostrada é de ${fmtDate(falha.ultima_copia)})` : "";
+    return `${naoBaixa(falha)} a página de portabilidade especial da ANS. A lista é a da última coleta que deu certo, antes dessa data${copia}${atualizada ? `; naquela coleta, a página dizia ter sido atualizada em ${atualizada}` : ""}.`;
   }
   return `Lista copiada da página de portabilidade especial da ANS na coleta de ${fmtDate(m.date)}${atualizada ? `; a página diz que foi atualizada em ${atualizada}` : ""}.`;
 }

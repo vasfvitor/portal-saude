@@ -124,6 +124,9 @@ export interface Falha {
   /** the first day of the current run of failures; null when ans-feeds did not publish it (never read as `dia`,
    * which moves with every run) */
   desde: string | null;
+  /** the day of the stored version of that source the site shows (ans-feeds keeps a file only when it changes, so
+   * not a download day); null when ans-feeds did not publish it, has no copy, or stopped halfway */
+  ultima_copia: string | null;
   fonte: string;
   assunto: string | null;
 }
@@ -280,7 +283,7 @@ export function parseMeta(raw: unknown): Meta {
     if (v !== null && !DIA.test(v)) throw new Error(`meta.json: bad ${k} ${v}`);
     return v;
   };
-  // `dia`, `desde` and `portabilidade_atualizada_em` are AAAA-MM-DD in the ans-feeds contract (dados/schema.md):
+  // `dia`, `desde`, `ultima_copia` and `portabilidade_atualizada_em` are AAAA-MM-DD in the ans-feeds contract (dados/schema.md):
   // anything else fails the build ("bad <campo>" in RUNBOOK.md)
   const falhas =
     o.falhas === undefined
@@ -291,6 +294,8 @@ export function parseMeta(raw: unknown): Meta {
             dia: dia(str(f, "dia", "meta.json falhas"), "falhas dia")!,
             // optional in the contract (absent before ans-feeds kept the first day of a run of failures)
             desde: dia(strOrAbsent(f, "desde", "meta.json falhas"), "falhas desde"),
+            // optional too: absent when ans-feeds has no copy of that source (or before it published the field)
+            ultima_copia: dia(strOrAbsent(f, "ultima_copia", "meta.json falhas"), "falhas ultima_copia"),
             fonte: str(f, "fonte", "meta.json falhas"),
             assunto: strOrAbsent(f, "assunto", "meta.json falhas"),
           };
@@ -349,6 +354,14 @@ export function operadorasForBuild(dadosUrl: string, metaUrl: string): Promise<O
 
 export function metaForBuild(metaUrl: string): Promise<Meta> {
   return once(`meta ${metaUrl}`, async () => parseMeta(await getJson(metaUrl)));
+}
+
+/** The first and last day a closed operator in the data was cancelled: the span "fechadas" covers, read from the
+ * data (ans-feeds keeps the ones closed within its own window, and the window is its rule, not ours). Null when the
+ * data lists none. */
+export function periodoCanceladas(ops: Pick<Operadora, "cancelamento">[]): { de: string; ate: string } | null {
+  const dias = ops.flatMap((o) => (o.cancelamento ? [o.cancelamento.data] : [])).sort();
+  return dias.length ? { de: dias[0]!, ate: dias.at(-1)! } : null;
 }
 
 // ---------------------------------------------------------------- URLs

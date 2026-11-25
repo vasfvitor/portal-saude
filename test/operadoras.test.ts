@@ -10,6 +10,7 @@ import {
   parseMeta,
   parseOperadora,
   parseTodas,
+  periodoCanceladas,
 } from "../src/lib/operadoras";
 import { slug } from "../src/lib/slug";
 
@@ -54,7 +55,7 @@ describe("parsers", () => {
     const falha = { dia: "2026-10-29", fonte: "pda-023-igr.csv", motivo: "1354 bytes contra 6756" };
     // the subject comes from ans-feeds; the reason is for people reading meta.json, not the page
     expect(parseMeta({ date: "2026-10-28", falhas: [{ ...falha, assunto: "reclamacoes" }] }).falhas).toEqual([
-      { dia: "2026-10-29", desde: null, fonte: "pda-023-igr.csv", assunto: "reclamacoes" },
+      { dia: "2026-10-29", desde: null, ultima_copia: null, fonte: "pda-023-igr.csv", assunto: "reclamacoes" },
     ]);
     // desde (first day of the run of failures) is optional in the contract: absent reads as null, never as dia
     expect(parseMeta({ date: "2026-10-28", falhas: [{ ...falha, desde: "2026-10-27" }] }).falhas![0]!.desde).toBe(
@@ -63,10 +64,29 @@ describe("parsers", () => {
     expect(() => parseMeta({ date: "2026-10-28", falhas: [{ ...falha, dia: "29/10/2026" }] })).toThrow(
       /bad falhas dia/,
     );
+    // ultima_copia (the day of the copy shown) is optional too, and as strict as the other days
+    expect(
+      parseMeta({ date: "2026-10-28", falhas: [{ ...falha, ultima_copia: "2026-10-26" }] }).falhas![0]!.ultima_copia,
+    ).toBe("2026-10-26");
+    expect(() => parseMeta({ date: "2026-10-28", falhas: [{ ...falha, ultima_copia: "26/10/2026" }] })).toThrow(
+      /bad falhas ultima_copia/,
+    );
     expect(parseMeta({ date: "2026-10-28" }).portabilidade_atualizada_em).toBeNull();
     expect(
       parseMeta({ date: "2026-10-28", portabilidade_atualizada_em: "2026-02-24" }).portabilidade_atualizada_em,
     ).toBe("2026-02-24");
+  });
+});
+
+describe("closed operators", () => {
+  it("say the span of their cancellation dates from the data, not a fixed number of years", () => {
+    const univida = parseOperadora(fixture("dados/operadora/422134.json"));
+    const bradesco = parseOperadora(fixture("dados/operadora/005711.json"));
+    const dia = univida.cancelamento!.data;
+    expect(periodoCanceladas([bradesco, univida])).toEqual({ de: dia, ate: dia });
+    const outra = { cancelamento: { data: "2021-12-02", motivo: "x" } };
+    expect(periodoCanceladas([univida, outra, bradesco])).toEqual({ de: "2021-12-02", ate: dia });
+    expect(periodoCanceladas([bradesco])).toBeNull();
   });
 });
 

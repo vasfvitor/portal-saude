@@ -3,17 +3,22 @@ import type { APIRoute } from "astro";
 import { DESCRIPTION, NAME, TITLE } from "../lib/brand";
 import { CMED_DADOS_URL, DADOS_URL, META_URL, REPOS } from "../lib/config";
 import { fmtDate, fmtInt } from "../lib/format";
-import { indiceForBuild, metaForBuild } from "../lib/operadoras";
+import { indiceForBuild, metaForBuild, operadorasForBuild, periodoCanceladas } from "../lib/operadoras";
 
 export const GET: APIRoute = async ({ site }) => {
-  const [indice, meta] = await Promise.all([indiceForBuild(DADOS_URL), metaForBuild(META_URL)]);
+  const [indice, meta, ops] = await Promise.all([
+    indiceForBuild(DADOS_URL),
+    metaForBuild(META_URL),
+    operadorasForBuild(DADOS_URL, META_URL),
+  ]);
+  const periodo = periodoCanceladas(ops);
   const url = (p: string) => new URL(p, site).href;
   const ativas = indice.filter((o) => o.situacao === "ativa").length;
   const body = `# ${NAME}
 
 > ${TITLE}. ${DESCRIPTION}
 
-Coleta de dados da ANS de ${fmtDate(meta.date)}: ${fmtInt(ativas)} operadoras de planos de saúde ativas na ANS e ${fmtInt(indice.length - ativas)} ${indice.length - ativas === 1 ? "cancelada" : "canceladas"} nos últimos 5 anos.
+Coleta de dados da ANS de ${fmtDate(meta.date)}: ${fmtInt(ativas)} operadoras de planos de saúde ativas na ANS e ${fmtInt(indice.length - ativas)} ${indice.length - ativas === 1 ? "cancelada" : "canceladas"}${periodo ? ` entre ${fmtDate(periodo.de)} e ${fmtDate(periodo.ate)}` : ""}.
 
 ## Páginas
 
