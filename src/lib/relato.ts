@@ -22,34 +22,42 @@ export interface LinksRelato {
 /** encodeURIComponent: spaces as %20 (never +), "&", "#", newlines and accents encoded */
 const q = encodeURIComponent;
 
+// the parts that never change, built once for all pages
+const ISSUE_NOVA = `${REPOS.portal}/issues/new?template=problema.yml`;
+const MAILTO = `mailto:${RELATO_EMAIL}`;
+
 export function linksRelato({ pagina, item = "", titulo }: Relato): LinksRelato {
   const assunto = `Problema em ${item || titulo}`;
-  const issue = `${REPOS.portal}/issues/new?template=problema.yml&title=${q(assunto)}&pagina=${q(pagina)}&item=${q(item)}`;
+  const qAssunto = q(assunto);
+  const issue = `${ISSUE_NOVA}&title=${qAssunto}&pagina=${q(pagina)}&item=${q(item)}`;
   // RFC 6068: line breaks in a mailto body are CRLF (%0D%0A)
   const corpo = `Página: ${pagina}\r\nItem: ${item}\r\n\r\nO que está errado:\r\n\r\nO que a fonte oficial mostra (link):\r\n`;
-  const mailto = `mailto:${RELATO_EMAIL}?subject=${q(assunto)}&body=${q(corpo)}`;
+  const mailto = `${MAILTO}?subject=${qAssunto}&body=${q(corpo)}`;
   return { assunto, issue, mailto };
 }
 
-/** for an attribute value in double quotes */
-const attr = (s: string): string =>
-  s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+/** Both links, ready for an href in double quotes: every value is percent-encoded, so the query's "&" is the only
+ * character to escape. */
+function hrefs(r: Relato): { issue: string; mailto: string } {
+  const { issue, mailto } = linksRelato(r);
+  return { issue: issue.replaceAll("&", "&amp;"), mailto: mailto.replaceAll("&", "&amp;") };
+}
 
 /** The full sentence, next to the data of a page about one item. */
 export function relatoHtml(r: Relato): string {
-  const { issue, mailto } = linksRelato(r);
+  const { issue, mailto } = hrefs(r);
   return (
-    `Encontrou um erro? <a href="${attr(issue)}">Abra um relato no GitHub</a> (precisa de conta) ou ` +
-    `<a href="${attr(mailto)}">escreva para ${RELATO_EMAIL}</a>. ` +
+    `Encontrou um erro? <a href="${issue}">Abra um relato no GitHub</a> (precisa de conta) ou ` +
+    `<a href="${mailto}">escreva para ${RELATO_EMAIL}</a>. ` +
     "O relato no GitHub é público: não inclua dados pessoais."
   );
 }
 
 /** The short form in the footer of every page. */
 export function relatoRodapeHtml(r: Relato): string {
-  const { issue, mailto } = linksRelato(r);
+  const { issue, mailto } = hrefs(r);
   return (
-    `Encontrou um erro? <a href="${attr(issue)}">Relato no GitHub</a> (público: não inclua dados pessoais) ou ` +
-    `<a href="${attr(mailto)}">${RELATO_EMAIL}</a>.`
+    `Encontrou um erro? <a href="${issue}">Relato no GitHub</a> (público: não inclua dados pessoais) ou ` +
+    `<a href="${mailto}">${RELATO_EMAIL}</a>.`
   );
 }
