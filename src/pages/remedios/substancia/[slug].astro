@@ -7,6 +7,7 @@ import Acompanhar from "../../../components/Acompanhar.astro";
 import ComparaDose, { type Linha } from "../../../components/ComparaDose.astro";
 import Secao from "../../../components/Secao.astro";
 import NomeSubstancia from "../../../components/NomeSubstancia.astro";
+import Relato from "../../../components/Relato.astro";
 import Selo from "../../../components/Selo.astro";
 import SeuEstado from "../../../components/SeuEstado.astro";
 import Base from "../../../layouts/Base.astro";
@@ -271,6 +272,8 @@ const dataLista = listaCmed(lista[0]!.stamp);
       </p>
     </Secao>
   </div>
+
+  <Relato item={substancia} />
 </Base>
 
 <style>

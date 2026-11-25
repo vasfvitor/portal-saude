@@ -7,6 +7,7 @@
 import Acompanhar from "../../components/Acompanhar.astro";
 import NomeSubstancia from "../../components/NomeSubstancia.astro";
 import Quadro from "../../components/Quadro.astro";
+import Relato from "../../components/Relato.astro";
 import Secao from "../../components/Secao.astro";
 import Selo from "../../components/Selo.astro";
 import SeuEstado from "../../components/SeuEstado.astro";
@@ -348,6 +349,8 @@ const breadcrumb = {
       </p>
     </Secao>
   </div>
+
+  <Relato item={`${p.produto}, registro ${p.registro_produto}`} />
 </Base>
 
 <style>

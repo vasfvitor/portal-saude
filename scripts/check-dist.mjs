@@ -1,5 +1,6 @@
 // Checks on the built site (run after `pnpm build`): the only client JavaScript is the search on /plano/ and
-// /remedios/ and the "seu estado" picker on the medicine and substância pages, no e-mail address is published,
+// /remedios/ and the "seu estado" picker on the medicine and substância pages, no e-mail address is published
+// but the one for reports (RELATO_EMAIL in src/lib/config.ts, read from that file),
 // every internal link resolves, and every operator and medicine in the search indexes has its page (and every
 // operator its /plano/<registro>/ shortcut), and no phrase of frases-proibidas.txt is in the text a reader sees
 // (outside the publisher's own names and values, marked data-dado: see texto-dist.mjs). Exits 1 with the list of
@@ -13,6 +14,12 @@ const DIST = new URL("../dist/", import.meta.url).pathname;
 const DONOS_DE_SCRIPT = /class="(busca|seu-estado)"/;
 const problems = [];
 const FRASES = carregarFrases(readFileSync(new URL("../frases-proibidas.txt", import.meta.url), "utf-8"));
+// the reporting address, the only e-mail the pages publish; one constant in config.ts (a .ts with import.meta.env, so
+// read as text here)
+const RELATO_EMAIL = /export const RELATO_EMAIL = "([^"]+)"/
+  .exec(readFileSync(new URL("../src/lib/config.ts", import.meta.url), "utf-8"))?.[1]
+  ?.toLowerCase();
+if (!RELATO_EMAIL) throw new Error("RELATO_EMAIL not found in src/lib/config.ts");
 
 function* htmlFiles(dir) {
   for (const name of readdirSync(dir)) {
@@ -38,9 +45,11 @@ for (const file of htmlFiles(DIST)) {
     if (DONOS_DE_SCRIPT.test(html) && /type="module" src="\/_astro\/(Busca|SeuEstado)\./.test(attrs)) continue;
     problems.push(`${page}: unexpected <script${attrs}>`);
   }
-  const email = /[\w.+-]+@[\w-]+\.[a-z]{2,}/i.exec(
-    html.replace(/<script type="application\/ld\+json">.*?<\/script>/gs, ""),
-  );
+  const email = [
+    ...html
+      .replace(/<script type="application\/ld\+json">.*?<\/script>/gs, "")
+      .matchAll(/[\w.+-]+@[\w-]+\.[a-z]{2,}/gi),
+  ].find(([m]) => m.toLowerCase() !== RELATO_EMAIL);
   if (email) problems.push(`${page}: e-mail-like text ${email[0]}`);
   for (const hit of frasesNaPagina(html, FRASES)) problems.push(`${page}: banned phrase ${hit}`);
   for (const [, href] of html.matchAll(/(?:href|src)="(\/[^"/][^"]*|\/)"/g)) {

@@ -5,6 +5,7 @@
 import Acompanhar from "../../components/Acompanhar.astro";
 import Frase from "../../components/Frase.astro";
 import Quadro from "../../components/Quadro.astro";
+import Relato from "../../components/Relato.astro";
 import Secao from "../../components/Secao.astro";
 import Serie from "../../components/Serie.astro";
 import Base from "../../layouts/Base.astro";
@@ -317,6 +318,8 @@ const breadcrumb = {
       )}
     </Secao>
   </div>
+
+  <Relato item={`${titulo} (registro ANS ${op.registro})`} />
 </Base>
 
 <style>

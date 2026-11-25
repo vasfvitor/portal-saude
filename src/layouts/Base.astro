@@ -5,6 +5,7 @@
 import Logo from "../components/Logo.astro";
 import { AUTHOR, DESCRIPTION, DISCLAIMER, NAME, pageTitle } from "../lib/brand";
 import { ANS_FEEDS_URL, ANS_URL, ANVISA_HUB_URL, ANVISA_URL, REPOS } from "../lib/config";
+import { relatoRodapeHtml } from "../lib/relato";
 
 interface Props {
   title: string;
@@ -121,6 +122,9 @@ const graph = {
       <p class="licenca">
         Feito por <a href={AUTHOR.url}>{AUTHOR.name}</a>. <a href={REPOS.portal}>Código do site</a>, com licença MIT.
       </p>
+      {/* noindex pages say nothing by their own URL: the 404 is served for any missing path and
+      /plano/<registro>/ only redirects to the operator's page. The reader fills the page in */}
+      <p class="relato" set:html={relatoRodapeHtml({ pagina: noindex ? "" : canonical, titulo: title })} />
     </footer>
   </body>
 </html>

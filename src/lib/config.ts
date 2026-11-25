@@ -46,6 +46,10 @@ export const PRAZO_RESPOSTA_ANS = {
 export const ANS_PORTABILIDADE_URL =
   "https://www.gov.br/ans/pt-br/assuntos/contratacao-e-troca-de-plano/operadoras-em-fase-de-portabilidade-especial-e-portabilidade-extraordinaria";
 
+// where a reader reports a wrong number or text: the e-mail half of "Encontrou um erro?" (src/lib/relato.ts); the
+// GitHub half opens an issue in REPOS.portal. scripts/check-dist.mjs reads this line to allow this one address.
+export const RELATO_EMAIL = "ajuda@abelhaninja.de";
+
 // public repositories only
 export const REPOS = {
   portal: "https://github.com/vasfvitor/portal-saude",

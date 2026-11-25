@@ -1,0 +1,22 @@
+---
+// "Encontrou um erro?" with the item prefilled, after the data and sources of a page about one item. The page's
+// canonical URL is worked out here, the same way Base.astro does. Our sentence, so never inside data-dado.
+import { relatoHtml } from "../lib/relato";
+
+interface Props {
+  /** what the page is about, with its identifier: "Unimed Rio (registro ANS 393321)" */
+  item: string;
+}
+const { item } = Astro.props;
+const pagina = new URL(Astro.url.pathname, Astro.site).href;
+---
+
+<p class="relato" set:html={relatoHtml({ pagina, item, titulo: item })} />
+
+<style>
+  .relato {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-top: 1.5rem;
+  }
+</style>

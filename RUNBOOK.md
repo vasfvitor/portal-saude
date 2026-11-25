@@ -11,18 +11,18 @@ Quem cria ou muda um alarme ou uma mensagem de erro atualiza este arquivo no mes
 
 ## Índice
 
-| Workflow     | Trecho da mensagem                                                                                 | Entrada                                                                 |
-| ------------ | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| Publish site | `could not read the` (aviso amarelo)                                                               | [Fonte não abriu no verify](#fonte-não-abriu-no-verify)                 |
-| Publish site | `HTTP 404 at`, `HTTP 503 at`, `HTTP 429 at`, `TimeoutError`, `fetch failed`                        | [Fonte fora do ar ou lenta](#fonte-fora-do-ar-ou-lenta)                 |
-| Publish site | `schema_version`, `(this site reads 1)`                                                            | [Contrato de uma fonte mudou](#contrato-de-uma-fonte-mudou)             |
-| Publish site | `not an object`, `no <campo>`, `bad <campo>`, `without PMC`, `cancelled without cancelamento`      | [Campo inválido numa fonte](#campo-inválido-numa-fonte)                 |
-| Publish site | `date ..., but meta.json has`, `but ... lists`, `but ... has`                                      | [Fonte publicada pela metade](#fonte-publicada-pela-metade)             |
-| Publish site | `unknown rate`                                                                                     | [Alíquota de ICMS nova](#alíquota-de-icms-nova)                         |
-| Publish site | `problem(s) in`, `unexpected <script`, `broken internal link`, `e-mail-like text`, `banned phrase` | [Conferência do site gerado falhou](#conferência-do-site-gerado-falhou) |
-| Publish site | `warning: built without the`                                                                       | [Site saiu sem dados da ANVISA](#site-saiu-sem-dados-da-anvisa)         |
-| Publish site | `format:check`, `lint`, `test`, `check`                                                            | [Lint, formato, testes ou tipos](#lint-formato-testes-ou-tipos)         |
-| (ans-feeds)  | issue "Portal N dias atrás", `the portal could not be read or is more than 2 days behind`          | [Portal atrasado](#portal-atrasado)                                     |
+| Workflow     | Trecho da mensagem                                                                                                           | Entrada                                                                 |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Publish site | `could not read the` (aviso amarelo)                                                                                         | [Fonte não abriu no verify](#fonte-não-abriu-no-verify)                 |
+| Publish site | `HTTP 404 at`, `HTTP 503 at`, `HTTP 429 at`, `TimeoutError`, `fetch failed`                                                  | [Fonte fora do ar ou lenta](#fonte-fora-do-ar-ou-lenta)                 |
+| Publish site | `schema_version`, `(this site reads 1)`                                                                                      | [Contrato de uma fonte mudou](#contrato-de-uma-fonte-mudou)             |
+| Publish site | `not an object`, `no <campo>`, `bad <campo>`, `without PMC`, `cancelled without cancelamento`                                | [Campo inválido numa fonte](#campo-inválido-numa-fonte)                 |
+| Publish site | `date ..., but meta.json has`, `but ... lists`, `but ... has`                                                                | [Fonte publicada pela metade](#fonte-publicada-pela-metade)             |
+| Publish site | `unknown rate`                                                                                                               | [Alíquota de ICMS nova](#alíquota-de-icms-nova)                         |
+| Publish site | `problem(s) in`, `unexpected <script`, `broken internal link`, `e-mail-like text`, `banned phrase`, `RELATO_EMAIL not found` | [Conferência do site gerado falhou](#conferência-do-site-gerado-falhou) |
+| Publish site | `warning: built without the`                                                                                                 | [Site saiu sem dados da ANVISA](#site-saiu-sem-dados-da-anvisa)         |
+| Publish site | `format:check`, `lint`, `test`, `check`                                                                                      | [Lint, formato, testes ou tipos](#lint-formato-testes-ou-tipos)         |
+| (ans-feeds)  | issue "Portal N dias atrás", `the portal could not be read or is more than 2 days behind`                                    | [Portal atrasado](#portal-atrasado)                                     |
 
 ## Publish site
 
@@ -130,16 +130,20 @@ Todas as fontes são obrigatórias. Em qualquer falha do build, **o site anterio
   - `<página>: broken internal link <link>`;
   - `<página>: banned phrase <frase> ("<trecho do texto>")`;
   - `operator page missing: ...`, `medicine page missing: ...` ou `operator shortcut missing: ...`;
+  - `Error: RELATO_EMAIL not found in src/lib/config.ts` (a conferência nem começa);
   - no fim, `N problem(s) in M pages`.
 - **O que quer dizer:** o site gerado tem um script que não devia, um texto que parece e-mail (por
-  exemplo, vindo de um dado da ANS), um link interno quebrado, uma página de operadora faltando ou, no
-  texto que o leitor vê, uma frase da lista `frases-proibidas.txt`. Essa conferência pula os nomes e
-  valores como a ANS e a ANVISA escrevem (nome de operadora, de remédio, de laboratório, de substância,
-  texto da apresentação), marcados com `data-dado` nos templates: a redação delas não bloqueia a
+  exemplo, vindo de um dado da ANS; o único endereço permitido é o de relatos, `RELATO_EMAIL` em
+  `src/lib/config.ts`, que a conferência lê desse arquivo), um link interno quebrado, uma página de
+  operadora faltando ou, no texto que o leitor vê, uma frase da lista `frases-proibidas.txt`. Essa
+  conferência pula os nomes e valores como a ANS e a ANVISA escrevem (nome de operadora, de remédio, de
+  laboratório, de substância, texto da apresentação), marcados com `data-dado` nos templates: a redação delas não bloqueia a
   publicação. Uma `banned phrase` é texto nosso, ou um dado sem a marca.
 - **O site foi afetado?** Não. O site anterior continua.
 - **Agir ou esperar:** pedir ajuda. A mensagem diz a página. Numa `banned phrase`, o trecho mostra onde:
   se for texto nosso, reescrever; se for um nome ou valor da fonte, marcar o elemento com `data-dado`.
+  Sem o `RELATO_EMAIL`, a linha `export const RELATO_EMAIL = "..."` de `src/lib/config.ts` foi mudada
+  ou removida: voltar com ela.
 
 ### Site saiu sem dados da ANVISA
 
