@@ -50,8 +50,11 @@ describe("relato", () => {
     const p = query(mailto);
     expect(p.get("subject")).toBe("Problema em Novalgina, registro 100900029");
     expect(p.get("body")).toBe(
-      `Página: ${PAGINA}\nItem: Novalgina, registro 100900029\n\nO que está errado:\n\nO que a fonte oficial mostra (link):\n`,
+      `Página: ${PAGINA}\r\nItem: Novalgina, registro 100900029\r\n\r\nO que está errado:\r\n\r\nO que a fonte oficial mostra (link):\r\n`,
     );
+    // RFC 6068: CRLF, never a bare LF
+    expect(mailto).toContain("%0D%0AItem%3A%20Novalgina");
+    expect(mailto).not.toMatch(/(?<!%0D)%0A/);
     expect(mailto).toContain("subject=Problema%20em%20Novalgina%2C%20registro%20100900029&body=P%C3%A1gina%3A%20");
   });
 
@@ -60,7 +63,7 @@ describe("relato", () => {
     expect(assunto).toBe("Problema em Remédios");
     expect(query(issue).get("item")).toBe("");
     expect(query(issue).get("pagina")).toBe("https://saude.abelhaninja.de/");
-    expect(query(mailto).get("body")).toContain("Item: \n\n");
+    expect(query(mailto).get("body")).toContain("Item: \r\n\r\n");
   });
 
   it("renders the full sentence, one space at each seam, '&' escaped in the attributes", () => {
@@ -78,7 +81,9 @@ describe("relato", () => {
 
   it("renders the footer form", () => {
     const html = relatoRodapeHtml({ pagina: PAGINA, titulo: "Remédios" });
-    expect(html.replace(/<[^>]+>/g, "")).toBe("Encontrou um erro? Relato no GitHub ou ajuda@abelhaninja.de.");
+    expect(html.replace(/<[^>]+>/g, "")).toBe(
+      "Encontrou um erro? Relato no GitHub (público: não inclua dados pessoais) ou ajuda@abelhaninja.de.",
+    );
     expect(html).toContain("title=Problema%20em%20Rem%C3%A9dios&amp;pagina=");
   });
 });

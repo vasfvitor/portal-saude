@@ -25,7 +25,8 @@ const q = encodeURIComponent;
 export function linksRelato({ pagina, item = "", titulo }: Relato): LinksRelato {
   const assunto = `Problema em ${item || titulo}`;
   const issue = `${REPOS.portal}/issues/new?template=problema.yml&title=${q(assunto)}&pagina=${q(pagina)}&item=${q(item)}`;
-  const corpo = `Página: ${pagina}\nItem: ${item}\n\nO que está errado:\n\nO que a fonte oficial mostra (link):\n`;
+  // RFC 6068: line breaks in a mailto body are CRLF (%0D%0A)
+  const corpo = `Página: ${pagina}\r\nItem: ${item}\r\n\r\nO que está errado:\r\n\r\nO que a fonte oficial mostra (link):\r\n`;
   const mailto = `mailto:${RELATO_EMAIL}?subject=${q(assunto)}&body=${q(corpo)}`;
   return { assunto, issue, mailto };
 }
@@ -47,5 +48,8 @@ export function relatoHtml(r: Relato): string {
 /** The short form in the footer of every page. */
 export function relatoRodapeHtml(r: Relato): string {
   const { issue, mailto } = linksRelato(r);
-  return `Encontrou um erro? <a href="${attr(issue)}">Relato no GitHub</a> ou <a href="${attr(mailto)}">${RELATO_EMAIL}</a>.`;
+  return (
+    `Encontrou um erro? <a href="${attr(issue)}">Relato no GitHub</a> (público: não inclua dados pessoais) ou ` +
+    `<a href="${attr(mailto)}">${RELATO_EMAIL}</a>.`
+  );
 }
