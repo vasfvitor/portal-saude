@@ -6,7 +6,7 @@ import Selo from "./Selo.astro";
 import { ehGenerico, REGIMES, type Opcao } from "../lib/comparar";
 import type { ApresentacaoLida } from "../lib/apresentacao";
 import { fmtMoney } from "../lib/format";
-import { precoPorUnidade, precosPorAliquota, precosPorUnidade } from "../lib/frases-remedios";
+import { precoPorUnidade, precosPorAliquota, precosPorUnidade, SEM_PRECO_ICMS } from "../lib/frases-remedios";
 import { TABELA, type Regime } from "../lib/icms";
 import { paginaProduto, pmcAplicavel, type Produto } from "../lib/remedios";
 
@@ -33,7 +33,8 @@ const detalhe = (p: Produto) => (p.produto === p.substancia ? null : p.laborator
 // A product with no price at the rate the label names says so (never another rate's price under that label), in the
 // element the other rows keep their price in, so the picker can swap in the reader's state when that rate has one.
 // Such a row never ranks before a state is picked: the regime "p" ranks at that same rate (TABELA.noRegime), so it
-// is past the cut there (data-fora="p").
+// is past the cut there (data-fora="p"). The other way round, a state whose rate has no price gets SEM_PRECO_ICMS
+// from the picker, which also drops the row's "X% menos" and highlight (data-linha, see SeuEstado.astro).
 const menosTexto = (n: number | undefined) => (n !== undefined && n >= 1 ? `${n}% menos` : "");
 ---
 
@@ -42,20 +43,27 @@ const menosTexto = (n: number | undefined) => (n !== undefined && n >= 1 ? `${n}
   <ol class="linhas">
     {linhas.map(({ o, ordem, menor, fora, menos }) => (
       <li
+        data-linha
         style={`--ordem: ${ordem.p}; --ordem-g: ${ordem.g}`}
         data-menor={menor.join(" ") || undefined}
         data-fora={fora.join(" ") || undefined}
         data-generico={ehGenerico(o.produto) ? "1" : "0"}
       >
         <span class="quem">
-          <a href={paginaProduto(o.produto)}>{nome(o.produto)}</a>
-          {detalhe(o.produto) && <span class="lab">{detalhe(o.produto)}</span>}
+          <a data-dado href={paginaProduto(o.produto)}>
+            {nome(o.produto)}
+          </a>
+          {detalhe(o.produto) && (
+            <span class="lab" data-dado>
+              {detalhe(o.produto)}
+            </span>
+          )}
         </span>
         <span>{o.produto.tipo_produto && <Selo>{o.produto.tipo_produto}</Selo>}</span>
         <span class="valor">
           {pmcAplicavel(o.apresentacao)[ref] === undefined ? (
-            <strong class="sem-preco" data-precos={precosPorAliquota(pmcAplicavel(o.apresentacao))}>
-              sem preço nesta faixa de ICMS
+            <strong data-sem-preco data-precos={precosPorAliquota(pmcAplicavel(o.apresentacao))}>
+              {SEM_PRECO_ICMS}
             </strong>
           ) : (
             <strong data-precos={precosPorAliquota(pmcAplicavel(o.apresentacao))}>
@@ -63,7 +71,7 @@ const menosTexto = (n: number | undefined) => (n !== undefined && n >= 1 ? `${n}
             </strong>
           )}
           {unidade && (
-            <small class="unidade" data-precos={precosPorUnidade(pmcAplicavel(o.apresentacao), unidade)}>
+            <small class="unidade" data-sem-texto data-precos={precosPorUnidade(pmcAplicavel(o.apresentacao), unidade)}>
               {pmcAplicavel(o.apresentacao)[ref] !== undefined &&
                 precoPorUnidade(pmcAplicavel(o.apresentacao)[ref]!, unidade)}
             </small>
@@ -112,8 +120,8 @@ const menosTexto = (n: number | undefined) => (n !== undefined && n >= 1 ? `${n}
   .valor small.menos {
     color: var(--good);
   }
-  /* a missing price is a note, not a result; once the picker swaps in a price (data-trocado) it looks like one */
-  .valor .sem-preco:not([data-trocado]) {
+  /* a missing price is a note, not a result (the picker sets data-sem-preco while the reader's rate has none) */
+  .valor [data-sem-preco] {
     color: var(--muted);
     font-size: 0.78rem;
     font-weight: 400;

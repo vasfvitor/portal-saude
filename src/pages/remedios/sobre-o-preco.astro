@@ -3,15 +3,17 @@
 // with the source of each row.
 import Base from "../../layouts/Base.astro";
 import { fmtDate } from "../../lib/format";
-import { aliquotaRotulo, PRECO_MAXIMO, SE_COBRAREM_MAIS } from "../../lib/frases-remedios";
+import { aliquotaRotulo, genericosComOutroIcms, PRECO_MAXIMO, SE_COBRAREM_MAIS } from "../../lib/frases-remedios";
 import { ESTADOS_POR_NOME as estados } from "../../lib/icms";
 
 const CMED_URL = "https://www.gov.br/anvisa/pt-br/assuntos/medicamentos/cmed";
+// from the ICMS table below, which shows the law of each state and the day it was checked
+const genericos = genericosComOutroIcms();
 const faq = [
   { q: "O que é o preço máximo?", a: PRECO_MAXIMO },
   {
     q: "Por que o preço muda de estado para estado?",
-    a: "Porque o preço máximo já inclui o ICMS, um imposto que cada estado define. A CMED publica um preço para cada ICMS possível, e vale o do estado onde o remédio é vendido. Cada preço que este site mostra é uma dessas colunas da lista, sem nenhuma conta nossa. Alguns remédios pagam ICMS diferente do padrão do estado: em São Paulo e Minas Gerais, por exemplo, os genéricos pagam 12%.",
+    a: `Porque o preço máximo já inclui o ICMS, um imposto que cada estado define. A CMED publica um preço para cada ICMS possível, e vale o do estado onde o remédio é vendido. Cada preço que este site mostra é uma dessas colunas da lista, sem nenhuma conta nossa. Alguns remédios pagam ICMS diferente do padrão do estado${genericos ? `: por exemplo, ${genericos} (a lei de cada estado está na tabela abaixo)` : ""}.`,
   },
   {
     q: "E os remédios isentos de ICMS?",

@@ -13,6 +13,7 @@ import {
   descricaoRemedio,
   fraseMedida,
   fraseRegistro,
+  genericosComOutroIcms,
   listaCmed,
   precoMaximo,
   precosPorAliquota,
@@ -20,6 +21,7 @@ import {
   tarjaExplicada,
   tipoExplicado,
 } from "../src/lib/frases-remedios";
+import { ESTADOS_POR_NOME } from "../src/lib/icms";
 import { parseProduto } from "../src/lib/remedios";
 
 const produto = (r: string) =>
@@ -60,6 +62,19 @@ describe("remedios sentences", () => {
     expect(quandoVenda(null)).toBe("no último ano");
     expect(avisoComercializacao(false, "2025")).toContain("nenhuma venda deste remédio à CMED em 2025.");
     expect(avisoComercializacao(false, null)).toContain("à CMED no último ano.");
+  });
+});
+
+describe("generics with a rate of their own", () => {
+  it("come from the ICMS table, never a typed number", () => {
+    expect(genericosComOutroIcms()).toBe("em Minas Gerais e São Paulo, os genéricos pagam 12%");
+    const mg = ESTADOS_POR_NOME.find((e) => e.uf === "MG")!;
+    const sp = ESTADOS_POR_NOME.find((e) => e.uf === "SP")!;
+    const rj = ESTADOS_POR_NOME.find((e) => e.uf === "RJ")!;
+    expect(genericosComOutroIcms([{ ...mg, aliquota_genericos: "17" }, sp, rj])).toBe(
+      "em Minas Gerais, os genéricos pagam 17%; em São Paulo, os genéricos pagam 12%",
+    );
+    expect(genericosComOutroIcms([rj, { ...sp, aliquota_genericos: sp.aliquota }])).toBeNull();
   });
 });
 

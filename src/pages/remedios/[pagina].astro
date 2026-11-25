@@ -40,8 +40,8 @@ import {
   REGISTRO_NAO_CONFERIDO,
   ISENTO_DE_ICMS,
   MEDIDAS_SEM_LOTE,
-  PRECO_MAXIMO,
   PRECO_MAXIMO_CURTO,
+  PRECO_MAXIMO_RESTO,
   precoMaximo,
   precoPorUnidade,
   quandoVenda,
@@ -197,9 +197,9 @@ const breadcrumb = {
       <NomeSubstancia nome={p.substancia} />
     </a>
   </p>
-  <h1>{p.produto}</h1>
+  <h1 data-dado>{p.produto}</h1>
   <p class="ficha">
-    {p.laboratorio}
+    <span data-dado>{p.laboratorio}</span>
     {p.tipo_produto && <Selo>{p.tipo_produto}</Selo>}
   </p>
 
@@ -277,8 +277,10 @@ const breadcrumb = {
             const u = lerApresentacao(a.apresentacao)?.unidade;
             return (
               <>
-                <h3>{nome}</h3>
-                <p class="codigo">Como está na lista oficial: {codigos.join("; ")}</p>
+                <h3 data-dado>{nome}</h3>
+                <p class="codigo">
+                  Como está na lista oficial: <span data-dado>{codigos.join("; ")}</span>
+                </p>
                 <ul class="linhas">
                   {cols
                     .filter((k) => a.pmc[k] !== undefined)
@@ -312,14 +314,18 @@ const breadcrumb = {
           </a>
           , com as outras marcas e os genéricos
         </li>
-        {p.classe_terapeutica && <li>Grupo de remédios: {classeSemCodigo(p.classe_terapeutica)}</li>}
+        {p.classe_terapeutica && (
+          <li>
+            Grupo de remédios: <span data-dado>{classeSemCodigo(p.classe_terapeutica)}</span>
+          </li>
+        )}
         <li>{fraseRegistro(p.registro_produto, p.situacao)}</li>
         {conferida === false && <li class="muted">{REGISTRO_NAO_CONFERIDO}</li>}
       </ul>
     </Secao>
 
     <Secao titulo="Antes de comprar" extra={temBarato ? "troca, Procon" : "Procon"} id="antes">
-      <p>{PRECO_MAXIMO}</p>
+      <p>{PRECO_MAXIMO_RESTO}</p>
       {temBarato && <p>{TROCA_NA_FARMACIA}</p>}
       <p>{SE_COBRAREM_MAIS}</p>
     </Secao>

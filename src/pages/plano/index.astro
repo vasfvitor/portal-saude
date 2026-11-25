@@ -53,7 +53,9 @@ const falhas = fraseFalhas(falhasDaPagina(meta.falhas, new Set(["cadastro", "can
     <ul class="lista">
       {portabilidade.slice(0, 10).map((o) => (
         <li>
-          <a href={paginaOperadora(o)}>{nomeExibido(o)}</a>
+          <a data-dado href={paginaOperadora(o)}>
+            {nomeExibido(o)}
+          </a>
           <span class="sub">liberada em {fmtDate(o.portabilidade_vigente[0]!.data)}</span>
         </li>
       ))}
@@ -69,7 +71,9 @@ const falhas = fraseFalhas(falhasDaPagina(meta.falhas, new Set(["cadastro", "can
     <ul class="lista">
       {canceladas.map((o) => (
         <li>
-          <a href={paginaOperadora(o)}>{nomeExibido(o)}</a>
+          <a data-dado href={paginaOperadora(o)}>
+            {nomeExibido(o)}
+          </a>
           <span class="sub">
             {fmtDate(o.cancelamento!.data)}: {motivoCancelamento(o.cancelamento!.motivo)}
           </span>

@@ -33,7 +33,9 @@ const url = new URL(destino, Astro.site).href;
   </head>
   <body>
     <p>
-      <a href={destino}>{nome}</a>
+      <a data-dado href={destino}>
+        {nome}
+      </a>
     </p>
   </body>
 </html>

@@ -23,11 +23,26 @@ export const CMED_ARQUIVO_URL = "https://dados.anvisa.gov.br/dados/TA_PRECO_MEDI
 export const ANS_URL = "https://www.gov.br/ans/pt-br";
 export const ANVISA_URL = "https://www.gov.br/anvisa/pt-br";
 export const DCB_URL = "https://www.gov.br/anvisa/pt-br/assuntos/farmacopeia/dcb";
-// The ANS consumer channels, checked on 2026-10-26 at the page below: Disque ANS on weekdays 8h-20h, free from
-// any phone, and the line for deaf people. Recheck when the page moves.
+// The ANS consumer channels: the numbers, the Disque ANS hours and the deadlines the ANS gives an operator to answer
+// a complaint (NIP) are facts the data does not carry, so each one says where it was read and when; the operator
+// page shows both. All from the page below, checked on 2026-11-25. Recheck when the page moves.
 export const ANS_CANAIS_URL = "https://www.gov.br/ans/pt-br/canais_atendimento/canais-de-atendimento-ao-consumidor-1";
 export const DISQUE_ANS = "0800 701 9656";
 export const DISQUE_ANS_SURDOS = "0800 021 2105";
+/** "Funcionamento do Disque ANS: segunda a sexta-feira (exceto feriados nacionais), das 8 às 20 horas." */
+export const DISQUE_ANS_HORARIO = {
+  texto: "de segunda a sexta, exceto feriados nacionais, das 8h às 20h",
+  fonte: ANS_CANAIS_URL,
+  conferido_em: "2026-11-25",
+};
+/** "5 dias úteis para reclamações relacionadas à cobertura do plano de saúde [...]; 10 dias úteis para outros tipos
+ * de reclamações" */
+export const PRAZO_RESPOSTA_ANS = {
+  cobertura: 5,
+  outros: 10,
+  fonte: ANS_CANAIS_URL,
+  conferido_em: "2026-11-25",
+};
 export const ANS_PORTABILIDADE_URL =
   "https://www.gov.br/ans/pt-br/assuntos/contratacao-e-troca-de-plano/operadoras-em-fase-de-portabilidade-especial-e-portabilidade-extraordinaria";
 

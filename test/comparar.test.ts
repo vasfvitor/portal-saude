@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { lerApresentacao } from "../src/lib/apresentacao";
 import { maisBarato, porChave, precoNoRegime, quantoMenos } from "../src/lib/comparar";
+import { precoNoEstado, precosPorAliquota, SEM_PRECO_ICMS } from "../src/lib/frases-remedios";
 import { aliquotaPorUf, TABELA } from "../src/lib/icms";
 import { parseProduto, pmcAplicavel, type Produto } from "../src/lib/remedios";
 
@@ -86,5 +87,21 @@ describe("same dose and package across brands", () => {
     expect(aliquotaPorUf(false).SP).toBe("18");
     expect(aliquotaPorUf(true).RJ).toBe("22");
     expect(Object.keys(aliquotaPorUf(false))).toHaveLength(27);
+  });
+
+  it("the state picker never shows the reference rate's price when the state's rate has none", () => {
+    const a = cipro.apresentacoes[0]!;
+    const rj = aliquotaPorUf(false).RJ!;
+    expect(rj).not.toBe(TABELA.ref);
+    const semRj = JSON.parse(
+      precosPorAliquota(Object.fromEntries(Object.entries(a.pmc).filter(([k]) => k !== rj))),
+    ) as Record<string, string>;
+    expect(semRj[TABELA.ref]).toBeDefined();
+    // null: the picker says SEM_PRECO_ICMS and drops the row's "X% menos" and highlight
+    expect(precoNoEstado(semRj, rj)).toBeNull();
+    expect(precoNoEstado(semRj, TABELA.ref)).toBe(semRj[TABELA.ref]);
+    // no state picked: the page's own text comes back
+    expect(precoNoEstado(semRj, undefined)).toBeUndefined();
+    expect(SEM_PRECO_ICMS).toBe("sem preço nesta faixa de ICMS");
   });
 });

@@ -4,7 +4,7 @@
 // is said once, above the table; the cheaper column says its own once a state is picked, since a generic may pay
 // less ICMS than the rest (SP, MG). Exempt rows say so in the row.
 import Selo from "./Selo.astro";
-import { aliquotaRotulo, precoMaximo, precosPorAliquota, quandoVenda } from "../lib/frases-remedios";
+import { aliquotaRotulo, precoMaximo, precosPorAliquota, quandoVenda, SEM_PRECO_ICMS } from "../lib/frases-remedios";
 import { TABELA, type Regime } from "../lib/icms";
 import { anoDeVenda, type Apresentacao } from "../lib/remedios";
 
@@ -61,7 +61,7 @@ const venda = quandoVenda(anoDeVenda(linhas.map((l) => l.a)));
       {linhas.map(({ a, nome, baratos, semVenda }) => (
         <tr>
           <th scope="row">
-            {nome}
+            <span data-dado>{nome}</span>
             {semVenda && <Selo tom="atencao">{`sem venda ${venda}`}</Selo>}
             {a.restricao_hospitalar && <Selo tom="atencao">uso hospitalar</Selo>}
           </th>
@@ -72,7 +72,9 @@ const venda = quandoVenda(anoDeVenda(linhas.map((l) => l.a)));
                 <small>isento de ICMS</small>
               </>
             ) : a.pmc[ref] === undefined ? (
-              <small>sem preço nesta faixa de ICMS</small>
+              <strong data-sem-preco data-precos={precosPorAliquota(a.pmc)}>
+                {SEM_PRECO_ICMS}
+              </strong>
             ) : (
               <strong data-precos={precosPorAliquota(a.pmc)}>{precoMaximo(a.pmc, ref)}</strong>
             )}
@@ -80,7 +82,12 @@ const venda = quandoVenda(anoDeVenda(linhas.map((l) => l.a)));
           {comBarato && (
             <td>
               {baratos.map((b) => (
-                <span class="barato" data-so-regime={b.regime} data-generico={b.tipo === "Genérico" ? "1" : "0"}>
+                <span
+                  class="barato"
+                  data-linha
+                  data-so-regime={b.regime}
+                  data-generico={b.tipo === "Genérico" ? "1" : "0"}
+                >
                   {b.isento ? (
                     <>
                       <strong>{precoMaximo(b.pmc, ref)}</strong>
@@ -94,7 +101,9 @@ const venda = quandoVenda(anoDeVenda(linhas.map((l) => l.a)));
                   )}
                   {b.menos >= 1 && <small class="menos">{b.menos}% a menos</small>}
                   {b.alternativa && !soAlternativas && <small>{`com venda ${venda}`}</small>}
-                  <a href={b.href}>{b.produto}</a>
+                  <a data-dado href={b.href}>
+                    {b.produto}
+                  </a>
                   {b.tipo && <small>{b.tipo.toLowerCase()}</small>}
                 </span>
               ))}
@@ -145,6 +154,13 @@ const venda = quandoVenda(anoDeVenda(linhas.map((l) => l.a)));
     display: block;
     color: var(--muted);
     font-size: 0.8rem;
+  }
+  /* a missing price is a note, not a result (the picker sets data-sem-preco while the reader's rate has none) */
+  td [data-sem-preco] {
+    display: block;
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 400;
   }
   td small.menos {
     color: var(--good);

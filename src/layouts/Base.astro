@@ -323,9 +323,13 @@ const graph = {
   :root[data-regime="g"] .linhas > li {
     order: var(--ordem-g, var(--ordem, 0));
   }
-  :root:not([data-regime="g"]) .linhas > li[data-menor~="p"],
-  :root[data-regime="g"] .linhas > li[data-menor~="g"] {
+  :root:not([data-regime="g"]) .linhas > li[data-menor~="p"]:not([data-sem-preco-linha]),
+  :root[data-regime="g"] .linhas > li[data-menor~="g"]:not([data-sem-preco-linha]) {
     background: var(--accent-soft);
+  }
+  /* no price at the reader's rate (SeuEstado.astro): a "X% menos" worked out at another rate does not apply */
+  [data-sem-preco-linha] .menos {
+    display: none;
   }
   :root:not([data-regime="g"]) .linhas > li[data-fora~="p"],
   :root[data-regime="g"] .linhas > li[data-fora~="g"] {

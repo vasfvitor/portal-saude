@@ -232,10 +232,17 @@ const dataLista = listaCmed(lista[0]!.stamp);
           <ul class="produtos">
             {doTipo(t).map((p) => (
               <li>
-                <a href={paginaProduto(p)}>{nome(p)}</a>
+                <a data-dado href={paginaProduto(p)}>
+                  {nome(p)}
+                </a>
                 <span class="muted">
-                  {detalhe(p) && ` · ${detalhe(p)}`} ·{" "}
-                  {contar(p.apresentacoes.length, "dose e embalagem", "doses e embalagens")}
+                  {detalhe(p) && (
+                    <>
+                      {" · "}
+                      <span data-dado>{detalhe(p)}</span>
+                    </>
+                  )}{" "}
+                  · {contar(p.apresentacoes.length, "dose e embalagem", "doses e embalagens")}
                 </span>
                 {!p.comercializado && <Selo tom="atencao">{`sem venda ${venda}`}</Selo>}
               </li>

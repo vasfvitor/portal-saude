@@ -1,7 +1,7 @@
 // Plain pt-BR for the CMED prices. The price is a ceiling set by the government, never a price we quote:
 // the pharmacy may charge less. Every price shown carries its ICMS rate next to it.
 import { fmtDate, fmtMes, fmtMoney, fmtStamp } from "./format";
-import { TABELA } from "./icms";
+import { ESTADOS_POR_NOME, regimeDoEstado, TABELA, type EstadoIcms } from "./icms";
 import { lerApresentacao, marcaInstitucional, type ApresentacaoLida } from "./apresentacao";
 import { anoDeVenda, type Aliquota, type Apresentacao, type Medida, type Produto } from "./remedios";
 
@@ -33,6 +33,31 @@ export function precoMaximo(pmc: Apresentacao["pmc"], aliquota: Aliquota): strin
   return c === undefined ? null : fmtMoney(c);
 }
 
+/** Where a price is missing at the rate shown: said in words, never another rate's price under that rate's label. */
+export const SEM_PRECO_ICMS = "sem preço nesta faixa de ICMS";
+
+/** What a `data-precos` element shows once the reader picks a state: the price at the state's rate, or null when
+ * that rate has none (the page then says SEM_PRECO_ICMS and drops the row's "X% menos" and highlight, both worked
+ * out at another rate); undefined without a state, which puts back the text the page was built with. */
+export function precoNoEstado(precos: Record<string, string>, aliquota: string | undefined): string | null | undefined {
+  if (aliquota === undefined) return undefined;
+  return precos[aliquota] ?? null;
+}
+
+/** "em Minas Gerais e São Paulo, os genéricos pagam 12%": the states whose law gives generics a rate of their own,
+ * read from the ICMS table (icms.ts, where each row has its source and the day it was checked). Null when none does. */
+export function genericosComOutroIcms(estados: EstadoIcms[] = ESTADOS_POR_NOME): string | null {
+  const porAliquota = new Map<string, string[]>();
+  for (const e of estados) {
+    if (regimeDoEstado(e) !== "g") continue;
+    porAliquota.set(e.aliquota_genericos!, [...(porAliquota.get(e.aliquota_genericos!) ?? []), e.nome]);
+  }
+  const e = (nomes: string[]) =>
+    nomes.length === 1 ? nomes[0]! : `${nomes.slice(0, -1).join(", ")} e ${nomes.at(-1)!}`;
+  const partes = [...porAliquota].map(([a, nomes]) => `em ${e(nomes)}, os genéricos pagam ${aliquotaRotulo(a)}`);
+  return partes.length ? partes.join("; ") : null;
+}
+
 /** The prices the "seu estado" picker swaps in (`data-precos`): rate → "R$ 507,70", only rates some state uses. */
 export const precosPorAliquota = (pmc: Apresentacao["pmc"]): string =>
   JSON.stringify(
@@ -52,9 +77,14 @@ export function avisoComercializacao(comercializado: boolean, ano: string | null
 /** "J1G1 - FLUORQUINOLONAS ORAIS" → "FLUORQUINOLONAS ORAIS": the ATC-like code means nothing to the reader. */
 export const classeSemCodigo = (classe: string): string => classe.replace(/^[A-Z0-9]{2,6}\s*-\s*/, "");
 
-/** Above the price table: the one line the reader needs; PRECO_MAXIMO, in "Antes de comprar", says the rest. */
+/** Above the price table: the one line the reader needs; PRECO_MAXIMO_RESTO, in "Antes de comprar", says the rest
+ * without defining the term a second time on the page. */
 export const PRECO_MAXIMO_CURTO = "O teto que a farmácia pode cobrar.";
 
+export const PRECO_MAXIMO_RESTO =
+  "A farmácia pode cobrar menos que o preço máximo. Quem fixa o teto é a CMED, o órgão do governo que regula o preço dos remédios, e ele muda com o ICMS de cada estado.";
+
+/** The whole definition, where the page has no PRECO_MAXIMO_CURTO (the "sobre o preço" page). */
 export const PRECO_MAXIMO =
   "O preço máximo é o teto que a farmácia pode cobrar; ela pode cobrar menos. Quem fixa o teto é a CMED, o órgão do governo que regula o preço dos remédios, e ele muda com o ICMS de cada estado.";
 

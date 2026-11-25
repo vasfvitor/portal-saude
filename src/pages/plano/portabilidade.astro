@@ -52,7 +52,9 @@ const faqLd = {
   <ul class="vigentes">
     {vigentes.map((o) => (
       <li>
-        <a href={paginaOperadora(o)}>{nomeExibido(o)}</a>
+        <a data-dado href={paginaOperadora(o)}>
+          {nomeExibido(o)}
+        </a>
         <span class="sub">
           {[
             `liberada em ${fmtDate(o.portabilidade_vigente[0]!.data)}`,

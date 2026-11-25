@@ -1,15 +1,18 @@
 // Checks on the built site (run after `pnpm build`): the only client JavaScript is the search on /plano/ and
 // /remedios/ and the "seu estado" picker on the medicine and substância pages, no e-mail address is published,
 // every internal link resolves, and every operator and medicine in the search indexes has its page (and every
-// operator its /plano/<registro>/ shortcut). Exits 1 with
-// the list of problems.
+// operator its /plano/<registro>/ shortcut), and no phrase of frases-proibidas.txt is in the text a reader sees
+// (outside the publisher's own names and values, marked data-dado: see texto-dist.mjs). Exits 1 with the list of
+// problems.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
+import { carregarFrases, frasesNaPagina } from "./texto-dist.mjs";
 
 const DIST = new URL("../dist/", import.meta.url).pathname;
 // a module script is allowed only where the component that owns it is on the page: the search box or the picker
 const DONOS_DE_SCRIPT = /class="(busca|seu-estado)"/;
 const problems = [];
+const FRASES = carregarFrases(readFileSync(new URL("../frases-proibidas.txt", import.meta.url), "utf-8"));
 
 function* htmlFiles(dir) {
   for (const name of readdirSync(dir)) {
@@ -39,6 +42,7 @@ for (const file of htmlFiles(DIST)) {
     html.replace(/<script type="application\/ld\+json">.*?<\/script>/gs, ""),
   );
   if (email) problems.push(`${page}: e-mail-like text ${email[0]}`);
+  for (const hit of frasesNaPagina(html, FRASES)) problems.push(`${page}: banned phrase ${hit}`);
   for (const [, href] of html.matchAll(/(?:href|src)="(\/[^"/][^"]*|\/)"/g)) {
     if (!resolves(href)) problems.push(`${page}: broken internal link ${href}`);
   }

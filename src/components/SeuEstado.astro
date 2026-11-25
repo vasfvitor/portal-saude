@@ -4,7 +4,12 @@
 // select stays hidden and every list shows all rates. Which rate an element uses comes from the nearest
 // data-generico="1|0" around it. Elements opt in with:
 //   data-precos='{"17":"R$ 501,58",...}'  text becomes the price at the state's rate (precosPorAliquota)
-//                                         and gets data-trocado while it shows a swapped-in text
+//                                         and gets data-trocado while it shows a swapped-in text; with no
+//                                         price at that rate, the text is SEM_PRECO_ICMS (empty with
+//                                         data-sem-texto) and the element gets data-sem-preco, as the page
+//                                         renders it with no price at the reference rate; the nearest
+//                                         data-linha around it then gets data-sem-preco-linha (CSS drops its
+//                                         "X% menos" and its cheapest highlight)
 //   data-aliquota="18"                    gets class "sua" when it is the state's rate
 //   data-uf-rotulo                        becomes "SP, ICMS 18%"
 // and, through CSS: data-so-com-estado, data-so-sem-estado, data-so-regime="p|g", and --ordem-g for lists.
@@ -25,7 +30,7 @@ import { ESTADOS_POR_NOME } from "../lib/icms";
 </div>
 
 <script>
-  import { aliquotaRotulo } from "../lib/frases-remedios";
+  import { aliquotaRotulo, precoNoEstado, SEM_PRECO_ICMS } from "../lib/frases-remedios";
   import { aliquotaPorUf, ESTADOS, regimeDoEstado } from "../lib/icms";
 
   // built into the shared script from icms.ts: the same table the pages were built with
@@ -33,14 +38,18 @@ import { ESTADOS_POR_NOME } from "../lib/icms";
   const REGIME = Object.fromEntries(ESTADOS.map((e) => [e.uf, regimeDoEstado(e)]));
   const A_CONFIRMAR = new Set(ESTADOS.filter((e) => !e.confirmado).map((e) => e.uf));
   const CHAVE = "saude.uf";
-  const originais = new WeakMap<Element, string>();
+  const originais = new WeakMap<Element, { texto: string; semPreco: boolean }>();
   const todos = <E extends Element = HTMLElement>(sel: string) => document.querySelectorAll<E>(sel);
 
-  /** Sets the text, or puts back the one the page was built with; data-trocado says which (for CSS). */
-  function trocar(el: Element, texto: string | undefined) {
-    if (!originais.has(el)) originais.set(el, el.textContent ?? "");
-    el.textContent = texto ?? originais.get(el)!;
+  /** Sets the text, or puts back the one the page was built with (undefined); data-trocado says which (for CSS).
+   * `semPreco`: the text says there is no price, so the element gets data-sem-preco. */
+  function trocar(el: Element, texto: string | undefined, semPreco = false) {
+    if (!originais.has(el))
+      originais.set(el, { texto: el.textContent ?? "", semPreco: el.hasAttribute("data-sem-preco") });
+    const original = originais.get(el)!;
+    el.textContent = texto ?? original.texto;
     el.toggleAttribute("data-trocado", texto !== undefined);
+    el.toggleAttribute("data-sem-preco", texto === undefined ? original.semPreco : semPreco);
   }
 
   function aplicar(uf: string) {
@@ -53,9 +62,14 @@ import { ESTADOS_POR_NOME } from "../lib/icms";
         ? (el.closest("[data-generico]")?.getAttribute("data-generico") === "1" ? POR_UF.generico : POR_UF.normal)[uf]
         : undefined;
 
+    for (const el of todos("[data-linha]")) el.removeAttribute("data-sem-preco-linha");
     for (const el of todos("[data-precos]")) {
-      const a = aliquota(el);
-      trocar(el, a ? (JSON.parse(el.dataset.precos ?? "{}") as Record<string, string>)[a] : undefined);
+      const preco = precoNoEstado(JSON.parse(el.dataset.precos ?? "{}") as Record<string, string>, aliquota(el));
+      if (preco !== null) trocar(el, preco);
+      else {
+        trocar(el, el.hasAttribute("data-sem-texto") ? "" : SEM_PRECO_ICMS, true);
+        el.closest("[data-linha]")?.setAttribute("data-sem-preco-linha", "");
+      }
     }
     for (const el of todos("[data-aliquota]")) el.classList.toggle("sua", el.dataset.aliquota === aliquota(el));
     for (const el of todos("[data-uf-rotulo]")) {
