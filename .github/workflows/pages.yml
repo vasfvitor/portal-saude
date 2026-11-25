@@ -117,7 +117,8 @@ jobs:
       - name: Build
         run: pnpm build
 
-      # only the search script, no e-mail address, no broken internal link, a page per operator and medicine
+      # only the search script, no e-mail address but RELATO_EMAIL, no broken internal link, a page per operator
+      # and medicine
       - run: pnpm check:dist
 
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
@@ -126,10 +127,13 @@ jobs:
 
       # GitHub's artifact service sometimes answers "No artifacts named github-pages were found" right after a
       # successful upload (7 deploys on 2026-11-24/25). One retry two minutes later, never more: if it fails
-      # too, the job is red as before.
+      # too, the job is red as before. deploy-pages cancels its own deployment when it fails or times out, so the
+      # retry does not meet a pending one; that error comes before any deployment is created anyway.
       - id: deploy
         continue-on-error: true
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        with:
+          timeout: 240000 # 4 min per attempt (default 10), so both fit in the job's limit
 
       - name: Wait before the one retry of the deploy
         if: steps.deploy.outcome == 'failure'
@@ -138,3 +142,5 @@ jobs:
       - id: deploy_retry
         if: steps.deploy.outcome == 'failure'
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        with:
+          timeout: 240000 # 4 min per attempt (default 10), so both fit in the job's limit

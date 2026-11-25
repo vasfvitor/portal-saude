@@ -22,6 +22,7 @@ Quem cria ou muda um alarme ou uma mensagem de erro atualiza este arquivo no mes
 | Publish site | `problem(s) in`, `unexpected <script`, `broken internal link`, `e-mail-like text`, `banned phrase`, `RELATO_EMAIL not found` | [Conferência do site gerado falhou](#conferência-do-site-gerado-falhou) |
 | Publish site | `warning: built without the`                                                                                                 | [Site saiu sem dados da ANVISA](#site-saiu-sem-dados-da-anvisa)         |
 | Publish site | `format:check`, `lint`, `test`, `check`                                                                                      | [Lint, formato, testes ou tipos](#lint-formato-testes-ou-tipos)         |
+| Publish site | `No artifacts named "github-pages"`, `Fetching artifact metadata failed`                                                     | [Deploy no Pages falhou](#deploy-no-pages-falhou)                       |
 | (ans-feeds)  | issue "Portal N dias atrás", `the portal could not be read or is more than 2 days behind`                                    | [Portal atrasado](#portal-atrasado)                                     |
 
 ## Publish site
@@ -174,6 +175,26 @@ Todas as fontes são obrigatórias. Em qualquer falha do build, **o site anterio
   ```
 
 - `pnpm install --frozen-lockfile` falhou: ver o RUNBOOK do hub, "Lockfile desatualizado".
+
+### Deploy no Pages falhou
+
+- **Onde aparece:** no fim do job `publish`, nos passos `actions/deploy-pages` (há dois: a tentativa e a
+  repetição).
+- **Mensagens:**
+  - `Error: No artifacts named "github-pages" were found for this workflow run.`
+  - `Fetching artifact metadata failed. Is githubstatus.com reporting issues with API requests, Pages, or Actions? Please re-run the deployment at a later time.`
+- **O que quer dizer:** o build e a conferência passaram e o site foi enviado, mas o serviço do GitHub não
+  achou o envio na hora de publicar (aconteceu em 7 deploys em 24 e 25/11/2026). O workflow tenta publicar
+  de novo uma vez, dois minutos depois. Cada tentativa espera no máximo 4 minutos; o job inteiro tem limite
+  de 25 minutos.
+- **O site foi afetado?** Não. Se as duas tentativas falharem, o site anterior continua no ar.
+- **Agir ou esperar:**
+  - Primeira tentativa vermelha e a repetição verde: nada a fazer. O run fica verde, com o erro da
+    primeira tentativa no log.
+  - As duas vermelhas: rodar de novo só o job que falhou, pela página do run ("Re-run failed jobs") ou com
+    `gh run rerun <id> --failed -R vasfvitor/portal-saude`. Ou esperar o próximo horário.
+- **Pedir ajuda quando:** o rerun também falhar, ou o erro se repetir por mais de um dia. Antes, ver se o
+  [githubstatus.com](https://www.githubstatus.com/) mostra problema em Actions ou Pages.
 
 ## Portal atrasado
 
